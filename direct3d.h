@@ -5,6 +5,7 @@
 #include <Windows.h>
 
 
+
 // �Z�[�t�����[�X�}�N��
 #define SAFE_RELEASE(o) if (o) { (o)->Release(); o = NULL; }
 

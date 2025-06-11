@@ -145,6 +145,7 @@
   <ItemGroup>
     <ClInclude Include="debug_ostream.h" />
     <ClInclude Include="direct3d.h" />
+    <ClInclude Include="DirectXTex.h" />
     <ClInclude Include="game_window.h" />
     <ClInclude Include="polygon.h" />
     <ClInclude Include="shader.h" />
@@ -162,6 +163,16 @@
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
     </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="DirectXTex.inl" />
+  </ItemGroup>
+  <ItemGroup>
+    <Library Include="DirectXTex_Debug.lib" />
+    <Library Include="DirectXTex_Release.lib" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="image.png" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
