@@ -16,6 +16,8 @@
 static ID3D11Device* g_pDevice = nullptr;
 static ID3D11DeviceContext* g_pDeviceContext = nullptr;
 static IDXGISwapChain* g_pSwapChain = nullptr;
+static ID3D11BlendState* g_pBlendStateMultiply = nullptr; // ブレンドステート（乗算ブレンド用）
+static ID3D11DepthStencilState* g_pDepthStencilStateDepthDisable = nullptr; // 深度ステンシルステート（深度無効用）
 
 /* バックバッファ関連 */
 static ID3D11RenderTargetView* g_pRenderTargetView = nullptr;
@@ -93,16 +95,65 @@ bool Direct3D_Initialize(HWND hWnd)
 		return false;
 	}
 
+	// ブレンドステート設定
+	D3D11_BLEND_DESC bd = {};
+	bd.AlphaToCoverageEnable = FALSE;
+	bd.IndependentBlendEnable = FALSE;
+	bd.RenderTarget[0].BlendEnable = TRUE;// ブレンドを有効にする
+
+	//scr ... ソース（今から描く絵（色））　dest ... デスティネーション（すでに描かれている絵（色））
+
+
+	//RGB
+	bd.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+	bd.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+	bd.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+	//ScrRGB * SrcAlpha + DestRGB * (1 - SrcAlpha)
+
+	//アルファ
+	bd.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;//1
+	bd.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;//0
+	bd.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;//加算演算子
+	//ScrAlpha * 1 + DestAlpha * 0
+
+	
+	// RGBとアルファの書き込みマスクを設定
+	bd.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+	
+
+	g_pDevice->CreateBlendState(&bd, &g_pBlendStateMultiply);
+
+	float blend_factor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	g_pDeviceContext->OMSetBlendState(g_pBlendStateMultiply, blend_factor, 0xffffffff);
+
+
+	// 深度ステンシルステート設定
+	D3D11_DEPTH_STENCIL_DESC dsd = {};
+	dsd.DepthFunc = D3D11_COMPARISON_LESS;
+	dsd.StencilEnable = FALSE;
+	dsd.DepthEnable = FALSE; // 無効にする
+	dsd.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+
+	g_pDevice->CreateDepthStencilState(&dsd, &g_pDepthStencilStateDepthDisable);
+
+	// dsd.DepthEnable = TRUE;
+	// dsd.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+	// g_pDevice->CreateDepthStencilState(&dsd, &g_pDepthStencilStateDepthEnable);
+
+	g_pDeviceContext->OMSetDepthStencilState(g_pDepthStencilStateDepthDisable, NULL);
     return true;
 }
 
 void Direct3D_Finalize()
 {
+	SAFE_RELEASE(g_pDepthStencilStateDepthDisable)
+	SAFE_RELEASE(g_pBlendStateMultiply)
 	releaseBackBuffer();
 
 	SAFE_RELEASE(g_pSwapChain)
 	SAFE_RELEASE(g_pDeviceContext)
 	SAFE_RELEASE(g_pDevice)
+	
 
 }
 

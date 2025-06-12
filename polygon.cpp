@@ -52,7 +52,7 @@ void Polygon_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 	TexMetadata metadata;
 	ScratchImage image;
 
-	LoadFromWICFile(L"image.png", WIC_FLAGS_NONE, &metadata, image);
+	LoadFromWICFile(L"knight.png", WIC_FLAGS_NONE, &metadata, image);
 	HRESULT hr = CreateShaderResourceView(g_pDevice,
 		image.GetImages(), image.GetImageCount(), metadata, &g_pTexture);
 
