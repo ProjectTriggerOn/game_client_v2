@@ -2,7 +2,7 @@
 #include <sstream>
 #include "debug_ostream.h"
 #include "game_window.h"
-constexpr char FILE_NAME[] = "tekito.png";
+
 
 #include <SDKDDKVer.h>
 #define WIN32_LEAN_AND_MEAN
@@ -11,6 +11,8 @@ constexpr char FILE_NAME[] = "tekito.png";
 
 #include "sprite.h"
 #include "shader.h"
+
+#include "texture.h"
 
 
 
@@ -28,9 +30,18 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 
 	Sprite_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
 
+	Texture_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
+
+	int texid_image = Texture_LoadFromFile(L"image.png");
+	int texid_knight= Texture_LoadFromFile(L"knight.png");
+
+
 	ShowWindow(hWnd, nCmdShow);
+
 	UpdateWindow(hWnd);
+
 	MSG msg;
+
 	float x = 0.0f;
 
 	while (GetMessage(&msg, nullptr, 0, 0)) {
@@ -45,7 +56,10 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 //			float sy = 32.0f;
 //			Sprite_Draw(sx, sy);
 //		}
-		Sprite_Draw(x, 32.0f);
+		Texture_Set(texid_image);
+		Sprite_Draw(x, 32.0f,600.0f,600.0f);
+		Texture_Set(texid_knight);
+		Sprite_Draw(32.0f, 32.0f, 600.0f, 600.0f);
 		x += 0.3f;
 
 		Direct3D_Present();
@@ -53,6 +67,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 
 
 	Sprite_Finalize();
+
+	Texture_AllRelease();
 
 	Shader_Finalize();
 

@@ -12,16 +12,16 @@ static ID3D11Buffer* g_pVSConstantBuffer = nullptr;
 static ID3D11PixelShader* g_pPixelShader = nullptr;
 static ID3D11SamplerState* g_pSamplerState = nullptr;
 
-// ���ӁI�������ŊO������ݒ肳����́BRelease�s�v�B
+// 注意！初期化で外部から設定されるもの。Release不要。
 static ID3D11Device* g_pDevice = nullptr;
 static ID3D11DeviceContext* g_pContext = nullptr;
 
 
 bool Shader_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 {
-	HRESULT hr; // �߂�l�i�[�p
+	HRESULT hr; // HRESULTはDirectXの関数の戻り値で、成功か失敗かを示す	
 
-	// �f�o�C�X�ƃf�o�C�X�R���e�L�X�g�̃`�F�b�N
+	// デバイスとデバイスコンテキストのチェック
 	if (!pDevice || !pContext) {
 		hal::dout << "Shader_Initialize() : �^����ꂽ�f�o�C�X���R���e�L�X�g���s���ł�" << std::endl;
 		return false;
@@ -111,14 +111,18 @@ bool Shader_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 	delete[] psbinary_pointer; //
 
 	if (FAILED(hr)) {
-		hal::dout << "Shader_Initialize() : �s�N�Z���V�F�[�_�[�̍쐬�Ɏ��s���܂���" << std::endl;
+		hal::dout << "Shader_Initialize() Error" << std::endl;
 		return false;
 	}
 
 	D3D11_SAMPLER_DESC sampler_desc{};
-	sampler_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR; // 線形フィルタリング
+
+	sampler_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR; // 点フィルタリング
+
+	//UV参照外のテクスチャのアドレスモードを設定
 	sampler_desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP; // U軸のアドレスモード
 	sampler_desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP; // V軸のアドレスモード
+
 	sampler_desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP; // W軸のアドレスモード
 	sampler_desc.MipLODBias = 0.0f; // MIPレベルのバイアス
 	sampler_desc.MaxAnisotropy = 8; // 異方性フィルタリングの最大値

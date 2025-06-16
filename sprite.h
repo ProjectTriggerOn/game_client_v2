@@ -5,6 +5,6 @@
 
 void Sprite_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext);
 void Sprite_Finalize(void);
-void Sprite_Draw(float sx, float sy);
+void Sprite_Draw(float sx, float sy,float sw,float sh);
 
 #endif	

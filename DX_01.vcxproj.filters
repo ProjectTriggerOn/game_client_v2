@@ -40,6 +40,9 @@
     <ClCompile Include="sprite.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="texture.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="debug_ostream.h">
@@ -63,6 +66,9 @@
     <ClInclude Include="sprite.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="texture.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shader_pixel_2d.hlsl">
@@ -83,6 +89,9 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="image.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="knight.png">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>

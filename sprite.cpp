@@ -49,16 +49,7 @@ void Sprite_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 
 	g_pDevice->CreateBuffer(&bd, NULL, &g_pVertexBuffer);
 
-	TexMetadata metadata;
-	ScratchImage image;
 
-	LoadFromWICFile(L"knight.png", WIC_FLAGS_NONE, &metadata, image);
-	HRESULT hr = CreateShaderResourceView(g_pDevice,
-		image.GetImages(), image.GetImageCount(), metadata, &g_pTexture);
-
-	if (FAILED(hr)) {
-		MessageBox(nullptr, "テクスチャの読み込みに失敗しました", "エラー", MB_OK | MB_ICONERROR);
-	}
 }
 
 void Sprite_Finalize(void)
@@ -68,7 +59,7 @@ void Sprite_Finalize(void)
 }
 
 // Add definitions for sx and sy at the top of the Sprite_Draw function  
-void Sprite_Draw(float sx,float sy)  
+void Sprite_Draw(float sx,float sy,float sw,float sh)  
 {  
    // Define sx and sy as the starting coordinates for the sprite  
 
@@ -86,26 +77,31 @@ void Sprite_Draw(float sx,float sy)
 
    // 頂点情報を書き込み  
    const float SCREEN_WIDTH = (float)Direct3D_GetBackBufferWidth();  
-   const float SCREEN_HEIGHT = (float)Direct3D_GetBackBufferHeight();  
+   const float SCREEN_HEIGHT = (float)Direct3D_GetBackBufferHeight();
 
+   //
    constexpr float w = 512.0f;  
    constexpr float h = 512.0f;  
 
    // 画面の左上から右下に向かう線分を描画する  
-   v[0].position = { sx  ,sy  , 0.0f };  
-   v[1].position = { sx + w,sy  , 0.0f };  
-   v[2].position = { sx  ,sy + h, 0.0f };  
-   v[3].position = { sx + w,sy + h, 0.0f };  
+   v[0].position = { sx    ,sy  , 0.0f };  
+   v[1].position = { sx + sw,sy  , 0.0f };  
+   v[2].position = { sx  ,  sy + sh, 0.0f };  
+   v[3].position = { sx + sw,sy + sh, 0.0f };  
 
-   v[0].color = { 1.0f, 1.0f, 1.0f, 0.3f };  
-   v[1].color = { 1.0f, 1.0f, 1.0f, 0.3f };  
-   v[2].color = { 1.0f, 1.0f, 1.0f, 0.3f };  
-   v[3].color = { 1.0f, 1.0f, 1.0f, 0.3f };  
+   v[0].color = { 1.0f, 1.0f, 1.0f, 1.0f };  
+   v[1].color = { 1.0f, 1.0f, 1.0f, 1.0f };  
+   v[2].color = { 1.0f, 1.0f, 1.0f, 1.0f };  
+   v[3].color = { 1.0f, 1.0f, 1.0f, 1.0f };  
 
-   v[0].uv = { 0.0f , 0.0f };  
-   v[1].uv = { 1.0f , 0.0f };  
-   v[2].uv = { 0.0f , 1.0f };  
-   v[3].uv = { 1.0f , 1.0f };  
+
+   static float a = 0.0f;
+   v[0].uv = { 0.0f+a , 0.0f+a };  
+   v[1].uv = { 1.0f+a , 0.0f+a };  
+   v[2].uv = { 0.0f+a , 1.0f+a };  
+   v[3].uv = { 1.0f+a , 1.0f+a };
+
+   //a -= 0.02f; // UV座標をアニメーションさせるための変数
 
    // 頂点バッファのロックを解除  
    g_pContext->Unmap(g_pVertexBuffer, 0);  
@@ -120,8 +116,7 @@ void Sprite_Draw(float sx,float sy)
 
    // プリミティブトポロジ設定  
    g_pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);  
-
-   g_pContext->PSSetShaderResources(0, 1, &g_pTexture);  
+ 
 
    // ポリゴン描画命令発行  
    g_pContext->Draw(NUM_VERTEX, 0);  

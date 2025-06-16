@@ -142,6 +142,7 @@
     <ClCompile Include="polygon.cpp" />
     <ClCompile Include="shader.cpp" />
     <ClCompile Include="sprite.cpp" />
+    <ClCompile Include="texture.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="debug_ostream.h" />
@@ -151,6 +152,7 @@
     <ClInclude Include="polygon.h" />
     <ClInclude Include="shader.h" />
     <ClInclude Include="sprite.h" />
+    <ClInclude Include="texture.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shader_pixel_2d.hlsl">
@@ -175,6 +177,7 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="image.png" />
+    <Image Include="knight.png" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
