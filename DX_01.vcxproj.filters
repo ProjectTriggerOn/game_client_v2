@@ -46,6 +46,15 @@
     <ClCompile Include="sprite_anime.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="system_timer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="WICTextureLoader11.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="debug_text.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="debug_ostream.h">
@@ -75,6 +84,15 @@
     <ClInclude Include="sprite_anime.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="system_timer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="WICTextureLoader11.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="debug_text.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shader_pixel_2d.hlsl">
@@ -88,6 +106,7 @@
     <None Include="DirectXTex.inl">
       <Filter>Header Files</Filter>
     </None>
+    <None Include="ascii_texture_generator.py" />
   </ItemGroup>
   <ItemGroup>
     <Library Include="DirectXTex_Debug.lib" />
@@ -101,6 +120,9 @@
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="kokosozai.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="consolab_ascii_512.png">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>

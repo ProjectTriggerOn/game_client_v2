@@ -45,6 +45,8 @@ bool Direct3D_Initialize(HWND hWnd)
     swap_chain_desc.SampleDesc.Count = 1;
     swap_chain_desc.SampleDesc.Quality = 0;
     swap_chain_desc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+	//swap_chain_desc.SwapEffect = DXGI_SWAP_EFFECT_SEQUENTIAL;
+	//swap_chain_desc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
     swap_chain_desc.OutputWindow = hWnd;
 
 	/*
@@ -170,7 +172,7 @@ void Direct3D_Clear()
 void Direct3D_Present()
 {
 	// スワップチェーンの表示
-	g_pSwapChain->Present(1, 0);
+	g_pSwapChain->Present(1, 0);//Benchmark
 }
 
 unsigned int Direct3D_GetBackBufferWidth()

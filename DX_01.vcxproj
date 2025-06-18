@@ -138,6 +138,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="debug_ostream.cpp" />
+    <ClCompile Include="debug_text.cpp" />
     <ClCompile Include="direct3d.cpp" />
     <ClCompile Include="game_window.cpp" />
     <ClCompile Include="main.cpp" />
@@ -145,10 +146,13 @@
     <ClCompile Include="shader.cpp" />
     <ClCompile Include="sprite.cpp" />
     <ClCompile Include="sprite_anime.cpp" />
+    <ClCompile Include="system_timer.cpp" />
     <ClCompile Include="texture.cpp" />
+    <ClCompile Include="WICTextureLoader11.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="debug_ostream.h" />
+    <ClInclude Include="debug_text.h" />
     <ClInclude Include="direct3d.h" />
     <ClInclude Include="DirectXTex.h" />
     <ClInclude Include="game_window.h" />
@@ -156,7 +160,9 @@
     <ClInclude Include="shader.h" />
     <ClInclude Include="sprite.h" />
     <ClInclude Include="sprite_anime.h" />
+    <ClInclude Include="system_timer.h" />
     <ClInclude Include="texture.h" />
+    <ClInclude Include="WICTextureLoader11.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shader_pixel_2d.hlsl">
@@ -173,6 +179,7 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
+    <None Include="ascii_texture_generator.py" />
     <None Include="DirectXTex.inl" />
   </ItemGroup>
   <ItemGroup>
@@ -180,6 +187,7 @@
     <Library Include="DirectXTex_Release.lib" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="consolab_ascii_512.png" />
     <Image Include="image.png" />
     <Image Include="knight.png" />
     <Image Include="kokosozai.png" />
