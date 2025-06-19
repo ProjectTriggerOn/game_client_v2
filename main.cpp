@@ -66,6 +66,10 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 	int texid_knight= Texture_LoadFromFile(L"knight.png");
 	int texid_sozai = Texture_LoadFromFile(L"kokosozai.png");
 
+	int aid_rw = SpriteAnime_PatternRegister(texid_sozai, 13, { 32,32 }, { 0,0 });
+	int aid_lw = SpriteAnime_PatternRegister(texid_sozai, 6, { 32,32 }, { 0,32*2 });
+	int aid_tc = SpriteAnime_PatternRegister(texid_sozai, 4, { 32,32 }, { 32*2,32*5 },false);
+
 
 	ShowWindow(hWnd, nCmdShow);
 
@@ -143,12 +147,12 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 				//Sprite_Draw(texid_sozai, 700, 64.0f,450,900 ,32 * 2, 32 * 3, 32, 64);
 				//Sprite_Draw(800.0f, 60.0f, 900.0f, 900.0f);
 
-				SpriteAnime_Draw(0, 100+300, 32.0,300,300);
-				SpriteAnime_Draw(1, 400+300, 32.0, 300, 300);
-				SpriteAnime_Draw(2, 700+300, 32.0, 300, 300);
-				SpriteAnime_Draw(3, 100+300, 332, 300, 300);
-				SpriteAnime_Draw(4, 400+300, 332, 300, 300);
-				SpriteAnime_Draw(5, 700+300, 332, 300, 300);
+				SpriteAnime_Draw(aid_rw, 100+300, 32.0,300,300);
+				SpriteAnime_Draw(aid_tc, 400+300, 32.0, 300, 300);
+				SpriteAnime_Draw(aid_lw, 700+300, 32.0, 300, 300);
+				//SpriteAnime_Draw(3, 100+300, 332, 300, 300);
+				//SpriteAnime_Draw(4, 400+300, 332, 300, 300);
+				//SpriteAnime_Draw(5, 700+300, 332, 300, 300);
 #if defined(_DEBUG) || defined(DEBUG)
 				std::stringstream ss;
 				std::stringstream ssf;
