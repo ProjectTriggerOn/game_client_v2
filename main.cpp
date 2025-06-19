@@ -71,10 +71,17 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 
 	UpdateWindow(hWnd);
 
-	ULONGLONG frame_count = 0;
-	double register_time = SystemTimer_GetTime();
-	double register_time_m = SystemTimer_GetTime();
+	//ULONGLONG frame_count = 0;
+	//double register_time = SystemTimer_GetTime();
+	//double register_time_m = SystemTimer_GetTime();
+	//double fps = 0.0;
+
+	double exec_last_time = SystemTimer_GetTime();
+	double fps_last_time = exec_last_time;
+	double current_time = 0.0;
+	ULONG frame_count = 0;
 	double fps = 0.0;
+
 
 	MSG msg;
 
@@ -89,73 +96,84 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 		}
 		else {
 
-			double now  = SystemTimer_GetTime();
-			double elapsed_time = now - register_time;
-			register_time = now;
+			current_time = SystemTimer_GetTime();
+			double elapsed_time = current_time - fps_last_time;
 
-			double elapsed_time_m = now - register_time_m;
+
+			//double now  = SystemTimer_GetTime();
+			//double elapsed_time = now - register_time;
+			//register_time = now;
+
+			//double elapsed_time_m = now - register_time_m;
 			
-			if (elapsed_time_m >= 1.0)
+			if (elapsed_time >= 1.0)
 			{
-				fps = frame_count / elapsed_time_m;
+				fps = frame_count / elapsed_time;
+				fps_last_time = current_time;
 				frame_count = 0;
-				register_time_m = now;
-			}
-			
-
-			//ゲームループ処理／ゲーム更新
-			SpriteAnime_Update(elapsed_time);
-			//ゲーム描画処理
-			Direct3D_Clear();
-
-			Sprite_Begin();
-
-			static float b = 0.0f;
-			if (c % 1000==0)
-			{
-				b = b == 0.0f ? 1.0f : 0.0f; 
 			}
 
-			//Texture_Set(texid_image);
-			//Sprite_Draw(texid_image, 0.0f, 0.0f,900,900);
-			//Sprite_Draw(texid_knight, 150.0f, 150.0f, 600,600);
-			//Sprite_Draw(texid_image,0.0f, 0.0f,{b,b,0.0f,1.0f});
+			elapsed_time = current_time - exec_last_time;
 
-			//Texture_Set(texid_knight);
-			//Sprite_Draw(32.0f, 32.0f, 600.0f, 600.0f);
+			if (true){
+				exec_last_time = current_time;
 
-			Texture_Set(texid_sozai);
-			//Sprite_Draw(texid_sozai, 700, 64.0f,450,900 ,32 * 2, 32 * 3, 32, 64);
-			//Sprite_Draw(800.0f, 60.0f, 900.0f, 900.0f);
+				//ゲームループ処理／ゲーム更新
+				SpriteAnime_Update(elapsed_time);
+				//ゲーム描画処理
+				Direct3D_Clear();
 
-			SpriteAnime_Draw(0,100,32.0,300,300);
-			SpriteAnime_Draw(1, 400, 32.0, 300, 300);
-			SpriteAnime_Draw(2, 700, 32.0, 300, 300);
-			SpriteAnime_Draw(3, 100, 332, 300, 300);
-			SpriteAnime_Draw(4, 400, 332, 300, 300);
-			SpriteAnime_Draw(5, 700, 332, 300, 300);
+				Sprite_Begin();
+
+				static float b = 0.0f;
+				if (c % 1000==0)
+				{
+					b = b == 0.0f ? 1.0f : 0.0f; 
+				}
+
+				//Texture_Set(texid_image);
+				//Sprite_Draw(texid_image, 0.0f, 0.0f,900,900);
+				//Sprite_Draw(texid_knight, 150.0f, 150.0f, 600,600);
+				//Sprite_Draw(texid_image,0.0f, 0.0f,{b,b,0.0f,1.0f});
+
+				//Texture_Set(texid_knight);
+				//Sprite_Draw(32.0f, 32.0f, 600.0f, 600.0f);
+
+				Texture_Set(texid_sozai);
+				//Sprite_Draw(texid_sozai, 700, 64.0f,450,900 ,32 * 2, 32 * 3, 32, 64);
+				//Sprite_Draw(800.0f, 60.0f, 900.0f, 900.0f);
+
+				SpriteAnime_Draw(0, 100+300, 32.0,300,300);
+				SpriteAnime_Draw(1, 400+300, 32.0, 300, 300);
+				SpriteAnime_Draw(2, 700+300, 32.0, 300, 300);
+				SpriteAnime_Draw(3, 100+300, 332, 300, 300);
+				SpriteAnime_Draw(4, 400+300, 332, 300, 300);
+				SpriteAnime_Draw(5, 700+300, 332, 300, 300);
 #if defined(_DEBUG) || defined(DEBUG)
-			std::stringstream ss;
-			std::stringstream ssf;
+				std::stringstream ss;
+				std::stringstream ssf;
 
-			ss << "Frame " << frame_count << "\n";
-			ssf << "FPS: " << fps << "\n";
-			dt.SetText(ss.str().c_str(), { 1.0f, 1.0f, 1.0f, 1.0f });
-			dt.SetText(ssf.str().c_str(), { 1.0f, 1.0f, 1.0f, 1.0f });
-			dt.SetText("Hello, World!\n");
-			dt.SetText("Direct3D 11 with C++\n");
-			dt.SetText("Sprite and Texture Example\n");
-			dt.SetText("Debug Text Example\n");
-			//dt.SetText("Press any key to continue...");
+				ss << "Frame " << frame_count << "\n";
+				ssf << "FPS: " << fps << "\n";
+				dt.SetText(ss.str().c_str(), { 1.0f, 1.0f, 1.0f, 1.0f });
+				dt.SetText(ssf.str().c_str(), { 1.0f, 1.0f, 1.0f, 1.0f });
+				dt.SetText("Hello, World!\n");
+				dt.SetText("Direct3D 11 with C++\n");
+				dt.SetText("Sprite and Texture Example\n");
+				dt.SetText("Debug Text Example\n");
+				//dt.SetText("Press any key to continue...");
 
-			dt.Draw();
-			dt.Clear();
+				dt.Draw();
+				dt.Clear();
 #endif // _DEBUG || DEBUG
-			//std::this_thread::sleep_for(std::chrono::milliseconds(100));
+				//std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-			Direct3D_Present();
+				Direct3D_Present();
 
-			frame_count++;
+				frame_count++;
+			}
+
+			
 		}
 	} while (msg.message != WM_QUIT);
 

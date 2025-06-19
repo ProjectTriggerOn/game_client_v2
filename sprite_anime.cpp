@@ -77,7 +77,7 @@ void SpriteAnime_Update(double elapsed_time)
 	{
 		g_AnimePlayData[i].m_PatternNum = (g_AnimePlayData[i].m_PatternNum + 1) % 
 			g_AnimePattern[g_AnimePlayData[i].m_PatternId].m_PatternMax; // アニメーションパターンを更新
-		g_AnimePlayData[i].m_AccumulatedTime = 0.0; // 経過時間をリセット
+		g_AnimePlayData[i].m_AccumulatedTime -= 0.1; // 経過時間をリセット
 	}
 	
 	g_AnimePlayData[i].m_AccumulatedTime += elapsed_time; // 経過時間を更新
@@ -86,14 +86,15 @@ void SpriteAnime_Update(double elapsed_time)
 
 void SpriteAnime_Draw(int playid ,float x, float y, float dw, float dh)
 {
-	int i = playid;
-	Sprite_Draw(g_AnimePattern[g_AnimePlayData[i].m_PatternId].m_TextureId,
+	int anm_ptrn_id = g_AnimePlayData[playid].m_PatternId;
+	AnimePatternData* pAnmPtrnData = &g_AnimePattern[anm_ptrn_id];
+	Sprite_Draw(pAnmPtrnData-> m_TextureId,
 		x, y, dw, dh,
-		g_AnimePattern[g_AnimePlayData[i].m_PatternId].m_StartPosition.x
-		+ g_AnimePattern[g_AnimePlayData[i].m_PatternId].m_PatternSize.x
-		* g_AnimePlayData[i].m_PatternNum,
-		g_AnimePattern[g_AnimePlayData[i].m_PatternId].m_StartPosition.y,
-		g_AnimePattern[g_AnimePlayData[i].m_PatternId].m_PatternSize.x,
-		g_AnimePattern[g_AnimePlayData[i].m_PatternId].m_PatternSize.y);
+		pAnmPtrnData->m_StartPosition.x
+		+ pAnmPtrnData->m_PatternSize.x
+		* g_AnimePlayData[playid].m_PatternNum,
+		pAnmPtrnData->m_StartPosition.y,
+		pAnmPtrnData->m_PatternSize.x,
+		pAnmPtrnData->m_PatternSize.y);
 
 }

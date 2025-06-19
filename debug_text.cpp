@@ -208,7 +208,7 @@ namespace hal
 	
 			if (*pText == '\n') {
 				m_TextLines.emplace_back(); // �s�𑝂₷
-				// m_TextLines.back().strings.emplace_back(color); // �V�����������ǉ�
+				 m_TextLines.back().strings.emplace_back(color); // �V�����������ǉ�
 			}
 			else if (*pText == '\r') {
 				// ���s�R�[�h '\r' �͖���
@@ -217,7 +217,7 @@ namespace hal
 				while (m_TextLines.back().characterCount % 4 != 0) {
 					if (m_MaxCharactersPerLine && m_TextLines.back().characterCount >= m_MaxCharactersPerLine) {
 						m_TextLines.emplace_back(); // �s�𑝂₷
-						// m_TextLines.back().strings.emplace_back(color); // �V�����������ǉ�
+						 m_TextLines.back().strings.emplace_back(color); // �V�����������ǉ�
 						break;
 					}
 					m_TextLines.back().strings.back().characters += ' '; // �^�u�̓X�y�[�X�ɒu������
