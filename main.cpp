@@ -48,7 +48,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 	SpriteAnime_Initialize();
 
 	hal::DebugText dt(Direct3D_GetDevice(), Direct3D_GetDeviceContext(),
-		L"consolab_ascii_512.png",
+		L"resource/texture/consolab_ascii_512.png",
 		Direct3D_GetBackBufferWidth(),Direct3D_GetBackBufferHeight(),
 		0.0f,0.0f,
 		0,0,
@@ -56,20 +56,15 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 	);
 
 
+	int texid_image = Texture_LoadFromFile(L"resource/texture/image.png");
+	int texid_knight= Texture_LoadFromFile(L"resource/texture/knight.png");
+	int texid_sozai = Texture_LoadFromFile(L"resource/texture/kokosozai.png");
+	int texid_runningman_01 = Texture_LoadFromFile(L"resource/texture/runningman001.png");
 
-
-
-
-
-
-	int texid_image = Texture_LoadFromFile(L"image.png");
-	int texid_knight= Texture_LoadFromFile(L"knight.png");
-	int texid_sozai = Texture_LoadFromFile(L"kokosozai.png");
-
-	int aid_rw = SpriteAnime_PatternRegister(texid_sozai, 13,0.01, { 32,32 }, { 0,0 });
+	int aid_rw = SpriteAnime_PatternRegister(texid_sozai, 13,0.1, { 32,32 }, { 0,0 });
 	int aid_lw = SpriteAnime_PatternRegister(texid_sozai, 6, 0.1,{ 32,32 }, { 0,32*2 });
 	int aid_tc = SpriteAnime_PatternRegister(texid_sozai, 4,0.1, { 32,32 }, { 32*2,32*5 });
-	int aid_hd = SpriteAnime_PatternRegister(texid_sozai, 15, 0.1, { 32,32 }, {0,32 * 4 });
+	int aid_hd = SpriteAnime_PatternRegister(texid_runningman_01, 10, 0.1, { 140,200 }, {0,0},true,2);
 
 	int pid01 = SpriteAnime_CreatePlayer(aid_rw);
 	int pid02 = SpriteAnime_CreatePlayer(aid_lw);

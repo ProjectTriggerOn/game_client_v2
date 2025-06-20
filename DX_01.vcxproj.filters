@@ -113,16 +113,19 @@
     <Library Include="DirectXTex_Release.lib" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="image.png">
+    <Image Include="resource\texture\consolab_ascii_512.png">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="knight.png">
+    <Image Include="resource\texture\image.png">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="kokosozai.png">
+    <Image Include="resource\texture\knight.png">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="consolab_ascii_512.png">
+    <Image Include="resource\texture\kokosozai.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="resource\texture\runningman001.png">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>

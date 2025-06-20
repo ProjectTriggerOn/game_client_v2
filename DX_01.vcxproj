@@ -112,7 +112,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /D /Y "$(TargetDir)*.cso" "$(ProjectDir)"</Command>
+      <Command>xcopy /D /Y "$(TargetDir)*.cso" "$(ProjectDir)resource/shader"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -133,7 +133,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /D /Y "$(TargetDir)*.cso" "$(ProjectDir)"</Command>
+      <Command>xcopy /D /Y "$(TargetDir)*.cso" "$(ProjectDir)resource/shader"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -187,10 +187,11 @@
     <Library Include="DirectXTex_Release.lib" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="consolab_ascii_512.png" />
-    <Image Include="image.png" />
-    <Image Include="knight.png" />
-    <Image Include="kokosozai.png" />
+    <Image Include="resource\texture\consolab_ascii_512.png" />
+    <Image Include="resource\texture\image.png" />
+    <Image Include="resource\texture\knight.png" />
+    <Image Include="resource\texture\kokosozai.png" />
+    <Image Include="resource\texture\runningman001.png" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

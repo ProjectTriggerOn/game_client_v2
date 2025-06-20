@@ -33,7 +33,7 @@ bool Shader_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 
 
 	// ���O�R���p�C���ςݒ��_�V�F�[�_�[�̓ǂݍ���
-	std::ifstream ifs_vs("shader_vertex_2d.cso", std::ios::binary);
+	std::ifstream ifs_vs("resource/shader/shader_vertex_2d.cso", std::ios::binary);
 
 	if (!ifs_vs) {
 		MessageBox(nullptr, "���_�V�F�[�_�[�̓ǂݍ��݂Ɏ��s���܂���\n\nshader_vertex_2d.cso", "�G���[", MB_OK);
@@ -91,7 +91,7 @@ bool Shader_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 
 
 	//
-	std::ifstream ifs_ps("shader_pixel_2d.cso", std::ios::binary);
+	std::ifstream ifs_ps("resource/shader/shader_pixel_2d.cso", std::ios::binary);
 	if (!ifs_ps) {
 		MessageBox(nullptr, "�s�N�Z���V�F�[�_�[�̓ǂݍ��݂Ɏ��s���܂���\n\nshader_pixel_2d.cso", "�G���[", MB_OK);
 		return false;
