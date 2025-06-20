@@ -66,11 +66,15 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 	int texid_knight= Texture_LoadFromFile(L"knight.png");
 	int texid_sozai = Texture_LoadFromFile(L"kokosozai.png");
 
-	int aid_rw = SpriteAnime_PatternRegister(texid_sozai, 13, { 32,32 }, { 0,0 });
-	int aid_lw = SpriteAnime_PatternRegister(texid_sozai, 6, { 32,32 }, { 0,32*2 });
-	int aid_tc = SpriteAnime_PatternRegister(texid_sozai, 4, { 32,32 }, { 32*2,32*5 },false);
+	int aid_rw = SpriteAnime_PatternRegister(texid_sozai, 13,0.01, { 32,32 }, { 0,0 });
+	int aid_lw = SpriteAnime_PatternRegister(texid_sozai, 6, 0.1,{ 32,32 }, { 0,32*2 });
+	int aid_tc = SpriteAnime_PatternRegister(texid_sozai, 4,0.1, { 32,32 }, { 32*2,32*5 });
+	int aid_hd = SpriteAnime_PatternRegister(texid_sozai, 15, 0.1, { 32,32 }, {0,32 * 4 });
 
-
+	int pid01 = SpriteAnime_CreatePlayer(aid_rw);
+	int pid02 = SpriteAnime_CreatePlayer(aid_lw);
+	int pid03 = SpriteAnime_CreatePlayer(aid_tc);
+	int pid04 = SpriteAnime_CreatePlayer(aid_hd);
 	ShowWindow(hWnd, nCmdShow);
 
 	UpdateWindow(hWnd);
@@ -118,7 +122,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 			}
 
 			elapsed_time = current_time - exec_last_time;
-
+			//if (elapsed_time < 0.001) {
 			if (true){
 				exec_last_time = current_time;
 
@@ -128,12 +132,6 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 				Direct3D_Clear();
 
 				Sprite_Begin();
-
-				static float b = 0.0f;
-				if (c % 1000==0)
-				{
-					b = b == 0.0f ? 1.0f : 0.0f; 
-				}
 
 				//Texture_Set(texid_image);
 				//Sprite_Draw(texid_image, 0.0f, 0.0f,900,900);
@@ -147,9 +145,12 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 				//Sprite_Draw(texid_sozai, 700, 64.0f,450,900 ,32 * 2, 32 * 3, 32, 64);
 				//Sprite_Draw(800.0f, 60.0f, 900.0f, 900.0f);
 
-				SpriteAnime_Draw(aid_rw, 100+300, 32.0,300,300);
-				SpriteAnime_Draw(aid_tc, 400+300, 32.0, 300, 300);
-				SpriteAnime_Draw(aid_lw, 700+300, 32.0, 300, 300);
+				SpriteAnime_Draw(pid01, 100+300, 32.0,300,300);
+				SpriteAnime_Draw(pid02, 400+300, 32.0, 300, 300);
+				SpriteAnime_Draw(pid03, 700+300, 32.0, 300, 300);
+				SpriteAnime_Draw(pid04, 100 + 300, 364, 300, 300);
+
+				//SpriteAnime_Draw(aid_lw, 700 + 300, 332, 300, 300);
 				//SpriteAnime_Draw(3, 100+300, 332, 300, 300);
 				//SpriteAnime_Draw(4, 400+300, 332, 300, 300);
 				//SpriteAnime_Draw(5, 700+300, 332, 300, 300);
@@ -193,6 +194,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 	Shader_Finalize();
 
 	Direct3D_Finalize();
+
 	return (int)msg.wParam;
 
 }
