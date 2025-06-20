@@ -85,9 +85,9 @@ void SpriteAnime_Update(double elapsed_time)
 		Sprite_Draw(pAnmPtrnData->m_TextureId,
 			x, y, dw, dh,
 			pAnmPtrnData->m_StartPosition.x + pAnmPtrnData->m_PatternSize.x 
-			* (g_AnimePlayData[playid].m_PatternNum / pAnmPtrnData->m_PatternCol),
-			pAnmPtrnData->m_StartPosition.y + pAnmPtrnData->m_PatternSize.y 
 			* (g_AnimePlayData[playid].m_PatternNum % pAnmPtrnData->m_PatternCol),
+			pAnmPtrnData->m_StartPosition.y + pAnmPtrnData->m_PatternSize.y 
+			* (g_AnimePlayData[playid].m_PatternNum / pAnmPtrnData->m_PatternCol),
 			pAnmPtrnData->m_PatternSize.x,
 			pAnmPtrnData->m_PatternSize.y);
 

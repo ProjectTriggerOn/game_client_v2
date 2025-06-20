@@ -61,10 +61,10 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 	int texid_sozai = Texture_LoadFromFile(L"resource/texture/kokosozai.png");
 	int texid_runningman_01 = Texture_LoadFromFile(L"resource/texture/runningman001.png");
 
-	int aid_rw = SpriteAnime_PatternRegister(texid_sozai, 13,0.1, { 32,32 }, { 0,0 });
-	int aid_lw = SpriteAnime_PatternRegister(texid_sozai, 6, 0.1,{ 32,32 }, { 0,32*2 });
-	int aid_tc = SpriteAnime_PatternRegister(texid_sozai, 4,0.1, { 32,32 }, { 32*2,32*5 });
-	int aid_hd = SpriteAnime_PatternRegister(texid_runningman_01, 10, 0.1, { 140,200 }, {0,0},true,2);
+	int aid_rw = SpriteAnime_PatternRegister(texid_sozai, 13,0.1, { 32,32 }, { 0,0 },true,13);
+	int aid_lw = SpriteAnime_PatternRegister(texid_sozai, 6, 0.1,{ 32,32 }, { 0,32*2 },true, 6);
+	int aid_tc = SpriteAnime_PatternRegister(texid_sozai, 4,0.1, { 32,32 }, { 32*2,32*5 },true, 4);
+	int aid_hd = SpriteAnime_PatternRegister(texid_runningman_01, 10, 0.2, { 140,200 }, {0,0},true,5);
 
 	int pid01 = SpriteAnime_CreatePlayer(aid_rw);
 	int pid02 = SpriteAnime_CreatePlayer(aid_lw);
