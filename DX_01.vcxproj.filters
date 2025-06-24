@@ -128,5 +128,8 @@
     <Image Include="resource\texture\runningman001.png">
       <Filter>Resource Files</Filter>
     </Image>
+    <Image Include="resource\texture\black.png">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
 </Project>

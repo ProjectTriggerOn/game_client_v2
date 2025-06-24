@@ -7,7 +7,7 @@ using namespace DirectX;
 #include "debug_ostream.h"
 
 
-static constexpr int NUM_VERTEX = 4; // 頂点数
+//static constexpr int NUM_VERTEX = 4; // 頂点数
 
 
 
@@ -18,6 +18,12 @@ static ID3D11ShaderResourceView* g_pTexture = nullptr;
 static ID3D11Device* g_pDevice = nullptr;
 static ID3D11DeviceContext* g_pContext = nullptr;
 
+static int g_NumVertex = 0;
+
+static float g_Radius = 100.0f; // 円の半径
+
+static float g_Cx = 900.0f; // 円の中心X座標
+static float g_Cy = 500.0f; // 円の中心Y座標
 
 // 頂点構造体
 struct Vertex
@@ -40,25 +46,18 @@ void Polygon_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 	g_pDevice = pDevice;
 	g_pContext = pContext;
 
+	g_NumVertex = g_Radius * 2.0f * DirectX::XM_PI;
+
 	// 頂点バッファ生成
 	D3D11_BUFFER_DESC bd = {};
 	bd.Usage = D3D11_USAGE_DYNAMIC;
-	bd.ByteWidth = sizeof(Vertex) * NUM_VERTEX;
+	bd.ByteWidth = sizeof(Vertex) * g_NumVertex;
 	bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
 	g_pDevice->CreateBuffer(&bd, NULL, &g_pVertexBuffer);
 
-	TexMetadata metadata;
-	ScratchImage image;
 
-	LoadFromWICFile(L"knight.png", WIC_FLAGS_NONE, &metadata, image);
-	HRESULT hr = CreateShaderResourceView(g_pDevice,
-		image.GetImages(), image.GetImageCount(), metadata, &g_pTexture);
-
-	if (FAILED(hr)) {
-		MessageBox(nullptr, "テクスチャの読み込みに失敗しました", "エラー", MB_OK | MB_ICONERROR);
-	}
 }
 
 void Polygon_Finalize(void)
@@ -83,28 +82,15 @@ void Polygon_Draw(void)
 	const float SCREEN_WIDTH = (float)Direct3D_GetBackBufferWidth();
 	const float SCREEN_HEIGHT = (float)Direct3D_GetBackBufferHeight();
 
-	constexpr float x = 32.0f;
-	constexpr float y = 32.0f;
-	constexpr float w = 512.0f;
-	constexpr float h = 512.0f;
-
-
-
-	// 画面の左上から右下に向かう線分を描画する
-	v[0].position = { x  ,y  , 0.0f };
-	v[1].position = { x + w,y  , 0.0f };
-	v[2].position = { x  ,y + h, 0.0f };
-	v[3].position = { x + w,y + h, 0.0f };
-
-	v[0].color = { 1.0f, 1.0f, 1.0f, 1.0f };
-	v[1].color = { 1.0f, 1.0f, 1.0f, 1.0f };
-	v[2].color = { 1.0f, 1.0f, 1.0f, 1.0f };
-	v[3].color = { 1.0f, 1.0f, 1.0f, 1.0f };
-
-	v[0].uv = { 0.0f , 0.0f };
-	v[1].uv = { 1.0f , 0.0f };
-	v[2].uv = { 0.0f , 1.0f };
-	v[3].uv = { 1.0f , 1.0f };
+	const float rad = 2.0f* DirectX::XM_PI / (float)g_NumVertex; // 1頂点あたりの角度
+	//float rad = 0.01f;
+	for (int i = 0; i < g_NumVertex; ++i) {
+		float angle = rad * i; // 現在の角度
+		v[i].position = { g_Cx + g_Radius * cosf(angle), g_Cy + g_Radius * sinf(angle), 0.0f };
+		v[i].color = { 0.1f, 0.1f, 0.1f, 1.0f }; 
+		v[i].uv = { 0.0f,0.0f };
+		//v[i].uv = { (v[i].position.x / SCREEN_WIDTH) * 2.0f - 1.0f, (v[i].position.y / SCREEN_HEIGHT) * 2.0f - 1.0f }; // UV座標変換
+	}
 
 	// 頂点バッファのロックを解除
 	g_pContext->Unmap(g_pVertexBuffer, 0);
@@ -117,11 +103,12 @@ void Polygon_Draw(void)
 	// 頂点シェーダーに変換行列を設定
 	Shader_SetMatrix(XMMatrixOrthographicOffCenterLH(0.0f, SCREEN_WIDTH, SCREEN_HEIGHT, 0.0f, 0.0f, 1.0f));
 
-	// プリミティブトポロジ設定
-	g_pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
-	g_pContext->PSSetShaderResources(0, 1, &g_pTexture);
+	// プリミティブトポロジ設定
+	g_pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_POINTLIST);
+
+	//g_pContext->PSSetShaderResources(0, 1, &g_pTexture);
 
 	// ポリゴン描画命令発行
-	g_pContext->Draw(NUM_VERTEX, 0);
+	g_pContext->Draw(g_NumVertex, 0);
 }

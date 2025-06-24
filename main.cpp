@@ -24,6 +24,8 @@
 
 #include <sstream>
 
+#include "polygon.h"
+
 
 //Window procedure prototype claim
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
@@ -41,7 +43,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 	Shader_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
 
 	Texture_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
-
+	Polygon_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
 
 	Sprite_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
 
@@ -60,6 +62,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 	int texid_knight= Texture_LoadFromFile(L"resource/texture/knight.png");
 	int texid_sozai = Texture_LoadFromFile(L"resource/texture/kokosozai.png");
 	int texid_runningman_01 = Texture_LoadFromFile(L"resource/texture/runningman001.png");
+	int texid_black = Texture_LoadFromFile(L"resource/texture/black.png");
 
 	int aid_rw = SpriteAnime_PatternRegister(texid_sozai, 13,0.1, { 32,32 }, { 0,0 },true,13);
 	int aid_lw = SpriteAnime_PatternRegister(texid_sozai, 6, 0.1,{ 32,32 }, { 0,32*2 },true, 6);
@@ -78,13 +81,13 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 	//double register_time = SystemTimer_GetTime();
 	//double register_time_m = SystemTimer_GetTime();
 	//double fps = 0.0;
-
+	
 	double exec_last_time = SystemTimer_GetTime();
 	double fps_last_time = exec_last_time;
 	double current_time = 0.0;
 	ULONG frame_count = 0;
 	double fps = 0.0;
-
+	double angle = 0.0f;
 
 	MSG msg;
 
@@ -101,8 +104,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 
 			current_time = SystemTimer_GetTime();
 			double elapsed_time = current_time - fps_last_time;
-
-
+			
 			//double now  = SystemTimer_GetTime();
 			//double elapsed_time = now - register_time;
 			//register_time = now;
@@ -128,27 +130,22 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 
 				Sprite_Begin();
 
-				//Texture_Set(texid_image);
-				//Sprite_Draw(texid_image, 0.0f, 0.0f,900,900);
-				//Sprite_Draw(texid_knight, 150.0f, 150.0f, 600,600);
-				//Sprite_Draw(texid_image,0.0f, 0.0f,{b,b,0.0f,1.0f});
+				float ky = sinf(angle) * 50.0f + 64.0f;
+				angle += 6.0f * elapsed_time;
+				Sprite_Draw(texid_knight, 256.0f, ky, 256.0f, 256.0f, 0, 0, 1024, 1024);
 
-				//Texture_Set(texid_knight);
-				//Sprite_Draw(32.0f, 32.0f, 600.0f, 600.0f);
 
-				Texture_Set(texid_sozai);
-				//Sprite_Draw(texid_sozai, 700, 64.0f,450,900 ,32 * 2, 32 * 3, 32, 64);
-				//Sprite_Draw(800.0f, 60.0f, 900.0f, 900.0f);
+				
 
-				SpriteAnime_Draw(pid01, 100+300, 32.0,300,300);
-				SpriteAnime_Draw(pid02, 400+300, 32.0, 300, 300);
-				SpriteAnime_Draw(pid03, 700+300, 32.0, 300, 300);
-				SpriteAnime_Draw(pid04, 100 + 300, 364, 300, 300);
+				//Polygon_Draw();
 
-				//SpriteAnime_Draw(aid_lw, 700 + 300, 332, 300, 300);
-				//SpriteAnime_Draw(3, 100+300, 332, 300, 300);
-				//SpriteAnime_Draw(4, 400+300, 332, 300, 300);
-				//SpriteAnime_Draw(5, 700+300, 332, 300, 300);
+				SpriteAnime_Draw(pid01, 400, 32.0,300,300);
+				SpriteAnime_Draw(pid02, 700, 32.0, 300, 300);
+				SpriteAnime_Draw(pid03, 1000, 32.0, 300, 300);
+				SpriteAnime_Draw(pid04, 400, 364, 280, 400);
+				Texture_Set(texid_black);
+				Polygon_Draw();
+
 #if defined(_DEBUG) || defined(DEBUG)
 				std::stringstream ss;
 				std::stringstream ssf;
@@ -167,6 +164,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 				dt.Clear();
 #endif // _DEBUG || DEBUG
 				//std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+				//Polygon_Draw();
 
 				Direct3D_Present();
 
@@ -187,6 +186,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 	Texture_AllRelease();
 
 	Shader_Finalize();
+
+	Polygon_Finalize();
 
 	Direct3D_Finalize();
 

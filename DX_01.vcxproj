@@ -187,6 +187,7 @@
     <Library Include="DirectXTex_Release.lib" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="resource\texture\black.png" />
     <Image Include="resource\texture\consolab_ascii_512.png" />
     <Image Include="resource\texture\image.png" />
     <Image Include="resource\texture\knight.png" />
