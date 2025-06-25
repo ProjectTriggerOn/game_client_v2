@@ -26,6 +26,8 @@
 
 #include "polygon.h"
 
+#include "DirectXMath.h"
+
 
 //Window procedure prototype claim
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
@@ -88,6 +90,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 	ULONG frame_count = 0;
 	double fps = 0.0;
 	double angle = 0.0f;
+	float angle2 = 0.0f;
 
 	MSG msg;
 
@@ -133,6 +136,9 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 				float ky = sinf(angle) * 50.0f + 64.0f;
 				angle += 6.0f * elapsed_time;
 				Sprite_Draw(texid_knight, 256.0f, ky, 256.0f, 256.0f, 0, 0, 1024, 1024);
+				
+				angle2 += DirectX::XM_2PI * elapsed_time;
+				Sprite_Draw(texid_sozai, 256, 256, 256.0f, 256.0f, 0, 0, 32, 32,angle2);
 
 
 				

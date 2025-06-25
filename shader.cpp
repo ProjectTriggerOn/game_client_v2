@@ -4,11 +4,12 @@ using namespace DirectX;
 #include "direct3d.h"
 #include "debug_ostream.h"
 #include <fstream>
+#include "shader.h"
 
 
 static ID3D11VertexShader* g_pVertexShader = nullptr;
 static ID3D11InputLayout* g_pInputLayout = nullptr;
-static ID3D11Buffer* g_pVSConstantBuffer = nullptr;
+static ID3D11Buffer* g_pVSConstantBuffer0 = nullptr;static ID3D11Buffer* g_pVSConstantBuffer1 = nullptr;
 static ID3D11PixelShader* g_pPixelShader = nullptr;
 static ID3D11SamplerState* g_pSamplerState = nullptr;
 
@@ -87,7 +88,8 @@ bool Shader_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 	buffer_desc.ByteWidth = sizeof(XMFLOAT4X4); // �o�b�t�@�̃T�C�Y
 	buffer_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER; // �o�C���h�t���O
 
-	g_pDevice->CreateBuffer(&buffer_desc, nullptr, &g_pVSConstantBuffer);
+	g_pDevice->CreateBuffer(&buffer_desc, nullptr, &g_pVSConstantBuffer0);
+	g_pDevice->CreateBuffer(&buffer_desc, nullptr, &g_pVSConstantBuffer1);
 
 
 	//
@@ -142,7 +144,8 @@ void Shader_Finalize()
 {
 	SAFE_RELEASE(g_pSamplerState);
 	SAFE_RELEASE(g_pPixelShader);
-	SAFE_RELEASE(g_pVSConstantBuffer);
+	SAFE_RELEASE(g_pVSConstantBuffer0);
+	SAFE_RELEASE(g_pVSConstantBuffer1);
 	SAFE_RELEASE(g_pInputLayout);
 	SAFE_RELEASE(g_pVertexShader);
 }
@@ -156,7 +159,33 @@ void Shader_SetMatrix(const DirectX::XMMATRIX& matrix)
 	XMStoreFloat4x4(&transpose, XMMatrixTranspose(matrix));
 
 	//
-	g_pContext->UpdateSubresource(g_pVSConstantBuffer, 0, nullptr, &transpose, 0, 0);
+	g_pContext->UpdateSubresource(g_pVSConstantBuffer0, 0, nullptr, &transpose, 0, 0);
+}
+
+void Shader_SetWorldMatrix(const DirectX::XMMATRIX& matrix)
+{
+	//
+	XMFLOAT4X4 transpose;
+
+	//
+	XMStoreFloat4x4(&transpose, XMMatrixTranspose(matrix));
+
+	//
+	g_pContext->UpdateSubresource(g_pVSConstantBuffer1, 0, nullptr, &transpose, 0, 0);
+
+}
+
+void Shader_SetProjectMatrix(const DirectX::XMMATRIX& matrix)
+{
+	//
+	XMFLOAT4X4 transpose;
+
+	//
+	XMStoreFloat4x4(&transpose, XMMatrixTranspose(matrix));
+
+	//
+	g_pContext->UpdateSubresource(g_pVSConstantBuffer0, 0, nullptr, &transpose, 0, 0);
+
 }
 
 void Shader_Begin()
@@ -169,7 +198,8 @@ void Shader_Begin()
 	g_pContext->IASetInputLayout(g_pInputLayout);
 
 	//定数バッファを描画パイプラインに設定
-	g_pContext->VSSetConstantBuffers(0, 1, &g_pVSConstantBuffer);
+	g_pContext->VSSetConstantBuffers(0, 1, &g_pVSConstantBuffer0);
+	g_pContext->VSSetConstantBuffers(1, 1, &g_pVSConstantBuffer1);
 
 	//サンプラーステートを描画パイプラインに設定
 	g_pContext->PSSetSamplers(0, 1, &g_pSamplerState);
