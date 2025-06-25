@@ -27,6 +27,7 @@ struct VS_OUT
 VS_OUT main(VS_IN vi)
 {
     VS_OUT vo;
+    
     vi.posL = mul(vi.posL, world);
     vo.posH  = mul(vi.posL, proj); // ローカル座標を変換
     vo.color = vi.color; // 色をそのまま渡す
