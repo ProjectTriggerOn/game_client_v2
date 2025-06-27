@@ -1,6 +1,9 @@
 
 #include <algorithm>
 #include "game_window.h"
+
+#include "keyboard.h"
+#include "mouse.h"
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 
@@ -50,7 +53,7 @@ HWND GameWindow_Generate(HINSTANCE hInstance)
 		WINDOW_CLASS,
 		TITLE,
 		WINDOW_STYLE,
-		//		WS_OVERLAPPEDWINDOW ^WS_THICKFRAME,
+		//WS_OVERLAPPEDWINDOW ^WS_THICKFRAME,
 		WINDOW_X,
 		WINDOW_Y,
 		WINDOW_WIDTH,
@@ -66,10 +69,34 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	switch (message)
 	{
-	case WM_KEYDOWN:
+
+	case WM_ACTIVATEAPP:
+		Keyboard_ProcessMessage(message, wParam, lParam);
+		Mouse_ProcessMessage(message, wParam, lParam);
+		break;
+	case WM_INPUT:
+	case WM_MOUSEMOVE:
+	case WM_LBUTTONDOWN:
+	case WM_LBUTTONUP:
+	case WM_RBUTTONDOWN:
+	case WM_RBUTTONUP:
+	case WM_MBUTTONDOWN:
+	case WM_MBUTTONUP:
+	case WM_MOUSEWHEEL:
+	case WM_XBUTTONDOWN:
+	case WM_XBUTTONUP:
+	case WM_MOUSEHOVER:
+	         Mouse_ProcessMessage(message, wParam, lParam);
+	         break;
+    case WM_KEYDOWN:
 		if (wParam == VK_ESCAPE) {
 			SendMessage(hWnd, WM_CLOSE, 0, 0);
 		}
+     case WM_SYSKEYDOWN:
+     case WM_KEYUP:
+     case WM_SYSKEYUP:
+         Keyboard_ProcessMessage(message, wParam, lParam);
+        break;
 	case WM_CLOSE:
 		if (MessageBox(hWnd, "exit?", "Over", MB_OKCANCEL | MB_ICONQUESTION | MB_DEFBUTTON2) == IDOK) {
 			DestroyWindow(hWnd);

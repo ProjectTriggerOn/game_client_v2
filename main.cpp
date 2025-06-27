@@ -27,6 +27,11 @@
 #include "polygon.h"
 
 #include "DirectXMath.h"
+#include "key_logger.h"
+#include "mouse.h"
+
+#include <Xinput.h>
+#pragma comment(lib, "xinput.lib")
 
 
 //Window procedure prototype claim
@@ -42,9 +47,14 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 
 	Direct3D_Initialize(hWnd);
 
+	KeyLogger_Initialize();
+
+	Mouse_Initialize(hWnd);
+
 	Shader_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
 
 	Texture_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
+
 	Polygon_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
 
 	Sprite_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
@@ -67,13 +77,15 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 	int texid_black = Texture_LoadFromFile(L"resource/texture/black.png");
 
 	int aid_rw = SpriteAnime_PatternRegister(texid_sozai, 13,0.1, { 32,32 }, { 0,0 },true,13);
-	int aid_lw = SpriteAnime_PatternRegister(texid_sozai, 6, 0.1,{ 32,32 }, { 0,32*2 },true, 6);
+	int aid_lw = SpriteAnime_PatternRegister(texid_sozai, 13, 0.1, { 32,32 }, { 0,32 }, true, 13);
+	int aid_bw = SpriteAnime_PatternRegister(texid_sozai, 6, 0.1,{ 32,32 }, { 0,32*2 },true, 6);
 	int aid_tc = SpriteAnime_PatternRegister(texid_sozai, 4,0.1, { 32,32 }, { 32*2,32*5 },true, 4);
+	int aid_idle = SpriteAnime_PatternRegister(texid_sozai, 15,0.1, { 32,32 }, { 32*0,32*4 },true, 15);
 	int aid_hd = SpriteAnime_PatternRegister(texid_runningman_01, 10, 0.2, { 140,200 }, {0,0},true,5);
 
 	int pid01 = SpriteAnime_CreatePlayer(aid_rw);
 	int pid02 = SpriteAnime_CreatePlayer(aid_lw);
-	int pid03 = SpriteAnime_CreatePlayer(aid_tc);
+	int pid03 = SpriteAnime_CreatePlayer(aid_idle);
 	int pid04 = SpriteAnime_CreatePlayer(aid_hd);
 	ShowWindow(hWnd, nCmdShow);
 
@@ -91,11 +103,13 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 	double fps = 0.0;
 	double angle = 0.0f;
 	float angle2 = 0.0f;
+	float x = 0.0f;
+	float y = 0.0f;
+	int texid = pid01;
+	Mouse_SetVisible(false);
 
 	MSG msg;
 
-	float x = 0.0f;
-	int c = 0.0f;
 
 	do{
 		if (PeekMessage(&msg,nullptr,0,0,PM_REMOVE))
@@ -126,8 +140,14 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 			if (true){
 				exec_last_time = current_time;
 
+
 				//ゲームループ処理／ゲーム更新
+				KeyLogger_Update();
+				Mouse_State ms{};
+				Mouse_GetState(&ms);
 				SpriteAnime_Update(elapsed_time);
+
+
 				//ゲーム描画処理
 				Direct3D_Clear();
 
@@ -138,16 +158,79 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 				Sprite_Draw(texid_knight, 256.0f, ky, 256.0f, 256.0f, 0, 0, 1024, 1024);
 				
 				angle2 += DirectX::XM_2PI * elapsed_time;
-				Sprite_Draw(texid_sozai, 256, 256, 256.0f, 256.0f, 0, 0, 32, 32,angle2);
+				//Sprite_Draw(texid_sozai, x, y, 256.0f, 256.0f, 0, 0, 32, 32,angle2);
 
+				SpriteAnime_Draw(texid, x, y, 300, 300);
+
+				XINPUT_STATE xs{};
+				XINPUT_KEYSTROKE xks{};
+
+				XInputGetState(0, &xs);
+				XInputGetKeystroke(0, 0, &xks);
+
+				XINPUT_VIBRATION xv{};
+
+				float Speed = 200.0f;
 
 				
+
+
+				float delta_x = (float)xs.Gamepad.sThumbLX * 0.01f * elapsed_time;
+
+				if (delta_x >=0)
+				{
+					x += delta_x ;
+					texid = pid01; // 右
+				}
+				else
+				{
+					x += delta_x;
+					texid = pid02; // 左
+				}
+				
+				
+				
+				
+
+				y -= (float)xs.Gamepad.sThumbLY * 0.01f * elapsed_time;
+
+
+				if (xs.Gamepad.wButtons & XINPUT_GAMEPAD_A)
+				{
+					xv.wLeftMotorSpeed = 65535;
+					xv.wRightMotorSpeed = 65535;
+					XInputSetState(0, &xv);
+				}
+				else
+				{
+					xv.wLeftMotorSpeed = 0;
+					xv.wRightMotorSpeed = 0;
+					XInputSetState(0, &xv);
+				}
+
+
+				if (KeyLogger_IsPressed(KK_D))
+				{
+					x += static_cast<float>(Speed * elapsed_time);
+				}if (KeyLogger_IsTrigger(KK_W))
+				{
+					y -= static_cast<float>(Speed * elapsed_time);
+				}
+				if (KeyLogger_IsReleased(KK_A))
+				{
+					x -= static_cast<float>(Speed * elapsed_time);
+				}
+				if (KeyLogger_IsPressed(KK_S))
+				{
+					y += static_cast<float>(Speed * elapsed_time);
+				}
 
 				//Polygon_Draw();
 
 				SpriteAnime_Draw(pid01, 400, 32.0,300,300);
 				SpriteAnime_Draw(pid02, 700, 32.0, 300, 300);
-				SpriteAnime_Draw(pid03, 1000, 32.0, 300, 300);
+
+				SpriteAnime_Draw(pid03, ms.x, ms.y, 300, 300);
 				SpriteAnime_Draw(pid04, 400, 364, 280, 400);
 				Texture_Set(texid_black);
 				Polygon_Draw();
@@ -196,6 +279,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 	Polygon_Finalize();
 
 	Direct3D_Finalize();
+
+	Mouse_Finalize();
 
 	return (int)msg.wParam;
 
