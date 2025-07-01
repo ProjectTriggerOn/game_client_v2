@@ -8,24 +8,15 @@
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #include "direct3d.h"
-
 #include "sprite.h"
 #include "shader.h"
 #include "sprite_anime.h"
-
 #include "debug_text.h"
-
 #include "texture.h"
-
-#include <chrono>
 #include <thread>
-
 #include "system_timer.h"
-
 #include <sstream>
-
 #include "polygon.h"
-
 #include "DirectXMath.h"
 #include "key_logger.h"
 #include "mouse.h"
@@ -109,8 +100,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 			}
 
 			elapsed_time = current_time - exec_last_time;
-			//if (elapsed_time < 0.001) {
-			if (true){
+			if (elapsed_time >= (1.0/60.0)) {
+			//if (true){
 				exec_last_time = current_time;
 
 
@@ -126,6 +117,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 				Direct3D_Clear();
 
 				Sprite_Begin();
+
+
 
 				Game_Draw();
 

@@ -3,6 +3,8 @@
 #include "texture.h"
 #include "keyboard.h"
 #include "key_logger.h"
+#include "bullet.h"
+#include "direct3d.h"
 
 using namespace DirectX;
 
@@ -16,7 +18,7 @@ void Player_Initialize(const XMFLOAT2& position)
 {
 	g_PlayerPosition = position; // プレイヤーの初期位置を設定
 	g_PlayerVelocity = { 0.0f, 0.0f }; // プレイヤーの初期速度を設定
-	g_PlayerTextureId = Texture_LoadFromFile(L"resource/texture/kokosozai.png"); // プレイヤーのテクスチャを読み込む
+	g_PlayerTextureId = Texture_LoadFromFile(L"resource/texture/p1.png"); // プレイヤーのテクスチャを読み込む
 
 }
 
@@ -43,24 +45,48 @@ void Player_Update(double elapsed_time)
 		direction += {1.0f, 0.0f}; // 右方向に速度を加える
 	}
 
+	
+
 	direction = XMVector2Normalize(direction); // 方向ベクトルを正規化
 
-	velocity += direction * 200.0f * static_cast<float>(elapsed_time); // 速度を更新
+	//velocity += direction * 1.0;
 
+	//position += velocity;
+	//velocity *= 0.9f; // 速度を減衰させる
 
+	velocity += direction * 6000000.0f/50000.0f * static_cast<float>(elapsed_time); // 速度を更新
 
 	position += velocity;
 
-	velocity *= 0.9f;
+	velocity += -velocity * 4.0f * elapsed_time;
+
+
 
 	XMStoreFloat2(&g_PlayerPosition, position); // 更新された位置を XMFLOAT2 に変換して保存
 	XMStoreFloat2(&g_PlayerVelocity, velocity); // 更新された速度を XMFLOAT2 に変換して保存
+
+
+	g_PlayerPosition.x = std::max(0.0f, g_PlayerPosition.x);
+
+	g_PlayerPosition.x = std::min(Direct3D_GetBackBufferWidth() - 64.0f, g_PlayerPosition.x);
+
+	g_PlayerPosition.y = std::max(0.0f, g_PlayerPosition.y);
+
+	g_PlayerPosition.y = std::min(Direct3D_GetBackBufferHeight() - 64.0f, g_PlayerPosition.y);
+
+	if (KeyLogger_IsTrigger(KK_SPACE))
+	{
+		Bullet_Spawn({g_PlayerPosition.x+46,g_PlayerPosition.y}); // スペースキーが押されたら弾を発射
+		Bullet_Spawn({ g_PlayerPosition.x+12,g_PlayerPosition.y }); 
+	}
+
+
 }
 
 void Player_Draw()
 {
 	Sprite_Draw(g_PlayerTextureId, g_PlayerPosition.x, g_PlayerPosition.y,
-		64.0f, 64.0f, 0,0,32,32); 
+		64.0f, 64.0f, 0,0,64,64); 
 }
 
 void Player_Finalize()

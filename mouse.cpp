@@ -69,10 +69,10 @@ void Mouse_Initialize(HWND window)
 
 void Mouse_Finalize(void)
 {
-    SAFE_CLOSEHANDLE(gScrollWheelValue);
-    SAFE_CLOSEHANDLE(gRelativeRead);
-    SAFE_CLOSEHANDLE(gAbsoluteMode);
-    SAFE_CLOSEHANDLE(gRelativeMode);
+    SAFE_CLOSEHANDLE(gScrollWheelValue)
+    SAFE_CLOSEHANDLE(gRelativeRead)
+    SAFE_CLOSEHANDLE(gAbsoluteMode)
+    SAFE_CLOSEHANDLE(gRelativeMode)
 }
 
 void Mouse_GetState(Mouse_State* pState)

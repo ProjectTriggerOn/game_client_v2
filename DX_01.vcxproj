@@ -137,6 +137,7 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="bullet.cpp" />
     <ClCompile Include="debug_ostream.cpp" />
     <ClCompile Include="debug_text.cpp" />
     <ClCompile Include="direct3d.cpp" />
@@ -156,6 +157,7 @@
     <ClCompile Include="WICTextureLoader11.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="bullet.h" />
     <ClInclude Include="debug_ostream.h" />
     <ClInclude Include="debug_text.h" />
     <ClInclude Include="direct3d.h" />
@@ -197,11 +199,14 @@
     <Library Include="DirectXTex_Release.lib" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="resource\texture\bg.png" />
     <Image Include="resource\texture\black.png" />
     <Image Include="resource\texture\consolab_ascii_512.png" />
     <Image Include="resource\texture\image.png" />
     <Image Include="resource\texture\knight.png" />
     <Image Include="resource\texture\kokosozai.png" />
+    <Image Include="resource\texture\laser.png" />
+    <Image Include="resource\texture\p1.png" />
     <Image Include="resource\texture\runningman001.png" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

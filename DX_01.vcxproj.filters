@@ -70,6 +70,9 @@
     <ClCompile Include="player.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="bullet.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="debug_ostream.h">
@@ -123,6 +126,9 @@
     <ClInclude Include="player.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="bullet.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shader_pixel_2d.hlsl">
@@ -159,6 +165,15 @@
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="resource\texture\black.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="resource\texture\p1.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="resource\texture\bg.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="resource\texture\laser.png">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>
