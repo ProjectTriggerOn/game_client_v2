@@ -3,7 +3,7 @@
 #include <DirectXMath.h>
 
 
-void Bullet_Initialize(const DirectX::XMFLOAT2& position);
+void Bullet_Initialize();
 	 
 void Bullet_Update(double elapsed_time);
 	 

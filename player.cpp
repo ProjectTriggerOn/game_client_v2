@@ -12,8 +12,6 @@ static XMFLOAT2 g_PlayerPosition{}; // プレイヤーの位置
 static XMFLOAT2 g_PlayerVelocity{}; // プレイヤーの速度
 static int g_PlayerTextureId = -1;
 
-
-
 void Player_Initialize(const XMFLOAT2& position)
 {
 	g_PlayerPosition = position; // プレイヤーの初期位置を設定
@@ -45,22 +43,13 @@ void Player_Update(double elapsed_time)
 		direction += {1.0f, 0.0f}; // 右方向に速度を加える
 	}
 
-	
-
 	direction = XMVector2Normalize(direction); // 方向ベクトルを正規化
-
-	//velocity += direction * 1.0;
-
-	//position += velocity;
-	//velocity *= 0.9f; // 速度を減衰させる
 
 	velocity += direction * 6000000.0f/50000.0f * static_cast<float>(elapsed_time); // 速度を更新
 
 	position += velocity;
 
 	velocity += -velocity * 4.0f * elapsed_time;
-
-
 
 	XMStoreFloat2(&g_PlayerPosition, position); // 更新された位置を XMFLOAT2 に変換して保存
 	XMStoreFloat2(&g_PlayerVelocity, velocity); // 更新された速度を XMFLOAT2 に変換して保存
@@ -79,8 +68,6 @@ void Player_Update(double elapsed_time)
 		Bullet_Spawn({g_PlayerPosition.x+46,g_PlayerPosition.y}); // スペースキーが押されたら弾を発射
 		Bullet_Spawn({ g_PlayerPosition.x+12,g_PlayerPosition.y }); 
 	}
-
-
 }
 
 void Player_Draw()

@@ -21,7 +21,8 @@ static Bullet g_Bullets[MAX_BULLETS]{}; // 弾の配列
 
 static int g_BulletId = -1;
 
-void Bullet_Initialize(const XMFLOAT2& position)
+
+void Bullet_Initialize()
 {
 	for (Bullet& b : g_Bullets)
 	{

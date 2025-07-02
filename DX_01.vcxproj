@@ -141,6 +141,9 @@
     <ClCompile Include="debug_ostream.cpp" />
     <ClCompile Include="debug_text.cpp" />
     <ClCompile Include="direct3d.cpp" />
+    <ClCompile Include="enemy.cpp" />
+    <ClCompile Include="enemy.h" />
+    <ClCompile Include="enemy_spawner.cpp" />
     <ClCompile Include="game.cpp" />
     <ClCompile Include="game_window.cpp" />
     <ClCompile Include="keyboard.cpp" />
@@ -162,6 +165,7 @@
     <ClInclude Include="debug_text.h" />
     <ClInclude Include="direct3d.h" />
     <ClInclude Include="DirectXTex.h" />
+    <ClInclude Include="enemy_spawner.h" />
     <ClInclude Include="game.h" />
     <ClInclude Include="game_window.h" />
     <ClInclude Include="keyboard.h" />
@@ -202,6 +206,8 @@
     <Image Include="resource\texture\bg.png" />
     <Image Include="resource\texture\black.png" />
     <Image Include="resource\texture\consolab_ascii_512.png" />
+    <Image Include="resource\texture\Enemy01.png" />
+    <Image Include="resource\texture\Enemy02.png" />
     <Image Include="resource\texture\image.png" />
     <Image Include="resource\texture\knight.png" />
     <Image Include="resource\texture\kokosozai.png" />

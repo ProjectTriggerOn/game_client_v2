@@ -73,6 +73,15 @@
     <ClCompile Include="bullet.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="enemy.h">
+      <Filter>Header Files</Filter>
+    </ClCompile>
+    <ClCompile Include="enemy.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="enemy_spawner.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="debug_ostream.h">
@@ -129,6 +138,9 @@
     <ClInclude Include="bullet.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="enemy_spawner.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shader_pixel_2d.hlsl">
@@ -174,6 +186,12 @@
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="resource\texture\laser.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="resource\texture\Enemy01.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="resource\texture\Enemy02.png">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>
