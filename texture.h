@@ -19,5 +19,7 @@ void Texture_Set(int texid);
 unsigned int Texture_GetWidth(int texid);
 unsigned int Texture_GetHeight(int texid);
 
+void Texture_Release(int texid);
+
 
 #endif

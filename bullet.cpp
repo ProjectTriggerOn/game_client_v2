@@ -11,14 +11,14 @@ struct Bullet
 	XMFLOAT2 velocity; // 弾の速度
 	bool is_enable;
 	double lifetime; // 弾の残り時間
+	Circle collision;// 衝突判定用の円
 
 };
 
 
 
-static constexpr unsigned int MAX_BULLETS = 1024; // 最大弾数
-static Bullet g_Bullets[MAX_BULLETS]{}; // 弾の配列
 
+static Bullet g_Bullets[MAX_BULLETS]{}; // 弾の配列
 static int g_BulletId = -1;
 
 
@@ -85,9 +85,27 @@ void Bullet_Spawn(const DirectX::XMFLOAT2& position)
 		//空き領域発見
 		
 		b.position = position; // 弾の位置を設定
-		b.velocity = { 0.0f, -1000.0f }; // 弾の速度を設定
+		b.velocity = { 0.0f, -500.0f }; // 弾の速度を設定
 		b.is_enable = true; // 弾を有効化
 		b.lifetime = 0.0; // 残り時間をリセット
+		b.collision = { {4.5,4.5},4.5 };
 		break;
 	}
+}
+
+bool Bullet_IsEnable(int index)
+{
+	return g_Bullets[index].is_enable;
+}
+
+Circle Bullet_GetCollision(int index)
+{
+	float centerX = g_Bullets[index].position.x + g_Bullets[index].collision.center.x;
+	float centerY = g_Bullets[index].position.y + g_Bullets[index].collision.center.y;
+	return { { centerX, centerY }, g_Bullets[index].collision.radius };
+}
+
+void Bullet_Destroy(int index)
+{
+	g_Bullets[index].is_enable = false; // 弾を無効化
 }

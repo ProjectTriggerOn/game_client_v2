@@ -33,6 +33,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 {
 	(void)CoInitializeEx(nullptr, COINIT_MULTITHREADED);
 
+	SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+
 	HWND hWnd = GameWindow_Generate(hInstance);
 
 	SystemTimer_Initialize();
@@ -56,7 +58,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 	hal::DebugText dt(Direct3D_GetDevice(), Direct3D_GetDeviceContext(),
 		L"resource/texture/consolab_ascii_512.png",
 		Direct3D_GetBackBufferWidth(),Direct3D_GetBackBufferHeight(),
-		0.0f,0.0f,
+		0.0f,900.0f,
 		0,0,
 		0.0f,16.0f
 	);

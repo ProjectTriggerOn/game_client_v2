@@ -26,8 +26,8 @@ HWND GameWindow_Generate(HINSTANCE hInstance)
 	RegisterClassEx(&wcex);
 	/* メインウインドウの作成 */
 
-	constexpr int SCREEN_WIDTH = 900;
-	constexpr int SCREEN_HEIGHT = 1600;
+	constexpr int SCREEN_WIDTH = 1280;
+	constexpr int SCREEN_HEIGHT = 960;
 	DWORD WINDOW_STYLE = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
 	RECT window_rect{
 		0,0,SCREEN_WIDTH,SCREEN_HEIGHT
@@ -98,7 +98,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
          Keyboard_ProcessMessage(message, wParam, lParam);
         break;
 	case WM_CLOSE:
-		if (MessageBox(hWnd, "exit?", "Over", MB_OKCANCEL | MB_ICONQUESTION | MB_DEFBUTTON2) == IDOK) {
+		if (MessageBox(hWnd, "exit?", "Over", MB_OKCANCEL | MB_ICONQUESTION | MB_DEFBUTTON1) == IDOK) {
 			DestroyWindow(hWnd);
 		}
 		break;

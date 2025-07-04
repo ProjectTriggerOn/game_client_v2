@@ -86,6 +86,18 @@ void Texture_AllRelease()
 	}
 }
 
+void Texture_Release(int texid)
+{
+	if (texid < 0 || texid >= MAX_TEXTURES)return; // 範囲外のインデックスは無視
+	SAFE_RELEASE(g_Textures[texid].pTexture); // テクスチャの解放
+	g_Textures[texid].filename.clear(); // ファイル名をクリア
+	g_Textures[texid].width = 0; // 幅をリセット
+	g_Textures[texid].height = 0; // 高さをリセット
+	if (g_SetTextureIndex == texid) {
+		g_SetTextureIndex = -1; // 現在のテクスチャインデックスをリセット
+	}
+}
+
 void Texture_Set(int texid)
 {
 	if (texid < 0 || texid >= MAX_TEXTURES)return; // 範囲外のインデックスは無視

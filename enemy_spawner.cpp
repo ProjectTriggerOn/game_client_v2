@@ -14,9 +14,13 @@ struct EnemySpawner
 };
 
 static constexpr unsigned int MAX_SPAWNERS = 100; // 最大スポーン数
-static EnemySpawner g_Spawners[MAX_SPAWNERS]{}; // スポーン情報の配列
-static unsigned int g_SpawnerCount = 0; // 現在のスポーン数
-static double g_Time;
+
+
+namespace{
+	EnemySpawner g_Spawners[MAX_SPAWNERS]{}; // スポーン情報の配列
+	unsigned int g_SpawnerCount = 0; // 現在のスポーン数
+	double g_Time;
+}
 
 
 void EnemySpawner_Initialize()
@@ -38,10 +42,11 @@ void EnemySpawner_Update(double elapsed_time)
 
 		if (spawner.isCompleted) continue; // スポーンが完了している場合はスキップ
 
-		if (spawner.time < g_Time) break; // スポーン時間が経過していない場合はスキップ
+		if (spawner.spawnTime > g_Time)break; // 如果生成时间小于当前时间，则跳出循环
 
-		if (spawner.spawnCount == 0) {
-			spawner.spawnTime = g_Time + spawner.rate; // 初回スポーン時間を設定
+		if (spawner.spawnCount == 0)
+		{
+			spawner.time = g_Time - spawner.rate - 0.00001;
 		}
 
 		if (g_Time - spawner.spawnTime >= spawner.rate) {
