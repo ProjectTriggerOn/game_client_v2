@@ -4,6 +4,7 @@
 #include "sprite.h"
 #include "texture.h"
 #include "collision.h"
+#include "effect.h"
 using namespace DirectX;
 
 struct EnemyType
@@ -12,6 +13,7 @@ struct EnemyType
 	int tx, ty, tw, th;
 	XMFLOAT2 velocity; // 敵の速度
 	Circle collision; // 衝突判定用の円
+	int maxHp;
 };
 
 struct Enemy
@@ -23,6 +25,8 @@ struct Enemy
 	float offsetY; // 敵のYオフセット
 	float offsetX; // 敵のXオフセット
 	double lifetime; // 敵の残り時間
+	int currentHp;
+	bool isDamaged;
 };
 
 
@@ -33,8 +37,8 @@ namespace
 {
 	Enemy g_Enemies[MAX_ENEMIES]{}; // 敵の配列
 	EnemyType g_EnemyTypes[] = {
-	{ -1, 0,0,64,64 ,{0,100},{{32,32},32.0}},
-	{-1,0,0,64,64,{0,100},{{32,32},32.0}}
+	{ -1, 0,0,64,64 ,{0,100},{{32,32},32.0},100},
+	{-1,0,0,64,64,{0,100},{{32,32},32.0},25}
 	};
 }
 
@@ -85,14 +89,18 @@ void Enemy_Update(double elapsed_time,double game_time)
 
 void Enemy_Draw()
 {
-	for (const Enemy& e : g_Enemies)
+	for (Enemy& e : g_Enemies)
 	{
 		if (!e.is_enable) continue;
 		Sprite_Draw(g_EnemyTypes[e.typeID].tex_id, e.position.x, e.position.y,
 			ENEMY_WIDTH, ENEMY_HEIGHT,
 			g_EnemyTypes[e.typeID].tx, g_EnemyTypes[e.typeID].ty,
-			g_EnemyTypes[e.typeID].tw, g_EnemyTypes[e.typeID].th);
+			g_EnemyTypes[e.typeID].tw, g_EnemyTypes[e.typeID].th,
+			e.isDamaged?XMFLOAT4{1.0,0.0,0.0,1.0}:XMFLOAT4{1.0,1.0,1.0,1.0});
+		e.isDamaged = false; // 描画後にダメージ状態をリセット
 	}
+
+	
 }
 
 void Enemy_Finalize()
@@ -104,12 +112,13 @@ void Enemy_Spawn(EnemyTypeID id, const DirectX::XMFLOAT2& position)
 	for (Enemy& e : g_Enemies)
 	{
 		if (e.is_enable)continue;
-
 		e.position = position; // 位置設定
 		e.is_enable = true;
+		e.isDamaged = false; // ダメージ状態初期化
 		e.offsetX = position.x;
 		e.typeID = id; // 敵の種類設定
 		e.lifetime = 0.0; // 残り時間初期化
+		e.currentHp = g_EnemyTypes[id].maxHp; // HP初期化
 		break;
 
 	}
@@ -130,5 +139,16 @@ Circle Enemy_GetCollision(int index)
 void Enemy_Destroy(int index)
 {
 	g_Enemies[index].is_enable = false; // 敵を無効化
+}
+
+void Enemy_TakeDamage(int index, int damage)
+{
+	g_Enemies[index].currentHp -= damage; // 敵のHPを減らす
+	g_Enemies[index].isDamaged = true; // ダメージ状態を有効化
+	if (g_Enemies[index].currentHp <= 0) {
+		Effect_Create(g_Enemies[index].position);
+		g_Enemies[index].is_enable = false; // HPが0以下なら敵を無効化
+		
+	}
 }
 

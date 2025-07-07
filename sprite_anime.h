@@ -16,4 +16,8 @@ int SpriteAnime_PatternRegister(int textrueId,int pattern_max, double second_per
 
 int SpriteAnime_CreatePlayer(int anime_pattern_id);
 
+bool SpriteAnime_IsStopped(int index);
+
+void SpriteAnime_DestroyPlayer(int index);
+
 #endif

@@ -2,6 +2,7 @@
 
 #include "player.h"
 #include "bullet.h"
+#include "effect.h"
 #include "sprite.h"
 #include "texture.h"
 #include "enemy_spawner.h"
@@ -19,14 +20,14 @@ void Game_Initialize()
 	
 	Player_Initialize({ 640 - 32.0f ,720 - 64 });
 	Bullet_Initialize(); // 弾の初期化
+	Effect_Initialize(); // エフェクトの初期化
 	bgTexId = Texture_LoadFromFile(L"resource/texture/bg.png"); // 背景テクスチャの読み込み
 	uiTexId = Texture_LoadFromFile(L"resource/texture/black.png"); // UIテクスチャの読み込み
 
 	EnemySpawner_Initialize(); // 敵スポーンの初期化
-	EnemySpawner_Spawn({ 640 - 32.0f ,50 },
-		ENEMY_GREEN, 3.0f, 0.3f, 25); // 敵のスポーン設定
-	EnemySpawner_Spawn({ 640 - 32.0f ,50},
-		ENEMY_RED, 4.0f, 0.5f, 25); // 敵のスポーン設定
+	EnemySpawner_Spawn({ 640 - 32.0f ,50 },ENEMY_GREEN, 3.0f, 1.0f, 3); // 敵のスポーン設定
+	EnemySpawner_Spawn({ 640 - 32.0f ,50},ENEMY_RED, 4.0f, 0.5f, 5); // 敵のスポーン設定
+
 
 }
 
@@ -38,6 +39,7 @@ void Game_Update(double elapsed_time)
 	Bullet_Update(elapsed_time);
 	CollisionDetect_Bullet_Enemy();
 	CollisionDetect_Player_Enemy();
+	Effect_Update(elapsed_time); // エフェクトの更新
 }
 
 void Game_Draw()
@@ -47,6 +49,7 @@ void Game_Draw()
 	Bullet_Draw();
 	Player_Draw();
 	Enemy_Draw();
+	Effect_Draw(); // エフェクトの描画
 	Sprite_Draw(uiTexId, 0, 0, 370, 960, 0, 0, 2, 2);
 	Sprite_Draw(uiTexId, 910, 0, 370, 960, 0, 0, 2, 2);
 }
@@ -73,7 +76,8 @@ void CollisionDetect_Bullet_Enemy()
 			if (Collision_OverlapCircleCircle(bulletCollision,enemyCollision))
 			{
 				Bullet_Destroy(bi); // 弾を破壊
-				Enemy_Destroy(ei); // 敵を破壊
+				//Enemy_Destroy(ei); // 敵を破壊
+				Enemy_TakeDamage(ei, 25); // 敵にダメージを与える
 				break; // 一つの弾が一つの敵にしか当たらないようにする
 			}
 		}

@@ -12,7 +12,6 @@ struct AnimePatternData {
 	XMUINT2 m_PatternSize = { 0,0 };//アニメーションパターンのサイズ
 	bool m_IsLooped = true;//ル-プするか
 	double m_second_per_pattern = 0.1; // パターンごとの秒数（デフォルトは0.1秒）
-
 };
 
 
@@ -20,7 +19,7 @@ struct AnimePlayData {
 	int m_PatternId = -1;//アニメ-ションパタ-ンID
 	int m_PatternNum = 0;//現在再生中のパ夕一ン番号
 	double m_AccumulatedTime = 0.0;// 累積時間
-	
+	bool m_isStopped = false; // 再生が停止しているかどうか
 };
 
 static constexpr int ANIM_PATTERN_MAX = 128;
@@ -39,6 +38,7 @@ void SpriteAnime_Initialize()
 
 	for (AnimePlayData& data : g_AnimePlayData) {
 		data.m_PatternId = -1; // 初期化
+		data.m_isStopped = false; // 再生が停止しているかどうかを初期化
 	}
 }
 
@@ -66,7 +66,7 @@ void SpriteAnime_Update(double elapsed_time)
 				else {
 
 					g_AnimePlayData[i].m_PatternNum = pAnmPtrnData->m_PatternMax - 1; // ループしない場合は最後のパターンに留める
-
+					g_AnimePlayData[i].m_isStopped = true; // 再生を停止
 				}
 				
 			}
@@ -122,5 +122,15 @@ void SpriteAnime_Update(double elapsed_time)
 			return i; // 登録したプレイヤーのIDを返す
 		}	
 		return -1;
+	}
+
+	bool SpriteAnime_IsStopped(int index)
+	{
+		return g_AnimePlayData[index].m_isStopped; // 再生が停止しているかどうかを返す
+	}
+
+	void SpriteAnime_DestroyPlayer(int index)
+	{
+		g_AnimePlayData[index].m_PatternId = -1; // アニメーションパターンIDを無効化
 	}
 

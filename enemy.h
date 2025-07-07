@@ -28,6 +28,8 @@ Circle Enemy_GetCollision(int index);
 
 void Enemy_Destroy(int index);
 
+void Enemy_TakeDamage(int index, int damage);
+
 #endif
 
 

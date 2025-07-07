@@ -85,6 +85,9 @@
     <ClCompile Include="collision.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="effect.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="debug_ostream.h">
@@ -147,6 +150,9 @@
     <ClInclude Include="collision.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="effect.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shader_pixel_2d.hlsl">
@@ -198,6 +204,9 @@
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="resource\texture\Enemy02.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="resource\texture\Explosion.png">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>
