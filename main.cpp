@@ -121,10 +121,13 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 
 				Game_Draw();
 
+				float player_vx = Player_GetVelocityX();
+
+
 #if defined(_DEBUG) || defined(DEBUG)
 
 				std::stringstream ssf;
-				ssf << "FPS: " << fps << "\n";
+				ssf << "PlayerVelocity: " << player_vx << "\n";
 				dt.SetText(ssf.str().c_str(), { 1.0f, 1.0f, 1.0f, 1.0f });
 				dt.Draw();
 				dt.Clear();

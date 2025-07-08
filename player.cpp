@@ -5,22 +5,32 @@
 #include "key_logger.h"
 #include "bullet.h"
 #include "direct3d.h"
+#include "sprite_anime.h"
 
 using namespace DirectX;
 
+static constexpr int TEXTURE_SIZE = 64; // プレイヤーのテクスチャの幅
+
 namespace{
+	int g_PlayerTexOffset = 0;
 	XMFLOAT2 g_PlayerPosition{}; // プレイヤーの位置
 	XMFLOAT2 g_PlayerVelocity{}; // プレイヤーの速度
 	int g_PlayerTextureId = -1;
+	int g_FlameAnimeId = -1; // プレイヤーの炎のテクスチャID
 	Circle g_PlayerCollision{ {32,32}, 32.0f }; // プレイヤーの衝突判定用の円
 	bool g_PlayerIsEnable = true; // プレイヤーが有効かどうか
+	bool g_PlayerIsExhaust = false;
 }
 
 void Player_Initialize(const XMFLOAT2& position)
 {
 	g_PlayerPosition = position; // プレイヤーの初期位置を設定
 	g_PlayerVelocity = { 0.0f, 0.0f }; // プレイヤーの初期速度を設定
-	g_PlayerTextureId = Texture_LoadFromFile(L"resource/texture/p1.png"); // プレイヤーのテクスチャを読み込む
+	int FlameTextureId = Texture_LoadFromFile(L"resource/texture/engine_flame.png"); // プレイヤーの炎のテクスチャを読み込む
+	g_PlayerTextureId = Texture_LoadFromFile(L"resource/texture/player_sprite.png"); // プレイヤーのテクスチャを読み込む
+	int flameTexId = SpriteAnime_PatternRegister(FlameTextureId, 6, 0.1, { 30,30 }, { 0,0 },
+		true, 6);
+	g_FlameAnimeId = SpriteAnime_CreatePlayer(flameTexId); // プレイヤーの炎のアニメーションを作成
 }
 
 void Player_Update(double elapsed_time)
@@ -59,6 +69,7 @@ void Player_Update(double elapsed_time)
 	XMStoreFloat2(&g_PlayerVelocity, velocity); // 更新された速度を XMFLOAT2 に変換して保存
 
 
+
 	g_PlayerPosition.x = std::max(0.0f+370.f, g_PlayerPosition.x);
 
 	g_PlayerPosition.x = std::min(Direct3D_GetBackBufferWidth() - 64.0f-370.0f, g_PlayerPosition.x);
@@ -69,15 +80,54 @@ void Player_Update(double elapsed_time)
 
 	if (KeyLogger_IsTrigger(KK_SPACE))
 	{
-		Bullet_Spawn({g_PlayerPosition.x+30,g_PlayerPosition.y}); 
+		Bullet_Spawn({g_PlayerPosition.x+ 64.0f/2 - 9.0f/2,g_PlayerPosition.y}); 
 	}
+
+	if (g_PlayerVelocity.x > 5)
+	{
+		g_PlayerTexOffset = 3; 
+	}
+	else if (g_PlayerVelocity.x > 15)
+	{
+		g_PlayerTexOffset = 4;
+	}
+	if (g_PlayerVelocity.x < -5)
+	{
+		g_PlayerTexOffset = 1;
+	}
+	else if (g_PlayerVelocity.x < -15)
+	{
+		g_PlayerTexOffset = 2;
+	}
+
+	if (g_PlayerVelocity.x <= 5 && g_PlayerVelocity.x >= -5)
+	{
+		g_PlayerTexOffset = 0; 
+	}
+
+	if (g_PlayerVelocity.y <-1)
+	{
+		g_PlayerIsExhaust = true; // 上に移動している場合は炎を表示
+	}else
+	{
+		g_PlayerIsExhaust = false; // 上に移動していない場合は炎を非表示
+	}
+
+	
 }
 
 void Player_Draw()
 {
 	if (!g_PlayerIsEnable) return; // プレイヤーが無効な場合は更新しない
 	Sprite_Draw(g_PlayerTextureId, g_PlayerPosition.x, g_PlayerPosition.y,
-		64.0f, 64.0f, 0,0,64,64); 
+		64.0f, 64.0f,
+		TEXTURE_SIZE*g_PlayerTexOffset, TEXTURE_SIZE * 0,
+		64,64);
+	if (g_PlayerIsExhaust)
+	{
+		SpriteAnime_Draw(g_FlameAnimeId, g_PlayerPosition.x + 64.0f / 2 - 30.0f / 2, g_PlayerPosition.y + 64.0f -10.0f,
+			30.0f, 30.0f); // プレイヤーの炎のアニメーションを描画
+	}
 }
 
 void Player_Finalize()
@@ -101,4 +151,9 @@ void Player_Destroy()
 {
 	g_PlayerIsEnable = false; // プレイヤーを無効化
 	//Texture_Release(g_PlayerTextureId); // プレイヤーのテクスチャを解放
+}
+
+float Player_GetVelocityX()
+{
+	return g_PlayerVelocity.x; // プレイヤーの速度を返す
 }

@@ -15,6 +15,10 @@ void CollisionDetect_Bullet_Enemy();
 
 void CollisionDetect_Player_Enemy();
 
+float Player_GetVelocityX();
+
+
+
 
 
 #endif 

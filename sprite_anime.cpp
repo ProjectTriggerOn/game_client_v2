@@ -119,6 +119,7 @@ void SpriteAnime_Update(double elapsed_time)
 			g_AnimePlayData[i].m_PatternId = anime_pattern_id; // アニメーションパターンIDを設定
 			g_AnimePlayData[i].m_PatternNum = 0; // パターン番号を初期化
 			g_AnimePlayData[i].m_AccumulatedTime = 0.0; // 累積時間を初期化
+			g_AnimePlayData[i].m_isStopped = false; // 再生が停止しているかどうかを初期化
 			return i; // 登録したプレイヤーのIDを返す
 		}	
 		return -1;

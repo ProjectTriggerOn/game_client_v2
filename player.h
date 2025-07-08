@@ -1,7 +1,7 @@
 ///Player Contorl///
 #ifndef	PLAYER_H
 #define PLAYER_H
-#include <DirectXMath.h>
+
 
 #include "collision.h"
 
@@ -18,6 +18,8 @@ bool Player_IsEnable();
 Circle Player_GetCollision();
 
 void Player_Destroy();
+
+float Player_GetVelocityX();
 
 #endif
 

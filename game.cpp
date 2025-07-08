@@ -6,12 +6,14 @@
 #include "sprite.h"
 #include "texture.h"
 #include "enemy_spawner.h"
+#include "key_logger.h"
 
 namespace{
 	int bgTexId = -1;
 	int uiTexId = -1;
 	double g_Time = 0.0f;
 	double g_SpawnTime = 0.0f;
+	bool g_Start = false; // ゲーム開始フラグ
 }
 
 void Game_Initialize()
@@ -33,6 +35,12 @@ void Game_Initialize()
 
 void Game_Update(double elapsed_time)
 {
+	if (KeyLogger_IsTrigger(KK_P))
+	{
+		g_Start = !g_Start; // Pキーでゲーム開始/停止を切り替え
+	}
+
+	if(!g_Start) return; // ゲームが開始されていない場合は何もしない
 	EnemySpawner_Update(elapsed_time);
 	Enemy_Update(elapsed_time,g_Time);
 	Player_Update(elapsed_time);

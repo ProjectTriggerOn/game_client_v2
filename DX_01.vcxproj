@@ -212,12 +212,14 @@
     <Image Include="resource\texture\consolab_ascii_512.png" />
     <Image Include="resource\texture\Enemy01.png" />
     <Image Include="resource\texture\Enemy02.png" />
+    <Image Include="resource\texture\engine_flame.png" />
     <Image Include="resource\texture\Explosion.png" />
     <Image Include="resource\texture\image.png" />
     <Image Include="resource\texture\knight.png" />
     <Image Include="resource\texture\kokosozai.png" />
     <Image Include="resource\texture\laser.png" />
     <Image Include="resource\texture\p1.png" />
+    <Image Include="resource\texture\player_sprite.png" />
     <Image Include="resource\texture\runningman001.png" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
