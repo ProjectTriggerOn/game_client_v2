@@ -21,5 +21,8 @@ void Player_Destroy();
 
 float Player_GetVelocityX();
 
+void Player_TakeDamage(int damage);
+
+int Player_GetLife();
 #endif
 

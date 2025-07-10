@@ -9,7 +9,7 @@
 
 using namespace DirectX;
 
-static constexpr int TEXTURE_SIZE = 64; // プレイヤーのテクスチャの幅
+static constexpr float TEXTURE_SIZE = 64.0f; // プレイヤーのテクスチャの幅
 
 namespace{
 	int g_PlayerTexOffset = 0;
@@ -20,6 +20,7 @@ namespace{
 	Circle g_PlayerCollision{ {32,32}, 32.0f }; // プレイヤーの衝突判定用の円
 	bool g_PlayerIsEnable = true; // プレイヤーが有効かどうか
 	bool g_PlayerIsExhaust = false;
+	int g_PlayerLife = 5;
 }
 
 void Player_Initialize(const XMFLOAT2& position)
@@ -156,4 +157,18 @@ void Player_Destroy()
 float Player_GetVelocityX()
 {
 	return g_PlayerVelocity.x; // プレイヤーの速度を返す
+}
+
+void Player_TakeDamage(int damage)
+{
+	g_PlayerLife -= damage; // プレイヤーのライフを減らす
+	if (g_PlayerLife <= 0)
+	{
+		g_PlayerIsEnable = false; // ライフが0以下になったらプレイヤーを無効化
+	}
+}
+
+int Player_GetLife()
+{
+	return g_PlayerLife; // プレイヤーのライフを返す
 }

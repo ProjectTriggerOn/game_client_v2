@@ -25,6 +25,8 @@
 #pragma comment(lib, "xinput.lib")
 #include "game.h"
 
+#include "Audio.h"
+
 
 //Window procedure prototype claim
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
@@ -44,6 +46,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 	KeyLogger_Initialize();
 
 	Mouse_Initialize(hWnd);
+
+	InitAudio();
 
 	Shader_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
 
@@ -123,18 +127,18 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 
 				float player_vx = Player_GetVelocityX();
 
+				int currentPlayerLife = Player_GetLife();
+
 
 #if defined(_DEBUG) || defined(DEBUG)
 
 				std::stringstream ssf;
 				ssf << "PlayerVelocity: " << player_vx << "\n";
+				ssf << "PlayerLife: " << currentPlayerLife << "\n";
 				dt.SetText(ssf.str().c_str(), { 1.0f, 1.0f, 1.0f, 1.0f });
 				dt.Draw();
 				dt.Clear();
 #endif // _DEBUG || DEBUG
-				//std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-				//Polygon_Draw();
 
 				Direct3D_Present();
 
@@ -161,6 +165,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 	Polygon_Finalize();
 
 	Direct3D_Finalize();
+
+	
 
 	Mouse_Finalize();
 

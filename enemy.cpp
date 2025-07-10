@@ -5,6 +5,7 @@
 #include "texture.h"
 #include "collision.h"
 #include "effect.h"
+#include "score.h"
 using namespace DirectX;
 
 struct EnemyType
@@ -58,8 +59,6 @@ void Enemy_Update(double elapsed_time,double game_time)
 	for (Enemy& e : g_Enemies)
 	{
 		if (!e.is_enable) continue;
-
-
 
 		switch(e.typeID)
 		{
@@ -148,7 +147,7 @@ void Enemy_TakeDamage(int index, int damage)
 	if (g_Enemies[index].currentHp <= 0) {
 		Effect_Create(g_Enemies[index].position);
 		g_Enemies[index].is_enable = false; // HPが0以下なら敵を無効化
-		
+		Score_AddScore(100); // スコアを加算
 	}
 }
 

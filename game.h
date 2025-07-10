@@ -17,6 +17,8 @@ void CollisionDetect_Player_Enemy();
 
 float Player_GetVelocityX();
 
+int Player_GetLife();
+
 
 
 

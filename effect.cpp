@@ -4,6 +4,8 @@
 
 #include "texture.h"
 #include "sprite_anime.h"
+
+#include "Audio.h"
 using namespace DirectX;
 
 struct Effect
@@ -16,15 +18,18 @@ struct Effect
 };
 
 
-static constexpr unsigned int MAX_EFFECTS = 256; // 最大エフェクト数
-static Effect g_Effects[MAX_EFFECTS]{}; // エフェクトの配列
-static int g_EffectTexId = -1; // エフェクトのアニメーションパターンID
-static int g_EffectAnimeId = -1; // エフェクトのテクスチャID
+namespace{
+	 constexpr unsigned int MAX_EFFECTS = 256; // 最大エフェクト数
+	 Effect g_Effects[MAX_EFFECTS]{}; // エフェクトの配列
+	 int g_EffectTexId = -1; // エフェクトのアニメーションパターンID
+	 int g_EffectAnimeId = -1; // エフェクトのテクスチャID
+	 int g_EffectSoundId = -1; // エフェクトのサウンドID
+	}
 
 void Effect_Initialize(void)
 {
-	int g_EffectTexId = Texture_LoadFromFile(L"resource/texture/Explosion.png"); // エフェクトのテクスチャIDを読み込む
-
+	g_EffectTexId = Texture_LoadFromFile(L"resource/texture/Explosion.png"); // エフェクトのテクスチャIDを読み込む
+	g_EffectSoundId = LoadAudio("resource/audio/se.wav"); // エフェクトのサウンドIDを読み込む
 	for (Effect& e : g_Effects)
 	{
 
@@ -38,6 +43,7 @@ void Effect_Initialize(void)
 
 void Effect_Finalize(void)
 {
+	UnloadAudio(g_EffectSoundId); // エフェクトのサウンドをアンロード
 }
 
 void Effect_Update(double elapsed_time)
@@ -72,6 +78,7 @@ void Effect_Create(const DirectX::XMFLOAT2 position)
 		e.position = position; // 弾の位置を設定
 		e.isEnable = true; // エフェクトを有効にする
 		e.spriteAnimeId = SpriteAnime_CreatePlayer(g_EffectAnimeId); // アニメーションを登録
+		PlayAudio(g_EffectSoundId);
 		break;
 	}
 }
