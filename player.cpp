@@ -129,6 +129,13 @@ void Player_Draw()
 		SpriteAnime_Draw(g_FlameAnimeId, g_PlayerPosition.x + 64.0f / 2 - 30.0f / 2, g_PlayerPosition.y + 64.0f -10.0f,
 			30.0f, 30.0f); // プレイヤーの炎のアニメーションを描画
 	}
+
+#if defined(_DEBUG) || defined(DEBUG)
+	// デバッグ用の衝突判定円を描画
+	Circle collision = Player_GetCollision();
+	Collision_DebugDraw(collision);
+
+#endif
 }
 
 void Player_Finalize()

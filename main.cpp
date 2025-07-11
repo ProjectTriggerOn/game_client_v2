@@ -20,13 +20,14 @@
 #include "DirectXMath.h"
 #include "key_logger.h"
 #include "mouse.h"
-
+#include "collision.h"
 #include <Xinput.h>
 #pragma comment(lib, "xinput.lib")
 #include "game.h"
 
 #include "Audio.h"
 #include "fade.h"
+#include "scene.h"
 
 
 //Window procedure prototype claim
@@ -60,22 +61,31 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 
 	SpriteAnime_Initialize();
 
-	hal::DebugText dt(Direct3D_GetDevice(), Direct3D_GetDeviceContext(),
-		L"resource/texture/consolab_ascii_512.png",
-		Direct3D_GetBackBufferWidth(),Direct3D_GetBackBufferHeight(),
-		0.0f,900.0f,
-		0,0,
-		0.0f,16.0f
-	);
 	Fade_Initialize();
 
-	Game_Initialize();
+	Scene_Initialize();
+
+#if defined(_DEBUG) || defined(DEBUG)
+
+	hal::DebugText dt(Direct3D_GetDevice(), Direct3D_GetDeviceContext(),
+		L"resource/texture/consolab_ascii_512.png",
+		Direct3D_GetBackBufferWidth(), Direct3D_GetBackBufferHeight(),
+		0.0f, 900.0f,
+		0, 0,
+		0.0f, 16.0f
+	);
+
+	Collision_DebugInitialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
+
+#endif // _DEBUG || DEBUG
+
+	//Game_Initialize();
 
 	ShowWindow(hWnd, nCmdShow);
 
 	UpdateWindow(hWnd);
 
-	Mouse_SetVisible(false);
+	//Mouse_SetVisible(false);
 
 
 
@@ -116,7 +126,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 				//ゲームループ処理／ゲーム更新
 				KeyLogger_Update();
 
-				Game_Update(elapsed_time);
+				//Game_Update(elapsed_time);
+				Scene_Update(elapsed_time);
 
 				SpriteAnime_Update(elapsed_time);
 
@@ -125,19 +136,25 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 
 				Sprite_Begin();
 
-				Game_Draw();
+				//Game_Draw();
+				Scene_Draw();
 
 				Fade_Draw();
 
 				float player_vx = Player_GetVelocityX();
 
-				int currentPlayerLife = Player_GetLife();
+				std::string fade_state =
+					Fade_GetState() == FADE_STATE_FADEIN ? "FADEIN" :
+					Fade_GetState() == FADE_STATE_FADEOUT ? "FADEOUT" :
+					Fade_GetState() == FADE_STATE_FINISHED_IN ? "FINISHED_IN" :
+					Fade_GetState() == FADE_STATE_FINISHED_OUT ? "FINISHED_OUT" : "NONE";
 
+				int currentPlayerLife = Player_GetLife();
 
 #if defined(_DEBUG) || defined(DEBUG)
 
 				std::stringstream ssf;
-				ssf << "PlayerVelocity: " << player_vx << "\n";
+				ssf << "FADE " << fade_state << "\n";
 				ssf << "PlayerLife: " << currentPlayerLife << "\n";
 				dt.SetText(ssf.str().c_str(), { 1.0f, 1.0f, 1.0f, 1.0f });
 				dt.Draw();
@@ -146,16 +163,21 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 
 				Direct3D_Present();
 
+				Scene_Refresh();
+
 				frame_count++;
 			}
-
-			
 		}
 	} while (msg.message != WM_QUIT);
 
+	//Game_Finalize();
+#if defined(_DEBUG) || defined(DEBUG)
 
+	Collision_DebugFinalize();
 
-	Game_Finalize();
+#endif
+
+	Scene_Finalize();
 
 	Fade_Finalize();
 
@@ -173,11 +195,9 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 
 	Direct3D_Finalize();
 
-	
-
 	Mouse_Finalize();
 
-	return (int)msg.wParam;
+	return static_cast<int>(msg.wParam);
 
 }
 
