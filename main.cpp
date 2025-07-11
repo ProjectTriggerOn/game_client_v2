@@ -26,6 +26,7 @@
 #include "game.h"
 
 #include "Audio.h"
+#include "fade.h"
 
 
 //Window procedure prototype claim
@@ -66,6 +67,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 		0,0,
 		0.0f,16.0f
 	);
+	Fade_Initialize();
 
 	Game_Initialize();
 
@@ -125,6 +127,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 
 				Game_Draw();
 
+				Fade_Draw();
+
 				float player_vx = Player_GetVelocityX();
 
 				int currentPlayerLife = Player_GetLife();
@@ -152,6 +156,9 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 
 
 	Game_Finalize();
+
+	Fade_Finalize();
+
 	SpriteAnime_Finalize();
 
 	Texture_Finalize();

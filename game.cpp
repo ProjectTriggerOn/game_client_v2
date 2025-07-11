@@ -7,6 +7,7 @@
 #include "sprite.h"
 #include "texture.h"
 #include "enemy_spawner.h"
+#include "fade.h"
 #include "key_logger.h"
 #include "score.h"
 
@@ -35,13 +36,27 @@ void Game_Initialize()
 	EnemySpawner_Spawn({ 640 - 32.0f ,50},ENEMY_RED, 4.0f, 0.5f, 5); // 敵のスポーン設定
 	g_BgmId = LoadAudio("resource/audio/bgm.wav"); // BGMの読み込み
 	PlayAudio(g_BgmId, true); // BGMをループ再生
+	Fade_Start(2.0, false, { 1.0f, 1.0f, 1.0f });
 }
 
 void Game_Update(double elapsed_time)
 {
-	if (KeyLogger_IsTrigger(KK_P))
+	Fade_Update(elapsed_time);
+	if (!g_Start && Fade_GetState() == FADE_STATE_FINISHED_IN)
 	{
-		g_Start = !g_Start; // Pキーでゲーム開始/停止を切り替え
+		PlayAudio(g_BgmId, true);
+		g_Start = true; // 游戏开始
+	}
+
+	if (KeyLogger_IsTrigger(KK_F))
+	{
+		Fade_Start(2.0, true, { 1.0f, 1.0f, 1.0f }); // 启动淡出效果
+	}
+
+	if (!g_Start && Fade_GetState() == FADE_STATE_FINISHED_OUT)
+	{
+		UnloadAudio(g_BgmId);
+		g_Start = false;
 	}
 
 	if(!g_Start) return; // ゲームが開始されていない場合は何もしない
