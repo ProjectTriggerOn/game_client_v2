@@ -4,17 +4,14 @@ using namespace DirectX;
 #include "texture.h"
 #include "Sprite.h"
 #include "direct3d.h"
-
-
-namespace{
-	double g_FadeTime = { 0.0 };
-	double g_FadeStartTime = { 0.0 };
-	double g_AccumulatedTime = { 0.0 };
-	XMFLOAT3 g_Color = { 0.0f, 0.0f, 0.0f };
-	float g_Alpha = 0.0f;
-	FadeState g_State = FADE_STATE_NONE;
-	int g_FadeTextureID = -1;
-}
+using namespace std;
+static double g_FadeTime = { 0.0 };
+static double g_FadeStartTime = { 0.0 };
+static double g_AccumulatedTime = { 0.0 };
+static XMFLOAT3 g_Color = { 0.0f, 0.0f, 0.0f };
+static float g_Alpha = 0.0f;
+static FadeState g_State = FADE_STATE_NONE;
+static int g_FadeTextureID = -1; 
 
 void Fade_Initialize()
 {
@@ -38,7 +35,7 @@ void Fade_Update(double elapsed_time)
 
 	g_AccumulatedTime += elapsed_time;
 
-	double ratio = std::min((g_AccumulatedTime - g_FadeStartTime) / g_FadeTime, 1.0);
+	double ratio = min((g_AccumulatedTime - g_FadeStartTime) / g_FadeTime, 1.0);
 
 	if (ratio >= 1.0)
 	{
@@ -58,13 +55,13 @@ void Fade_Draw()
 		color);
 }
 
-void Fade_Start(double time, bool isFadeout, DirectX::XMFLOAT3 color)
+void Fade_Start(double time, bool isFadeout,XMFLOAT3 color)
 {
 	g_FadeStartTime = g_AccumulatedTime;
 	g_FadeTime = time;
 	g_State = isFadeout ? FADE_STATE_FADEOUT : FADE_STATE_FADEIN;
 	g_Color = color;
-	g_Alpha = isFadeout ? 0.0f : 1.0f; 
+	g_Alpha = isFadeout ? 0.0f : 1.0f;
 }
 
 FadeState Fade_GetState()

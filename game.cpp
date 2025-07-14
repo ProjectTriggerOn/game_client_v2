@@ -36,12 +36,13 @@ void Game_Initialize()
 	EnemySpawner_Spawn({ 640 - 32.0f ,50},ENEMY_RED, 4.0f, 0.5f, 5); // 敵のスポーン設定
 	g_BgmId = LoadAudio("resource/audio/bgm.wav"); // BGMの読み込み
 	PlayAudio(g_BgmId, true); // BGMをループ再生
-	Fade_Start(2.0, false, { 1.0f, 1.0f, 1.0f });
+	Fade_Start(2.0, false);
+	g_Start = false; // ゲーム開始フラグを初期化
 }
 
 void Game_Update(double elapsed_time)
 {
-	Fade_Update(elapsed_time);
+	
 	if (!g_Start && Fade_GetState() == FADE_STATE_FINISHED_IN)
 	{
 		PlayAudio(g_BgmId, true);
@@ -55,7 +56,7 @@ void Game_Update(double elapsed_time)
 
 	if (!g_Start && Fade_GetState() == FADE_STATE_FINISHED_OUT)
 	{
-		UnloadAudio(g_BgmId);
+		//UnloadAudio(g_BgmId);
 		g_Start = false;
 	}
 

@@ -1,5 +1,4 @@
 #pragma once
-#pragma once
 #ifndef FADE_H
 #define FADE_H
 

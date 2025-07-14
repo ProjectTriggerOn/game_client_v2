@@ -25,12 +25,12 @@ void Title_Finalize()
 
 void Title_Update(double elapsed_time)
 {
-	//Fade_Start(2.0, true);
 	if (KeyLogger_IsTrigger(KK_ENTER))
 	{
-		Fade_Start(2.0, true, { 1.0f, 1.0f, 1.0f }); // フェードアウト開始
-		//Scene_Change(SCENE_GAME); // ゲームシーンへ遷移
+		Fade_Start(2.0, true); // フェードアウト開始
+		
 	}
+
 	if (Fade_GetState() == FADE_STATE_FINISHED_OUT) {
 		Scene_Change(SCENE_GAME); // ゲームシーンへ遷移
 	}
@@ -39,5 +39,5 @@ void Title_Update(double elapsed_time)
 void Title_Draw()
 {
 	Sprite_Draw(g_TitleBG, 0, 0, 1280, 960, 0, 0, 350, 400);
-	//Sprite_Draw(g_TitleLogo, 370, 300, 540, 50, 0, 0, 1514, 123);
+	Sprite_Draw(g_TitleLogo, 370, 300, 540, 50, 0, 0, 1514, 123);
 }
