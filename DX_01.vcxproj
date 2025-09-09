@@ -139,6 +139,7 @@
   <ItemGroup>
     <ClCompile Include="Audio.cpp" />
     <ClCompile Include="collision.cpp" />
+    <ClCompile Include="cube.cpp" />
     <ClCompile Include="debug_ostream.cpp" />
     <ClCompile Include="debug_text.cpp" />
     <ClCompile Include="direct3d.cpp" />
@@ -154,6 +155,7 @@
     <ClCompile Include="scene.cpp" />
     <ClCompile Include="score.cpp" />
     <ClCompile Include="shader.cpp" />
+    <ClCompile Include="shader_3d.cpp" />
     <ClCompile Include="sprite.cpp" />
     <ClCompile Include="sprite_anime.cpp" />
     <ClCompile Include="system_timer.cpp" />
@@ -164,6 +166,7 @@
   <ItemGroup>
     <ClInclude Include="Audio.h" />
     <ClInclude Include="collision.h" />
+    <ClInclude Include="cube.h" />
     <ClInclude Include="debug_ostream.h" />
     <ClInclude Include="debug_text.h" />
     <ClInclude Include="direct3d.h" />
@@ -179,6 +182,7 @@
     <ClInclude Include="scene.h" />
     <ClInclude Include="score.h" />
     <ClInclude Include="shader.h" />
+    <ClInclude Include="shader_3d.h" />
     <ClInclude Include="sprite.h" />
     <ClInclude Include="sprite_anime.h" />
     <ClInclude Include="system_timer.h" />
@@ -193,12 +197,14 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
     </FxCompile>
+    <FxCompile Include="shader_pixel_3d.hlsl" />
     <FxCompile Include="shader_vertex_2d.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
     </FxCompile>
+    <FxCompile Include="shader_vertex_3d.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="ascii_texture_generator.py" />
@@ -219,7 +225,6 @@
     <Image Include="resource\texture\game_num_font.png" />
     <Image Include="resource\texture\image.png" />
     <Image Include="resource\texture\knight.png" />
-    <Image Include="resource\texture\kokosozai.png" />
     <Image Include="resource\texture\laser.png" />
     <Image Include="resource\texture\p1.png" />
     <Image Include="resource\texture\player_sprite.png" />
