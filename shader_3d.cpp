@@ -1,4 +1,3 @@
-
 #include <d3d11.h>
 #include <DirectXMath.h>
 using namespace DirectX;
@@ -19,13 +18,13 @@ static ID3D11Device* g_pDevice = nullptr;
 static ID3D11DeviceContext* g_pContext = nullptr;
 
 
-bool Shader_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
+bool Shader_3D_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 {
 	HRESULT hr; // HRESULTはDirectXの関数の戻り値で、成功か失敗かを示す	
 
 	// デバイスとデバイスコンテキストのチェック
 	if (!pDevice || !pContext) {
-		hal::dout << "Shader_Initialize() : �^����ꂽ�f�o�C�X���R���e�L�X�g���s���ł�" << std::endl;
+		hal::dout << "Shader_3D_Initialize() : �^����ꂽ�f�o�C�X���R���e�L�X�g���s���ł�" << std::endl;
 		return false;
 	}
 
@@ -57,7 +56,7 @@ bool Shader_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 	hr = g_pDevice->CreateVertexShader(vsbinary_pointer, filesize, nullptr, &g_pVertexShader);
 
 	if (FAILED(hr)) {
-		hal::dout << "Shader_Initialize() : ���_�V�F�[�_�[�̍쐬�Ɏ��s���܂���" << std::endl;
+		hal::dout << "Shader_3D_Initialize() : ���_�V�F�[�_�[�̍쐬�Ɏ��s���܂���" << std::endl;
 		delete[] vsbinary_pointer; // ���������[�N���Ȃ��悤�Ƀo�C�i���f�[�^�̃o�b�t�@����
 		return false;
 	}
@@ -79,7 +78,7 @@ bool Shader_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 	delete[] vsbinary_pointer; // �o�C�i���f�[�^�̃o�b�t�@����
 
 	if (FAILED(hr)) {
-		hal::dout << "Shader_Initialize() : ���_���C�A�E�g�̍쐬�Ɏ��s���܂���" << std::endl;
+		hal::dout << "Shader_3D_Initialize() : ���_���C�A�E�g�̍쐬�Ɏ��s���܂���" << std::endl;
 		return false;
 	}
 
@@ -114,7 +113,7 @@ bool Shader_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 	delete[] psbinary_pointer; //
 
 	if (FAILED(hr)) {
-		hal::dout << "Shader_Initialize() Error" << std::endl;
+		hal::dout << "Shader_3D_Initialize() Error" << std::endl;
 		return false;
 	}
 
@@ -141,7 +140,7 @@ bool Shader_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 
 
 
-void Shader_Finalize()
+void Shader_3D_Finalize()
 {
 	SAFE_RELEASE(g_pSamplerState);
 	SAFE_RELEASE(g_pPixelShader);
@@ -151,7 +150,7 @@ void Shader_Finalize()
 	SAFE_RELEASE(g_pVertexShader);
 }
 
-void Shader_SetMatrix(const DirectX::XMMATRIX& matrix)
+void Shader_3D_SetMatrix(const DirectX::XMMATRIX& matrix)
 {
 	//
 	XMFLOAT4X4 transpose;
@@ -163,7 +162,7 @@ void Shader_SetMatrix(const DirectX::XMMATRIX& matrix)
 	g_pContext->UpdateSubresource(g_pVSConstantBuffer0, 0, nullptr, &transpose, 0, 0);
 }
 
-void Shader_SetWorldMatrix(const DirectX::XMMATRIX& matrix)
+void Shader_3D_SetWorldMatrix(const DirectX::XMMATRIX& matrix)
 {
 	//
 	XMFLOAT4X4 transpose;
@@ -176,7 +175,7 @@ void Shader_SetWorldMatrix(const DirectX::XMMATRIX& matrix)
 
 }
 
-void Shader_SetProjectMatrix(const DirectX::XMMATRIX& matrix)
+void Shader_3D_SetProjectMatrix(const DirectX::XMMATRIX& matrix)
 {
 	//
 	XMFLOAT4X4 transpose;
@@ -189,7 +188,7 @@ void Shader_SetProjectMatrix(const DirectX::XMMATRIX& matrix)
 
 }
 
-void Shader_Begin()
+void Shader_3D_Begin()
 {
 	//頂点シェーダーとピクセルシェーダーを描画パイプラインに設定
 	g_pContext->VSSetShader(g_pVertexShader, nullptr, 0);
