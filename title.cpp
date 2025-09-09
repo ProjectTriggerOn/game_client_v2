@@ -23,7 +23,7 @@ void Title_Finalize()
 	Texture_Release(g_TitleLogo);
 }
 
-void Title_Update(double elapsed_time)
+void Title_Update(double )
 {
 	if (KeyLogger_IsTrigger(KK_ENTER))
 	{

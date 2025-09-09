@@ -5,7 +5,7 @@
 
 namespace 
 {
-	scene g_CurrentScene = SCENE_TITLE;// 現在のシーン
+	scene g_CurrentScene = SCENE_GAME;// 現在のシーン
 	scene g_NextScene = g_CurrentScene; // 次のシーン
 }
 void Scene_Initialize()

@@ -328,10 +328,6 @@ void Sprite_Draw(int texid,float sx,float sy,float sw,float sh,
 	// 頂点バッファへの仮想ポインタを取得  
 	Vertex* v = (Vertex*)msr.pData;
 
-	unsigned int dw = Texture_GetWidth(texid);
-	unsigned int dh = Texture_GetHeight(texid);
-
-
 	// 画面の左上から右下に向かう線分を描画する  
 	v[0].position = { sx     ,sy , 0.0f };
 	v[1].position = { sx + sw,sy , 0.0f };

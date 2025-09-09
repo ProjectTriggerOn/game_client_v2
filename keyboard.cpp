@@ -1,11 +1,11 @@
 //--------------------------------------------------------------------------------------
 // File: Keyboard.cpp
 //
-// �L�[�{�[�h���W���[��
+// キーボードモジュール
 //
 //--------------------------------------------------------------------------------------
 // 2020/06/07
-//     DirectXTK���A�Ȃ񂿂����C����p�ɃV�F�C�v�A�b�v����
+//     DirectXTKより、なんちゃってC言語用にシェイプアップ改変
 //
 // Licensed under the MIT License.
 //
@@ -17,7 +17,7 @@
 #include <assert.h>
 
 
-static_assert(sizeof(Keyboard_State) == 256 / 8, "�L�[�{�[�h��ԍ\���̂̃T�C�Y�s��v");
+static_assert(sizeof(Keyboard_State) == 256 / 8, "キーボード状態構造体のサイズ不一致");
 
 
 static Keyboard_State gState = {};
@@ -25,7 +25,7 @@ static Keyboard_State gState = {};
 
 static void keyDown(int key)
 {
-    if (key < 0 || key > 0xfe) { return;  }
+    if (key < 0 || key > 0xfe) { return; }
 
     unsigned int* p = (unsigned int*)&gState;
     unsigned int bf = 1u << (key & 0x1f);
@@ -85,7 +85,7 @@ bool Keyboard_IsKeyUp(Keyboard_Keys key)
 }
 
 
-// �L�[�{�[�h�̌��݂̏�Ԃ�擾����
+// キーボードの現在の状態を取得する
 const Keyboard_State* Keyboard_GetState(void)
 {
     return &gState;
@@ -98,7 +98,7 @@ void Keyboard_Reset(void)
 }
 
 
-// �L�[�{�[�h����̂��߂̃E�H���ǂ����b�Z�[�W�v���V�[�W���t�b�N�֐�
+// キーボード制御のためのウォンどうメッセージプロシージャフック関数
 void Keyboard_ProcessMessage(UINT message, WPARAM wParam, LPARAM lParam)
 {
     bool down = false;
@@ -129,7 +129,7 @@ void Keyboard_ProcessMessage(UINT message, WPARAM wParam, LPARAM lParam)
         vk = (int)MapVirtualKey(((unsigned int)lParam & 0x00ff0000) >> 16u, MAPVK_VSC_TO_VK_EX);
         if (!down)
         {
-            // ���V�t�g�ƉE�V�t�g�̗����������ɉ����ꂽ�ꍇ�ɃN���A�����悤�ɂ��邽�߂̉���
+            // 左シフトと右シフトの両方が同時に押された場合にクリアされるようにするための回避策
             keyUp(VK_LSHIFT);
             keyUp(VK_RSHIFT);
         }

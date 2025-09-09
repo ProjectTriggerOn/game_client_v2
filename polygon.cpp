@@ -46,7 +46,7 @@ void Polygon_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 	g_pDevice = pDevice;
 	g_pContext = pContext;
 
-	g_NumVertex = g_Radius * 2.0f * DirectX::XM_PI;
+	g_NumVertex = static_cast<int>(g_Radius * 2.0f * XM_PI);
 
 	// 頂点バッファ生成
 	D3D11_BUFFER_DESC bd = {};

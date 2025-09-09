@@ -26,8 +26,8 @@ HWND GameWindow_Generate(HINSTANCE hInstance)
 	RegisterClassEx(&wcex);
 	/* メインウインドウの作成 */
 
-	constexpr int SCREEN_WIDTH = 1280;
-	constexpr int SCREEN_HEIGHT = 960;
+	constexpr int SCREEN_WIDTH = 1920;
+	constexpr int SCREEN_HEIGHT = 1080;
 	DWORD WINDOW_STYLE = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
 	RECT window_rect{
 		0,0,SCREEN_WIDTH,SCREEN_HEIGHT

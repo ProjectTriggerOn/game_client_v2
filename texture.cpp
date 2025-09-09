@@ -13,11 +13,13 @@ struct Texture
 	unsigned int height ; // 高さ
 };
 
-static Texture g_Textures[MAX_TEXTURES]{}; // テクスチャデータ配列
-static unsigned int g_SetTextureIndex = -1; // 現在設定されているテクスチャのインデックス
-
-static ID3D11Device* g_pDevice = nullptr;
-static ID3D11DeviceContext* g_pContext = nullptr;
+namespace{
+	Texture g_Textures[MAX_TEXTURES]{}; // テクスチャデータ配列
+	unsigned int g_SetTextureIndex = static_cast<unsigned int>(-1); // 現在設定されているテクスチャのインデックス
+	
+	ID3D11Device* g_pDevice = nullptr;
+	ID3D11DeviceContext* g_pContext = nullptr;
+}
 
 void Texture_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 {
@@ -27,7 +29,7 @@ void Texture_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 		//t.width = 0;
 		//t.height = 0;
 	}
-	g_SetTextureIndex = -1;
+	g_SetTextureIndex = static_cast<unsigned int>(-1);
 	g_pDevice = pDevice; // デバイスの保存
 	g_pContext = pContext; // デバイスコンテキストの保存
 }
@@ -63,8 +65,8 @@ int Texture_LoadFromFile(const wchar_t* pFilename)
 			return -1; // 読み込み失敗
 		}
 		g_Textures[i].filename = pFilename; // ファイル名を保存
-		g_Textures[i].width  = metadata.width; // 幅を保存
-		g_Textures[i].height = metadata.height; // 高さを保存
+		g_Textures[i].width  = static_cast<unsigned int>(metadata.width); // 幅を保存
+		g_Textures[i].height = static_cast<unsigned int>(metadata.height); // 高さを保存
 
 
 		hr = DirectX::CreateShaderResourceView(
@@ -93,8 +95,8 @@ void Texture_Release(int texid)
 	g_Textures[texid].filename.clear(); // ファイル名をクリア
 	g_Textures[texid].width = 0; // 幅をリセット
 	g_Textures[texid].height = 0; // 高さをリセット
-	if (g_SetTextureIndex == texid) {
-		g_SetTextureIndex = -1; // 現在のテクスチャインデックスをリセット
+	if (g_SetTextureIndex == static_cast<unsigned int>(texid)) {
+		g_SetTextureIndex = static_cast<unsigned int>(-1); // 現在のテクスチャインデックスをリセット
 	}
 }
 

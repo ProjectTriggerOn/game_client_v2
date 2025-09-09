@@ -46,7 +46,7 @@ void Effect_Finalize(void)
 	UnloadAudio(g_EffectSoundId); // エフェクトのサウンドをアンロード
 }
 
-void Effect_Update(double elapsed_time)
+void Effect_Update(double)
 {
 	for (Effect& e : g_Effects)
 	{

@@ -141,7 +141,6 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 				Scene_Draw();
 				Fade_Draw();
 
-				float player_vx = Player_GetVelocityX();
 
 				std::string fade_state =
 					Fade_GetState() == FADE_STATE_FADEIN ? "IN" :
@@ -149,13 +148,11 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 					Fade_GetState() == FADE_STATE_FINISHED_IN ? "FINISHED_IN" :
 					Fade_GetState() == FADE_STATE_FINISHED_OUT ? "FINISHED_OUT" : "NONE";
 
-				int currentPlayerLife = Player_GetLife();
 
 #if defined(_DEBUG) || defined(DEBUG)
 
 				std::stringstream ssf;
 				ssf << "Fade Status: " << fade_state << "\n";
-				ssf << "PlayerLife: " << currentPlayerLife << "\n";
 				dt.SetText(ssf.str().c_str(), { 1.0f, 1.0f, 1.0f, 1.0f });
 				dt.Draw();
 				dt.Clear();
