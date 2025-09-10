@@ -143,25 +143,17 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 
 				Sprite_Begin();
 
-				Game_Draw();
+				//Game_Draw();
 				Scene_Draw();
 				Fade_Draw();
 
 
-				std::string fade_state =
-					Fade_GetState() == FADE_STATE_FADEIN ? "IN" :
-					Fade_GetState() == FADE_STATE_FADEOUT ? "OUT" :
-					Fade_GetState() == FADE_STATE_FINISHED_IN ? "FINISHED_IN" :
-					Fade_GetState() == FADE_STATE_FINISHED_OUT ? "FINISHED_OUT" : "NONE";
+
 
 
 #if defined(_DEBUG) || defined(DEBUG)
 
-				std::stringstream ssf;
-				ssf << "Fade Status: " << fade_state << "\n";
-				dt.SetText(ssf.str().c_str(), { 1.0f, 1.0f, 1.0f, 1.0f });
-				dt.Draw();
-				dt.Clear();
+
 #endif // _DEBUG || DEBUG
 
 				Direct3D_Present();

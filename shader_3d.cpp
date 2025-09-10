@@ -40,7 +40,7 @@ bool Shader_3D_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 	std::ifstream ifs_vs("resource/shader/shader_vertex_3d.cso", std::ios::binary);
 
 	if (!ifs_vs) {
-		MessageBox(nullptr, "���_�V�F�[�_�[�̓ǂݍ��݂Ɏ��s���܂���\n\nshader_vertex_3d.cso", "�G���[", MB_OK);
+		MessageBox(nullptr, "", "error", MB_OK);
 		return false;
 	}
 
@@ -59,8 +59,8 @@ bool Shader_3D_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 	hr = g_pDevice->CreateVertexShader(vsbinary_pointer, filesize, nullptr, &g_pVertexShader);
 
 	if (FAILED(hr)) {
-		hal::dout << "Shader_3D_Initialize() : ���_�V�F�[�_�[�̍쐬�Ɏ��s���܂���" << std::endl;
-		delete[] vsbinary_pointer; // ���������[�N���Ȃ��悤�Ƀo�C�i���f�[�^�̃o�b�t�@����
+		hal::dout << "Shader_3D_Initialize()" << std::endl;
+		delete[] vsbinary_pointer; //
 		return false;
 	}
 
@@ -69,8 +69,6 @@ bool Shader_3D_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 	D3D11_INPUT_ELEMENT_DESC layout[] = {
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT,    0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT,    0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		//{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,    0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-
 	};
 
 	UINT num_elements = ARRAYSIZE(layout); // �z��̗v�f����擾
@@ -86,10 +84,10 @@ bool Shader_3D_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 	}
 
 
-	// ���_�V�F�[�_�[�p�萔�o�b�t�@�̍쐬
+	// 
 	D3D11_BUFFER_DESC buffer_desc{};
-	buffer_desc.ByteWidth = sizeof(XMFLOAT4X4); // �o�b�t�@�̃T�C�Y
-	buffer_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER; // �o�C���h�t���O
+	buffer_desc.ByteWidth = sizeof(XMFLOAT4X4); // 
+	buffer_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER; //
 
 	g_pDevice->CreateBuffer(&buffer_desc, nullptr, &g_pVSConstantBuffer0);
 	g_pDevice->CreateBuffer(&buffer_desc, nullptr, &g_pVSConstantBuffer1);
@@ -99,7 +97,7 @@ bool Shader_3D_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 	//
 	std::ifstream ifs_ps("resource/shader/shader_pixel_3d.cso", std::ios::binary);
 	if (!ifs_ps) {
-		MessageBox(nullptr, "�s�N�Z���V�F�[�_�[�̓ǂݍ��݂Ɏ��s���܂���\n\nshader_pixel_3d.cso", "�G���[", MB_OK);
+		MessageBox(nullptr, "\n\nshader_pixel_3d.cso", "error", MB_OK);
 		return false;
 	}
 

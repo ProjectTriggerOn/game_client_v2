@@ -11,7 +11,6 @@ struct Vertex3D
 {
 	XMFLOAT3 position; // 頂点座標
 	XMFLOAT4 color;
-	//XMFLOAT2 uv;
 };
 
 namespace {
@@ -24,12 +23,12 @@ namespace {
 
 	Vertex3D g_CubeVertex[36]
 	{
-		{{-0.5f, 0.5f,-0.5f},{1.0f,1.0f,1.0f,1.0f}},
-		{{ 0.5f,-0.5f,-0.5f},{1.0f,1.0f,1.0f,1.0f}},
-		{{-0.5f,-0.5f,-0.5f},{1.0f,1.0f,1.0f,1.0f}},
-		{{-0.5f, 0.5f,-0.5f},{1.0f,1.0f,1.0f,1.0f}},
-		{{ 0.5f, 0.5f,-0.5f},{1.0f,1.0f,1.0f,1.0f}},
-		{{ 0.5f,-0.5f,-0.5f},{1.0f,1.0f,1.0f,1.0f}},
+		{{-0.5f, 0.5f,-0.5f},{1.0f,0.0f,0.0f,1.0f}},
+		{{ 0.5f,-0.5f,-0.5f},{1.0f,0.0f,0.0f,1.0f}},
+		{{-0.5f,-0.5f,-0.5f},{1.0f,0.0f,0.0f,1.0f}},
+		{{-0.5f, 0.5f,-0.5f},{1.0f,0.0f,0.0f,1.0f}},
+		{{ 0.5f, 0.5f,-0.5f},{1.0f,0.0f,0.0f,1.0f}},
+		{{ 0.5f,-0.5f,-0.5f},{1.0f,0.0f,0.0f,1.0f}},
 	};
 }
 
@@ -42,7 +41,6 @@ void Cube_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 	g_pContext = pContext;
 	// 頂点バッファ生成
 	D3D11_BUFFER_DESC bd = {};
-	//bd.Usage = D3D11_USAGE_DYNAMIC;// 書き込み可能に設定
 	bd.Usage = D3D11_USAGE_DEFAULT;// 書き込み不可に設定
 	bd.ByteWidth = sizeof(Vertex3D) * NUM_VERTEX;
 	bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
@@ -81,6 +79,7 @@ void Cube_Draw(void)
 		{0.0f,1.0f,0.0f} // 上方向ベクトル
 	);
 
+	Shader_3D_SetViewMatrix(mtxView);
 
 	float fovAngleY = XMConvertToRadians(60.0f);
 	float aspectRatio = static_cast<float>(Direct3D_GetBackBufferWidth()) / static_cast<float>(Direct3D_GetBackBufferHeight());
@@ -95,10 +94,9 @@ void Cube_Draw(void)
 	);
 
 	Shader_3D_SetProjectMatrix(mtxPerspective);
+
 	// プリミティブトポロジ設定
 	g_pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-	//g_pContext->PSSetShaderResources(0, 1, &g_pTexture);
 
 	// ポリゴン描画命令発行
 	g_pContext->Draw(6, 0);
