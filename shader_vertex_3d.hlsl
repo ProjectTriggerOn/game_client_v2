@@ -34,18 +34,10 @@ VS_OUT main(VS_IN vi)
 {
     VS_OUT vo;
 
-    // ローカル座標を ワ一ルド → ビュー → プロジェクション 変換
-    float4 posW = mul(vi.posL, view);
-    float4 posWV = mul(posW, world);
-    vo.posH = mul(posWV, proj); // ローカル座標を変換
-
-    //float4x4 mtxV = mul(view, world);
-    //float4x4 mtxWVP = mul(mtxV, proj);
-    //vo.posH = mul(vi.posL, mtxWVP);
-
-
-
-    vo.color = vi.color; // 色をそのまま渡す
-
+    float4 pos = float4(vi.posL.xyz, 1.0f); //补w
+    pos = mul(pos, world); // 依次 world -> view -> proj
+    pos = mul(pos, view);
+    vo.posH = mul(pos, proj);
+    vo.color = vi.color;
     return vo;
 }

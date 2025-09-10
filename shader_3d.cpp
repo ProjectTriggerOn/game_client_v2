@@ -217,7 +217,7 @@ void Shader_3D_Begin()
 	//定数バッファを描画パイプラインに設定
 	g_pContext->VSSetConstantBuffers(0, 1, &g_pVSConstantBuffer0);
 	g_pContext->VSSetConstantBuffers(1, 1, &g_pVSConstantBuffer1);
-	g_pContext->VSSetConstantBuffers(2, 1, &g_pVSConstantBuffer1);
+	g_pContext->VSSetConstantBuffers(2, 1, &g_pVSConstantBuffer2);
 
 	//サンプラーステートを描画パイプラインに設定
 	g_pContext->PSSetSamplers(0, 1, &g_pSamplerState);
