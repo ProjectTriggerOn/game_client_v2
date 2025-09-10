@@ -6,17 +6,20 @@ using namespace DirectX;
 #include <fstream>
 #include "shader_3d.h"
 
+namespace
+{
+	ID3D11VertexShader* g_pVertexShader = nullptr;
+	ID3D11InputLayout* g_pInputLayout = nullptr;
+	ID3D11Buffer* g_pVSConstantBuffer0 = nullptr;
+	ID3D11Buffer* g_pVSConstantBuffer1 = nullptr;
+	ID3D11Buffer* g_pVSConstantBuffer2 = nullptr;
+	ID3D11PixelShader* g_pPixelShader = nullptr;
+	ID3D11SamplerState* g_pSamplerState = nullptr;
 
-static ID3D11VertexShader* g_pVertexShader = nullptr;
-static ID3D11InputLayout* g_pInputLayout = nullptr;
-static ID3D11Buffer* g_pVSConstantBuffer0 = nullptr;static ID3D11Buffer* g_pVSConstantBuffer1 = nullptr;
-static ID3D11PixelShader* g_pPixelShader = nullptr;
-static ID3D11SamplerState* g_pSamplerState = nullptr;
-
-// 注意！初期化で外部から設定されるもの。Release不要。
-static ID3D11Device* g_pDevice = nullptr;
-static ID3D11DeviceContext* g_pContext = nullptr;
-
+	// 注意！初期化で外部から設定されるもの。Release不要。
+	ID3D11Device* g_pDevice = nullptr;
+	ID3D11DeviceContext* g_pContext = nullptr;
+}
 
 bool Shader_3D_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 {
@@ -34,10 +37,10 @@ bool Shader_3D_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 
 
 	// ���O�R���p�C���ςݒ��_�V�F�[�_�[�̓ǂݍ���
-	std::ifstream ifs_vs("resource/shader/shader_vertex_2d.cso", std::ios::binary);
+	std::ifstream ifs_vs("resource/shader/shader_vertex_3d.cso", std::ios::binary);
 
 	if (!ifs_vs) {
-		MessageBox(nullptr, "���_�V�F�[�_�[�̓ǂݍ��݂Ɏ��s���܂���\n\nshader_vertex_2d.cso", "�G���[", MB_OK);
+		MessageBox(nullptr, "���_�V�F�[�_�[�̓ǂݍ��݂Ɏ��s���܂���\n\nshader_vertex_3d.cso", "�G���[", MB_OK);
 		return false;
 	}
 
@@ -66,7 +69,7 @@ bool Shader_3D_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 	D3D11_INPUT_ELEMENT_DESC layout[] = {
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT,    0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT,    0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,    0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		//{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,    0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 
 	};
 
@@ -90,12 +93,13 @@ bool Shader_3D_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 
 	g_pDevice->CreateBuffer(&buffer_desc, nullptr, &g_pVSConstantBuffer0);
 	g_pDevice->CreateBuffer(&buffer_desc, nullptr, &g_pVSConstantBuffer1);
+	g_pDevice->CreateBuffer(&buffer_desc, nullptr, &g_pVSConstantBuffer2);
 
 
 	//
-	std::ifstream ifs_ps("resource/shader/shader_pixel_2d.cso", std::ios::binary);
+	std::ifstream ifs_ps("resource/shader/shader_pixel_3d.cso", std::ios::binary);
 	if (!ifs_ps) {
-		MessageBox(nullptr, "�s�N�Z���V�F�[�_�[�̓ǂݍ��݂Ɏ��s���܂���\n\nshader_pixel_2d.cso", "�G���[", MB_OK);
+		MessageBox(nullptr, "�s�N�Z���V�F�[�_�[�̓ǂݍ��݂Ɏ��s���܂���\n\nshader_pixel_3d.cso", "�G���[", MB_OK);
 		return false;
 	}
 
@@ -119,7 +123,8 @@ bool Shader_3D_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 
 	D3D11_SAMPLER_DESC sampler_desc{};
 
-	sampler_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT; // 点フィルタリング
+	//sampler_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR; // 点フィルタリング
+	sampler_desc.Filter = D3D11_FILTER_ANISOTROPIC;
 
 	//UV参照外のテクスチャのアドレスモードを設定
 	sampler_desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP; // U軸のアドレスモード
@@ -127,7 +132,7 @@ bool Shader_3D_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 
 	sampler_desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP; // W軸のアドレスモード
 	sampler_desc.MipLODBias = 0.0f; // MIPレベルのバイアス
-	sampler_desc.MaxAnisotropy = 8; // 異方性フィルタリングの最大値
+	sampler_desc.MaxAnisotropy = 16; // 異方性フィルタリングの最大値
 	sampler_desc.ComparisonFunc = D3D11_COMPARISON_ALWAYS; // 比較関数
 	sampler_desc.MinLOD = 0.0f; // 最小LOD
 	sampler_desc.MaxLOD = D3D11_FLOAT32_MAX; // 最大LOD
@@ -146,6 +151,7 @@ void Shader_3D_Finalize()
 	SAFE_RELEASE(g_pPixelShader);
 	SAFE_RELEASE(g_pVSConstantBuffer0);
 	SAFE_RELEASE(g_pVSConstantBuffer1);
+	SAFE_RELEASE(g_pVSConstantBuffer2);
 	SAFE_RELEASE(g_pInputLayout);
 	SAFE_RELEASE(g_pVertexShader);
 }
@@ -171,6 +177,19 @@ void Shader_3D_SetWorldMatrix(const DirectX::XMMATRIX& matrix)
 	XMStoreFloat4x4(&transpose, XMMatrixTranspose(matrix));
 
 	//
+	g_pContext->UpdateSubresource(g_pVSConstantBuffer0, 0, nullptr, &transpose, 0, 0);
+
+}
+
+void Shader_3D_SetViewMatrix(const DirectX::XMMATRIX& matrix)
+{
+	//
+	XMFLOAT4X4 transpose;
+
+	//
+	XMStoreFloat4x4(&transpose, XMMatrixTranspose(matrix));
+
+	//
 	g_pContext->UpdateSubresource(g_pVSConstantBuffer1, 0, nullptr, &transpose, 0, 0);
 
 }
@@ -184,7 +203,7 @@ void Shader_3D_SetProjectMatrix(const DirectX::XMMATRIX& matrix)
 	XMStoreFloat4x4(&transpose, XMMatrixTranspose(matrix));
 
 	//
-	g_pContext->UpdateSubresource(g_pVSConstantBuffer0, 0, nullptr, &transpose, 0, 0);
+	g_pContext->UpdateSubresource(g_pVSConstantBuffer2, 0, nullptr, &transpose, 0, 0);
 
 }
 
@@ -200,6 +219,7 @@ void Shader_3D_Begin()
 	//定数バッファを描画パイプラインに設定
 	g_pContext->VSSetConstantBuffers(0, 1, &g_pVSConstantBuffer0);
 	g_pContext->VSSetConstantBuffers(1, 1, &g_pVSConstantBuffer1);
+	g_pContext->VSSetConstantBuffers(2, 1, &g_pVSConstantBuffer1);
 
 	//サンプラーステートを描画パイプラインに設定
 	g_pContext->PSSetSamplers(0, 1, &g_pSamplerState);

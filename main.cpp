@@ -10,6 +10,7 @@
 #include "direct3d.h"
 #include "sprite.h"
 #include "shader.h"
+#include "shader_3d.h"
 #include "sprite_anime.h"
 #include "debug_text.h"
 #include "texture.h"
@@ -26,6 +27,7 @@
 #include "game.h"
 
 #include "Audio.h"
+#include "cube.h"
 #include "fade.h"
 #include "scene.h"
 
@@ -53,6 +55,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 
 	Shader_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
 
+	Shader_3D_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
+
 	Texture_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
 
 	Polygon_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
@@ -64,6 +68,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 	Fade_Initialize();
 
 	Scene_Initialize();
+
+	Cube_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
 
 #if defined(_DEBUG) || defined(DEBUG)
 
@@ -137,7 +143,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 
 				Sprite_Begin();
 
-				//Game_Draw();
+				Game_Draw();
 				Scene_Draw();
 				Fade_Draw();
 
@@ -174,6 +180,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 
 #endif
 
+	Cube_Finalize();
+
 	Scene_Finalize();
 
 	Fade_Finalize();
@@ -188,11 +196,15 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 
 	Shader_Finalize();
 
+	Shader_3D_Finalize();
+
 	Polygon_Finalize();
 
 	Direct3D_Finalize();
 
 	Mouse_Finalize();
+
+
 
 	return static_cast<int>(msg.wParam);
 

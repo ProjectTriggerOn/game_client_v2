@@ -3,7 +3,7 @@
 #include <DirectXMath.h>
 
 #include "direct3d.h"
-#include "shader.h"
+#include "shader_3d.h"
 
 using namespace DirectX;
 
@@ -51,7 +51,7 @@ void Cube_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 	D3D11_SUBRESOURCE_DATA sd{};
 	sd.pSysMem = g_CubeVertex;
 
-	g_pDevice->CreateBuffer(&bd, NULL, &g_pVertexBuffer);
+	g_pDevice->CreateBuffer(&bd, &sd, &g_pVertexBuffer);
 }
 
 void Cube_Finalize(void)
@@ -62,7 +62,7 @@ void Cube_Finalize(void)
 void Cube_Draw(void)
 {
 	// シェーダーを描画パイプラインに設定
-	Shader_Begin();
+	Shader_3D_Begin();
 
 	// 頂点バッファを描画パイプラインに設定
 	UINT stride = sizeof(Vertex3D);
@@ -71,7 +71,8 @@ void Cube_Draw(void)
 
 	//ワールド座標変換行列を設定
 	XMMATRIX mtxWorld = XMMatrixIdentity();// 単位行列
-	Shader_SetWorldMatrix(mtxWorld);
+
+	Shader_3D_SetWorldMatrix(mtxWorld);
 
 	//ビュー座標変換行列を設定
 	XMMATRIX mtxView = XMMatrixLookAtLH(
@@ -93,7 +94,7 @@ void Cube_Draw(void)
 		farZ
 	);
 
-	Shader_SetProjectMatrix(mtxPerspective);
+	Shader_3D_SetProjectMatrix(mtxPerspective);
 	// プリミティブトポロジ設定
 	g_pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 

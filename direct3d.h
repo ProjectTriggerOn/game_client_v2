@@ -22,4 +22,6 @@ unsigned int Direct3D_GetBackBufferHeight(); // バックバッファの幅と�
 ID3D11Device* Direct3D_GetDevice();
 ID3D11DeviceContext* Direct3D_GetDeviceContext();
 
+void Direct3D_SetDepthEnable(bool enable);
+
 #endif // DIRECT3D_H

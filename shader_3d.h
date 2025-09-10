@@ -9,6 +9,7 @@ void Shader_3D_Finalize();
 
 void Shader_3D_SetMatrix(const DirectX::XMMATRIX& matrix);
 void Shader_3D_SetWorldMatrix(const DirectX::XMMATRIX& matrix);
+void Shader_3D_SetViewMatrix(const DirectX::XMMATRIX& matrix);
 void Shader_3D_SetProjectMatrix(const DirectX::XMMATRIX& matrix);
 
 void Shader_3D_Begin();

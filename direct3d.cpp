@@ -18,7 +18,7 @@ static ID3D11DeviceContext* g_pDeviceContext = nullptr;
 static IDXGISwapChain* g_pSwapChain = nullptr;
 static ID3D11BlendState* g_pBlendStateMultiply = nullptr; // ブレンドステート（乗算ブレンド用）
 static ID3D11DepthStencilState* g_pDepthStencilStateDepthDisable = nullptr; // 深度ステンシルステート（深度無効用）
-
+static ID3D11DepthStencilState* g_pDepthStencilStateDepthEnable = nullptr; // 深度ステンシルステート（深度有効用）
 /* バックバッファ関連 */
 static ID3D11RenderTargetView* g_pRenderTargetView = nullptr;
 static ID3D11Texture2D* g_pDepthStencilBuffer = nullptr;
@@ -138,18 +138,21 @@ bool Direct3D_Initialize(HWND hWnd)
 
 	g_pDevice->CreateDepthStencilState(&dsd, &g_pDepthStencilStateDepthDisable);
 
-	// dsd.DepthEnable = TRUE;
-	// dsd.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-	// g_pDevice->CreateDepthStencilState(&dsd, &g_pDepthStencilStateDepthEnable);
+	dsd.DepthEnable = TRUE;
+	dsd.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+	g_pDevice->CreateDepthStencilState(&dsd, &g_pDepthStencilStateDepthEnable);
 
-	g_pDeviceContext->OMSetDepthStencilState(g_pDepthStencilStateDepthDisable, NULL);
+	Direct3D_SetDepthEnable(true);
+
     return true;
 }
 
 void Direct3D_Finalize()
 {
 	SAFE_RELEASE(g_pDepthStencilStateDepthDisable)
+	SAFE_RELEASE(g_pDepthStencilStateDepthEnable)
 	SAFE_RELEASE(g_pBlendStateMultiply)
+
 	releaseBackBuffer();
 
 	SAFE_RELEASE(g_pSwapChain)
@@ -193,6 +196,19 @@ ID3D11Device* Direct3D_GetDevice()
 ID3D11DeviceContext* Direct3D_GetDeviceContext()
 {
 	return g_pDeviceContext;
+}
+
+void Direct3D_SetDepthEnable(bool enable)
+{
+	if (enable)
+	{
+		g_pDeviceContext->OMSetDepthStencilState(g_pDepthStencilStateDepthEnable, NULL);
+
+	}else
+	{
+		g_pDeviceContext->OMSetDepthStencilState(g_pDepthStencilStateDepthDisable, NULL);
+
+	}
 }
 
 bool configureBackBuffer()
