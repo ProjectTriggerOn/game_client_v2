@@ -12,10 +12,10 @@ void Game_Initialize()
 
 }
 
-void Game_Update(double )
+void Game_Update(double elapsed_time)
 {
 	
-
+	Cube_Update(elapsed_time);
 }
 
 void Game_Draw()
