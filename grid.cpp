@@ -13,8 +13,8 @@ struct Vertex3D
 };
 
 namespace {
-	constexpr int GRID_H_COUNT = 10;	// Horizontal lines count
-	constexpr int GRID_V_COUNT = 10;	// Vertical lines count
+	constexpr int GRID_H_COUNT = 20;	// Horizontal lines count
+	constexpr int GRID_V_COUNT = 20;	// Vertical lines count
 	constexpr int GRID_H_LINE_COUNT = GRID_H_COUNT + 1;
 	constexpr int GRID_V_LINE_COUNT = GRID_V_COUNT + 1;
 	constexpr int NUM_VERTEX = (GRID_H_LINE_COUNT + GRID_V_LINE_COUNT) * 2;	// Total number of vertices
@@ -28,27 +28,32 @@ namespace {
 	Vertex3D g_CubeVertex[NUM_VERTEX]{};
 }
 
-static void Grid_CreateVertexes()
+static void Grid_CreateVertexes(float gridSize)
 {
 	int index = 0;
-	float gridSize = 1.0f; // Size of each grid cell
-	// Horizontal lines
 	for (int i = 0; i <= GRID_H_COUNT; ++i) {
 		float z = (i - GRID_H_COUNT / 2) * gridSize;
-		g_CubeVertex[index++] = { XMFLOAT3(-GRID_V_COUNT / 2 * gridSize, 0.0f, z), XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f) };
-		g_CubeVertex[index++] = { XMFLOAT3(GRID_V_COUNT / 2 * gridSize, 0.0f, z), XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f) };
+		g_CubeVertex[index++] = {
+			XMFLOAT3(-GRID_V_COUNT / 2 * gridSize, 0.0f, z),
+			XMFLOAT4(1.0f,1.0f,1.0f, 1.0f) };
+		g_CubeVertex[index++] = {
+			XMFLOAT3(GRID_V_COUNT / 2 * gridSize, 0.0f, z),
+			XMFLOAT4(1.0f,1.0f,1.0f, 1.0f) };
 	}
-	// Vertical lines
 	for (int i = 0; i <= GRID_V_COUNT; ++i) {
 		float x = (i - GRID_V_COUNT / 2) * gridSize;
-		g_CubeVertex[index++] = { XMFLOAT3(x, 0.0f, -GRID_H_COUNT / 2 * gridSize), XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f) };
-		g_CubeVertex[index++] = { XMFLOAT3(x, 0.0f, GRID_H_COUNT / 2 * gridSize), XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f) };
+		g_CubeVertex[index++] = {
+			XMFLOAT3(x, 0.0f, -GRID_H_COUNT / 2 * gridSize),
+			XMFLOAT4(1.0f,1.0f,1.0f, 1.0f) };
+		g_CubeVertex[index++] = {
+			XMFLOAT3(x, 0.0f, GRID_H_COUNT / 2 * gridSize),
+			XMFLOAT4(1.0f,1.0f,1.0f, 1.0f) };
 	}
 }
 
 void Grid_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 {
-	Grid_CreateVertexes();
+	Grid_CreateVertexes(1.0f);
 	// デバイスとデバイスコンテキストの保存
 	g_pDevice = pDevice;
 	g_pContext = pContext;
@@ -85,30 +90,6 @@ void Grid_Draw(void)
 	XMMATRIX mtxWorld = XMMatrixIdentity();// 単位行列
 	Shader_3D_SetWorldMatrix(mtxWorld);
 
-
-
-	//ビュー座標変換行列を設定
-	XMMATRIX mtxView = XMMatrixLookAtLH(
-		{ 2.0f,2.0f,-5.0f },// 視点座標
-		{ 0.0f,0.0f,0.0f }, // 注視点座標
-		{ 0.0f,1.0f,0.0f } // 上方向ベクトル
-	);
-
-	Shader_3D_SetViewMatrix(mtxView);
-
-	float fovAngleY = XMConvertToRadians(60.0f);
-	float aspectRatio = static_cast<float>(Direct3D_GetBackBufferWidth()) / static_cast<float>(Direct3D_GetBackBufferHeight());
-	float nearZ = 0.1f;
-	float farZ = 100.0f;
-
-	XMMATRIX mtxPerspective = XMMatrixPerspectiveFovLH(
-		fovAngleY,
-		aspectRatio,
-		nearZ,
-		farZ
-	);
-
-	Shader_3D_SetProjectMatrix(mtxPerspective);
 
 	// プリミティブトポロジ設定
 	g_pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);

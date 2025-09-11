@@ -11,6 +11,7 @@
 #include "sprite.h"
 #include "shader.h"
 #include "shader_3d.h"
+#include "grid.h"
 #include "sprite_anime.h"
 #include "debug_text.h"
 #include "texture.h"
@@ -70,6 +71,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 	Scene_Initialize();
 
 	Cube_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
+
+	Grid_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
 
 #if defined(_DEBUG) || defined(DEBUG)
 
