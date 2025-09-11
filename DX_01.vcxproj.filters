@@ -94,6 +94,9 @@
     <ClCompile Include="shader_3d.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="grid.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="debug_ostream.h">
@@ -169,6 +172,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="shader_3d.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="grid.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
