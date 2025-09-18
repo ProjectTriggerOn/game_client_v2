@@ -42,7 +42,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v145</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
@@ -151,6 +151,7 @@
   <ItemGroup>
     <ClCompile Include="Audio.cpp" />
     <ClCompile Include="camera.cpp" />
+    <ClCompile Include="circle.cpp" />
     <ClCompile Include="collision.cpp" />
     <ClCompile Include="cube.cpp" />
     <ClCompile Include="debug_ostream.cpp" />
@@ -166,6 +167,7 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="mouse.cpp" />
     <ClCompile Include="polygon.cpp" />
+    <ClCompile Include="sampler.cpp" />
     <ClCompile Include="scene.cpp" />
     <ClCompile Include="score.cpp" />
     <ClCompile Include="shader.cpp" />
@@ -180,6 +182,7 @@
   <ItemGroup>
     <ClInclude Include="Audio.h" />
     <ClInclude Include="camera.h" />
+    <ClInclude Include="circle.h" />
     <ClInclude Include="collision.h" />
     <ClInclude Include="cube.h" />
     <ClInclude Include="debug_ostream.h" />
@@ -195,6 +198,7 @@
     <ClInclude Include="key_logger.h" />
     <ClInclude Include="mouse.h" />
     <ClInclude Include="polygon.h" />
+    <ClInclude Include="sampler.h" />
     <ClInclude Include="scene.h" />
     <ClInclude Include="score.h" />
     <ClInclude Include="shader.h" />

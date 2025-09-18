@@ -19,12 +19,14 @@ struct VS_IN
 {
     float4 posL : POSITION0; // ローカル座標
     float4 color : COLOR0; // 色
+    float2 uv : TEXCOORD0; // UV
 };
 
 struct VS_OUT
 {
     float4 posH : SV_POSITION; // 変換後の座標
     float4 color : COLOR0; // 色
+    float2 uv : TEXCOORD0; // UV
 };
 
 //=============================================================================
@@ -39,5 +41,6 @@ VS_OUT main(VS_IN vi)
     pos = mul(pos, view);
     vo.posH = mul(pos, proj);
     vo.color = vi.color;
+    vo.uv = vi.uv;
     return vo;
 }

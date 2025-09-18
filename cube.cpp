@@ -5,6 +5,7 @@
 #include "direct3d.h"
 #include "shader_3d.h"
 #include "key_logger.h"
+#include "mouse.h"
 
 using namespace DirectX;
 
@@ -12,6 +13,7 @@ struct Vertex3D
 {
 	XMFLOAT3 position; // 頂点座標
 	XMFLOAT4 color;
+	XMFLOAT2 uv; // uv座標
 };
 
 namespace {
@@ -24,6 +26,17 @@ namespace {
 	float g_RotationX = 0.0f;
 	float g_RotationY = 0.0f;
 	float g_RotationZ = 0.0f;
+
+	double g_AccumulatedTime;
+
+	XMFLOAT3 g_TranslationPosition = { 0.0f, 0.0f, 0.0f };
+
+	XMFLOAT3 g_Scaling = { 1.0f, 1.0f, 1.0f };
+
+	constexpr float MOVE_SPEED = 1.0f;
+	constexpr float MOUSE_ROT_SPEED = 0.008f;
+	constexpr float WHEEL_ROT_SPEED = 0.004f;
+	constexpr float SCALE_SPEED = 0.5f;
 
 	Vertex3D g_CubeVertex[36]
 	{
@@ -97,7 +110,7 @@ void Cube_Finalize(void)
 	SAFE_RELEASE(g_pVertexBuffer);
 }
 
-void Cube_Draw(void)
+void Cube_Draw(XMMATRIX mtxW)
 {
 	// シェーダーを描画パイプラインに設定
 	Shader_3D_Begin();
@@ -111,14 +124,27 @@ void Cube_Draw(void)
 	//XMMATRIX mtxWorld = XMMatrixIdentity();// 単位行列
 	//Shader_3D_SetWorldMatrix(mtxWorld);
 	XMMATRIX mtxWorld =
+
+		XMMatrixTranslation(
+			g_TranslationPosition.x,
+			g_TranslationPosition.y,
+			g_TranslationPosition.z) *
+
 		XMMatrixRotationX(g_RotationX) *
 		XMMatrixRotationY(g_RotationY) *
-		XMMatrixRotationZ(g_RotationZ);
-	Shader_3D_SetWorldMatrix(mtxWorld);
+		XMMatrixRotationZ(g_RotationZ) *
 
-	
+		XMMatrixScaling(
+			g_Scaling.x,
+			g_Scaling.y * 0.5,
+			g_Scaling.z) *
+		//turn to pyramid base at y=0
+		XMMatrixScaling(
+			1.0f, 2.0f, 1.0f
+		);
+		
 
-
+	Shader_3D_SetWorldMatrix(mtxW);
 
 	// プリミティブトポロジ設定
 	g_pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -127,17 +153,64 @@ void Cube_Draw(void)
 	g_pContext->Draw(36, 0);
 }
 
+static void Mouse_Control(double elapsed_time)
+{
+	//Mouse_State mstate;
+	//Mouse_GetState(&mstate);
+	//if (mstate.positionMode == MOUSE_POSITION_MODE_RELATIVE) {
+	//	g_RotationY += mstate.x * MOUSE_ROT_SPEED;
+	//	g_RotationX += mstate.y * MOUSE_ROT_SPEED;
+	//}
+	//if (mstate.scrollWheelValue != 0) {
+	//	g_RotationZ += mstate.scrollWheelValue * WHEEL_ROT_SPEED;
+	//	Mouse_ResetScrollWheelValue();
+	//}
+	//if (KeyLogger_IsPressed(KK_A)) g_TranslationPosition.x -= static_cast<float>(MOVE_SPEED * elapsed_time);
+	//if (KeyLogger_IsPressed(KK_D)) g_TranslationPosition.x += static_cast<float>(MOVE_SPEED * elapsed_time);
+	//if (KeyLogger_IsPressed(KK_LEFTCONTROL)) g_TranslationPosition.y -= static_cast<float>(MOVE_SPEED * elapsed_time);
+	//if (KeyLogger_IsPressed(KK_SPACE)) g_TranslationPosition.y += static_cast<float>(MOVE_SPEED * elapsed_time);
+	//if (KeyLogger_IsPressed(KK_W)) g_TranslationPosition.z += static_cast<float>(MOVE_SPEED * elapsed_time);
+	//if (KeyLogger_IsPressed(KK_S)) g_TranslationPosition.z -= static_cast<float>(MOVE_SPEED * elapsed_time);
+
+	if (KeyLogger_IsPressed(KK_Q)) g_Scaling.y += static_cast<float>(SCALE_SPEED * elapsed_time);
+	//	XMFLOAT3(
+	//	g_Scaling.x - static_cast<float>(SCALE_SPEED * elapsed_time),
+	//	g_Scaling.y - static_cast<float>(SCALE_SPEED * elapsed_time),
+	//	g_Scaling.z - static_cast<float>(SCALE_SPEED * elapsed_time)
+	//);
+	if (KeyLogger_IsPressed(KK_E)) g_Scaling.y -= static_cast<float>(SCALE_SPEED * elapsed_time);
+	//	XMFLOAT3(
+	//	g_Scaling.x + static_cast<float>(SCALE_SPEED * elapsed_time),
+	//	g_Scaling.y + static_cast<float>(SCALE_SPEED * elapsed_time),
+	//	g_Scaling.z + static_cast<float>(SCALE_SPEED * elapsed_time)
+	//);
+}
+
+static void Auto_Control_Demo(double elapsed_time)
+{
+	//g_RotationX += static_cast<float>(0.5f * elapsed_time);
+	g_RotationY += static_cast<float>(0.5f * elapsed_time);
+	//g_RotationZ += static_cast<float>(0.5f * elapsed_time);
+	//if (g_RotationX > XM_2PI) g_RotationX -= XM_2PI;
+	//if (g_RotationY > XM_2PI) g_RotationY -= XM_2PI;
+	//if (g_RotationZ > XM_2PI) g_RotationZ -= XM_2PI;
+	//g_AccumulatedTime += elapsed_time;
+	//g_TranslationPosition.x = static_cast<float>(sin(g_AccumulatedTime)) * 1.5f;
+	//g_TranslationPosition.z = static_cast<float>(cos(g_AccumulatedTime)) * 1.5f;
+	//g_Scaling = XMFLOAT3(
+	//	//g_Scaling.x + static_cast<float>((sin(g_AccumulatedTime)+1.0) *0.5),
+	//	1.0,
+	//	static_cast<float>((sin(g_AccumulatedTime)+1.0) *0.5),
+	//	1.0
+	//	//g_Scaling.z + static_cast<float>((sin(g_AccumulatedTime)+1.0) *0.5)
+	//);
+	
+}
+
 void Cube_Update(double elapsed_time)
 {
 
-		const float ROT_SPEED = 1.0f; // 旋转速度，可以调整
-
-		if (KeyLogger_IsPressed(KK_A)) g_RotationY -= (float)(ROT_SPEED * elapsed_time);
-		if (KeyLogger_IsPressed(KK_D)) g_RotationY += (float)(ROT_SPEED * elapsed_time);
-		if (KeyLogger_IsPressed(KK_W)) g_RotationX += (float)(ROT_SPEED * elapsed_time);
-		if (KeyLogger_IsPressed(KK_S)) g_RotationX -= (float)(ROT_SPEED * elapsed_time);
-		if (KeyLogger_IsPressed(KK_Q)) g_RotationZ += (float)(ROT_SPEED * elapsed_time);
-		if (KeyLogger_IsPressed(KK_E)) g_RotationZ -= (float)(ROT_SPEED * elapsed_time);
-	
+	//Mouse_Control(elapsed_time);
+	Auto_Control_Demo(elapsed_time);
 
 }
