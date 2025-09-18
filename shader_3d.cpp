@@ -14,7 +14,6 @@ namespace
 	ID3D11Buffer* g_pVSConstantBuffer1 = nullptr;
 	ID3D11Buffer* g_pVSConstantBuffer2 = nullptr;
 	ID3D11PixelShader* g_pPixelShader = nullptr;
-	ID3D11SamplerState* g_pSamplerState = nullptr;
 
 	// 注意！初期化で外部から設定されるもの。Release不要。
 	ID3D11Device* g_pDevice = nullptr;
@@ -121,24 +120,10 @@ bool Shader_3D_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 		return false;
 	}
 
-	D3D11_SAMPLER_DESC sampler_desc{};
-
-	//sampler_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR; // 点フィルタリング
-	sampler_desc.Filter = D3D11_FILTER_ANISOTROPIC;
-
-	//UV参照外のテクスチャのアドレスモードを設定
-	sampler_desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP; // U軸のアドレスモード
-	sampler_desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP; // V軸のアドレスモード
-
-	sampler_desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP; // W軸のアドレスモード
-	sampler_desc.MipLODBias = 0.0f; // MIPレベルのバイアス
-	sampler_desc.MaxAnisotropy = 16; // 異方性フィルタリングの最大値
-	sampler_desc.ComparisonFunc = D3D11_COMPARISON_ALWAYS; // 比較関数
-	sampler_desc.MinLOD = 0.0f; // 最小LOD
-	sampler_desc.MaxLOD = D3D11_FLOAT32_MAX; // 最大LOD
 
 
-	g_pDevice->CreateSamplerState(&sampler_desc, &g_pSamplerState);
+
+
 
 	return true;
 }
@@ -147,7 +132,7 @@ bool Shader_3D_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 
 void Shader_3D_Finalize()
 {
-	SAFE_RELEASE(g_pSamplerState);
+
 	SAFE_RELEASE(g_pPixelShader);
 	SAFE_RELEASE(g_pVSConstantBuffer0);
 	SAFE_RELEASE(g_pVSConstantBuffer1);
@@ -222,7 +207,7 @@ void Shader_3D_Begin()
 	g_pContext->VSSetConstantBuffers(2, 1, &g_pVSConstantBuffer2);
 
 	//サンプラーステートを描画パイプラインに設定
-	g_pContext->PSSetSamplers(0, 1, &g_pSamplerState);
+	//g_pContext->PSSetSamplers(0, 1, &g_pSamplerState);
 
 	
 }
