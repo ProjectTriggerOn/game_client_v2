@@ -21,8 +21,6 @@ namespace
 	XMFLOAT3 upDirection{};
 
 	constexpr float MOVE_SPEED = 1.0f;
-	constexpr float MOUSE_ROT_SPEED = 0.008f;
-	constexpr float WHEEL_ROT_SPEED = 0.004f;
 	constexpr float CAMERA_ROT_SPEED = XMConvertToRadians(30.0f);
 
 	XMFLOAT3 g_Camerafront{};
@@ -36,13 +34,23 @@ namespace
 
 	hal::DebugText* g_DebugText = nullptr;
 
+	float g_fov;
+
 }
 
 void Camera_Initialize()
 {
-
+	g_fov = 60.0f;
 	XMStoreFloat4x4(&g_ViewMatrix, XMMatrixIdentity());
 	XMStoreFloat4x4(&g_PerspectiveMatrix, XMMatrixIdentity());
+
+	eyePosition = { 0.0f,0.0f,-5.0f };
+	eyeDirection = { 0.0f,0.0f,1.0f };
+	upDirection = { 0.0f,1.0f,0.0f };
+
+	g_Camerafront = { 0.0f,0.0f,1.0f };
+	g_Cameraright = { 1.0f,0.0f,0.0f };
+	g_CameraUp = { 0.0f,1.0f,0.0f };
 
 #if defined(_DEBUG) || defined(DEBUG)
 
@@ -55,26 +63,26 @@ void Camera_Initialize()
 	);
 
 #endif // _DEBUG || DEBUG
-	eyePosition = { 0.0f,0.0f,-5.0f };
-	eyeDirection = { 0.0f,0.0f,1.0f };
-	upDirection = { 0.0f,1.0f,0.0f };
-
-	g_Camerafront = { 0.0f,0.0f,1.0f };
-	g_Cameraright = { 1.0f,0.0f,0.0f };
-	g_CameraUp = { 0.0f,1.0f,0.0f };
 
 }
 
-void Camera_Initialize(DirectX::XMFLOAT3& position, DirectX::XMFLOAT3& front, DirectX::XMFLOAT3& up, DirectX::XMFLOAT3& right)
+void Camera_Initialize(const DirectX::XMFLOAT3& position, 
+					const DirectX::XMFLOAT3& front,const DirectX::XMFLOAT3& right)
 {
 
 	Camera_Initialize();
 	eyePosition = position;
-	g_Camerafront = front;
-	g_CameraUp = up;
-	g_Cameraright = right;
-	XMStoreFloat4x4(&g_ViewMatrix, XMMatrixIdentity());
-	XMStoreFloat4x4(&g_PerspectiveMatrix, XMMatrixIdentity());
+	XMVECTOR f = XMVector3Normalize(XMLoadFloat3(&front));
+	XMVECTOR r = XMVector3Normalize(
+		XMLoadFloat3(&right) * XMVECTOR {
+		1.0f,
+			0.0f,
+			1.0f
+	});
+	XMVECTOR u = XMVector3Normalize(XMVector3Cross(f, r));
+	XMStoreFloat3(&g_Camerafront,f );
+	XMStoreFloat3(&g_Cameraright,r);
+	XMStoreFloat3(&g_CameraUp, u);
 }
 
 void Camera_Finalize()
@@ -91,14 +99,14 @@ void Camera_Update(double elapsed_time)
 
 	if (KeyLogger_IsPressed(KK_DOWN))
 	{
-		XMMATRIX rot = XMMatrixRotationAxis(right, CAMERA_ROT_SPEED * elapsed_time);
+		XMMATRIX rot = XMMatrixRotationAxis(right, CAMERA_ROT_SPEED * static_cast<float>(elapsed_time));
 		front = XMVector3TransformNormal(front, rot);
 		front = XMVector3Normalize(front);
 		up = XMVector3Cross(front, right);
 	}
 	if (KeyLogger_IsPressed(KK_UP))
 	{
-		XMMATRIX rot = XMMatrixRotationAxis(right, -CAMERA_ROT_SPEED * elapsed_time);
+		XMMATRIX rot = XMMatrixRotationAxis(right, -CAMERA_ROT_SPEED * static_cast<float>(elapsed_time));
 		front = XMVector3TransformNormal(front, rot);
 		front = XMVector3Normalize(front);
 		up = XMVector3Cross(front, right);
@@ -106,7 +114,7 @@ void Camera_Update(double elapsed_time)
 
 	if (KeyLogger_IsPressed(KK_LEFT))
 	{
-		XMMATRIX rot = XMMatrixRotationY(-CAMERA_ROT_SPEED * elapsed_time);
+		XMMATRIX rot = XMMatrixRotationY(-CAMERA_ROT_SPEED * static_cast<float>(elapsed_time));
 		up = XMVector3Normalize(XMVector3TransformNormal(up,rot));
 		front = XMVector3TransformNormal(front, rot);
 		front = XMVector3Normalize(front);
@@ -116,7 +124,7 @@ void Camera_Update(double elapsed_time)
 	}
 	if (KeyLogger_IsPressed(KK_RIGHT))
 	{
-		XMMATRIX rot = XMMatrixRotationY(CAMERA_ROT_SPEED * elapsed_time);
+		XMMATRIX rot = XMMatrixRotationY(CAMERA_ROT_SPEED * static_cast<float>(elapsed_time));
 		up = XMVector3Normalize(XMVector3TransformNormal(up, rot));
 		front = XMVector3TransformNormal(front, rot);
 		front = XMVector3Normalize(front);
@@ -125,31 +133,38 @@ void Camera_Update(double elapsed_time)
 	}
 	if (KeyLogger_IsPressed(KK_W))
 	{
-		position += front * MOVE_SPEED * elapsed_time;
-
-
-		
+		position += front * MOVE_SPEED * static_cast<float>(elapsed_time);
 	}
 	if (KeyLogger_IsPressed(KK_A))
 	{
-		position += -right * MOVE_SPEED * elapsed_time;
+		position += -right * MOVE_SPEED * static_cast<float>(elapsed_time);
 
 	}
 	if (KeyLogger_IsPressed(KK_S))
 	{
-		position += -front * MOVE_SPEED * elapsed_time;
+		position += -front * MOVE_SPEED * static_cast<float>(elapsed_time);
 	}
 	if (KeyLogger_IsPressed(KK_D))
 	{
-		position += right * MOVE_SPEED * elapsed_time;
+		position += right * MOVE_SPEED * static_cast<float>(elapsed_time);
 	}
 	if (KeyLogger_IsPressed(KK_SPACE))
 	{
-		position += up * MOVE_SPEED * elapsed_time;
+		position += up * MOVE_SPEED * static_cast<float>(elapsed_time);
 	}
 	if (KeyLogger_IsPressed(KK_LEFTCONTROL))
 	{
-		position -= up * MOVE_SPEED * elapsed_time;
+		position -= up * MOVE_SPEED * static_cast<float>(elapsed_time);
+	}
+
+	if (KeyLogger_IsPressed(KK_Z))
+	{
+		g_fov -= 10.0f * static_cast<float>(elapsed_time);
+	}
+
+	if (KeyLogger_IsPressed(KK_X))
+	{
+		g_fov += 10.0f * static_cast<float>(elapsed_time);
 	}
 
 	XMStoreFloat3(&eyePosition, position);
@@ -168,7 +183,7 @@ void Camera_Update(double elapsed_time)
 
 	Shader_3D_SetViewMatrix(mtxView);
 
-	float fovAngleY = XMConvertToRadians(60.0f);
+	float fovAngleY = XMConvertToRadians(g_fov);
 	float aspectRatio = static_cast<float>(Direct3D_GetBackBufferWidth()) / static_cast<float>(Direct3D_GetBackBufferHeight());
 	float nearZ = 0.1f;
 	float farZ = 1000.0f;
@@ -202,6 +217,10 @@ const DirectX::XMFLOAT3& Camera_GetFront()
 const DirectX::XMFLOAT3& Camera_GetPosition()
 {
 	return eyePosition;
+}
+
+void Camera_SetFov()
+{
 }
 
 void Camera_Debug()

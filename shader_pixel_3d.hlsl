@@ -12,7 +12,8 @@ SamplerState samplerState;
 float4 main(PS_IN ps_in) : SV_TARGET
 {
     return
-	//tex.Sample(samplerState, ps_in.uv) * 
-    ps_in.color; // テクスチャサンプリング
+	tex.Sample(samplerState, ps_in.uv)
+    //ps_in.color
+	; // テクスチャサンプリング
 
 }

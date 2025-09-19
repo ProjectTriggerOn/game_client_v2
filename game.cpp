@@ -5,6 +5,7 @@
 #include "camera.h"
 #include "circle.h"
 #include "key_logger.h"
+#include "sampler.h"
 using namespace DirectX;
 
 namespace{
@@ -14,6 +15,8 @@ namespace{
 
 void Game_Initialize()
 {
+	
+	//Camera_Initialize({3.0f,2.45f,-3.0f},{-0.6f,-0.45f,0.66f},{-0.75,0.0,0.66});
 	Camera_Initialize();
 
 }
@@ -23,8 +26,6 @@ void Game_Update(double elapsed_time)
 	
 	Cube_Update(elapsed_time);
 	Camera_Update(elapsed_time);
-
-
 	if (KeyLogger_IsTrigger(KK_SPACE))
 	{
 		
@@ -33,18 +34,17 @@ void Game_Update(double elapsed_time)
 
 	// Move the cube forward in the direction the camera is facing
 	XMVECTOR cube_position = XMLoadFloat3(&g_CubePosition);
-	cube_position = XMLoadFloat3(&Camera_GetFront()) * 10.0f * elapsed_time + cube_position;
+	cube_position = XMLoadFloat3(&Camera_GetFront()) * 10.0f * static_cast<float>(elapsed_time) + cube_position;
 	XMStoreFloat3(&g_CubePosition, cube_position);
 }
 
 void Game_Draw()
 {
-	
-	//Shader_Begin();
-	//XMMATRIX mtxWorld = XMMatrixTranslationFromVector(XMLoadFloat3(&Camera_GetFront()) * 10.0F);
-
+	Sampler_SetFilterAnisotropic();
 	XMMATRIX mtxWorld = XMMatrixIdentity();
 	Cube_Draw(mtxWorld);
+
+
 	Camera_Debug();
 	Grid_Draw();
 	CircleD circle;
@@ -60,6 +60,7 @@ void Game_Finalize()
 	Cube_Finalize();
 	Grid_Finalize();
 	Circle_DebugFinalize();
+	Sampler_Finalize();
 }
 
 

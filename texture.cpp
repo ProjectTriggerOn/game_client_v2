@@ -1,16 +1,18 @@
 #include "texture.h"
 #include "direct3d.h"
 #include <string>
-
-#include "DirectXTex.h"
+#include "WICTextureLoader11.h"
 using namespace DirectX;
-static constexpr int MAX_TEXTURES = 256; // 最大テクスチャ数
+static constexpr int MAX_TEXTURES = 1024; // 最大テクスチャ数
 struct Texture
 {
 	std::wstring filename; // ファイル名
-	ID3D11ShaderResourceView* pTexture;
+	
 	unsigned int width ; // 幅
 	unsigned int height ; // 高さ
+
+	ID3D11Resource* pTexture = nullptr;
+	ID3D11ShaderResourceView* pTextureView = nullptr;
 };
 
 namespace{
@@ -51,26 +53,24 @@ int Texture_LoadFromFile(const wchar_t* pFilename)
 
 	//空いている管理領域を探す
 	for (int i = 0; i < MAX_TEXTURES; ++i) {
+
 		if (g_Textures[i].pTexture)continue;// すでに使用中のテクスチャはスキップ
-	
 
+		HRESULT hr;
+		hr = CreateWICTextureFromFile(g_pDevice, g_pContext, pFilename, &g_Textures[i].pTexture, &g_Textures[i].pTextureView);
 
+		ID3D11Texture2D* pTexture = (ID3D11Texture2D*)g_Textures[i].pTexture;
+		D3D11_TEXTURE2D_DESC t2desc;
+		pTexture->GetDesc(&t2desc);
+		g_Textures[i].width = t2desc.Width;
+		g_Textures[i].height = t2desc.Height;
 
-		TexMetadata metadata;
-		ScratchImage image;
-
-		HRESULT hr = LoadFromWICFile(pFilename, WIC_FLAGS_NONE, &metadata, image);
 		if (FAILED(hr)) {
 			MessageBoxW(nullptr, L"テクスチャの読み込みに失敗しました", pFilename, MB_OK | MB_ICONERROR);
 			return -1; // 読み込み失敗
 		}
+
 		g_Textures[i].filename = pFilename; // ファイル名を保存
-		g_Textures[i].width  = static_cast<unsigned int>(metadata.width); // 幅を保存
-		g_Textures[i].height = static_cast<unsigned int>(metadata.height); // 高さを保存
-
-
-		hr = DirectX::CreateShaderResourceView(
-			g_pDevice, image.GetImages(), image.GetImageCount(), metadata, &g_Textures[i].pTexture);
 
 		return i;
 		
@@ -84,14 +84,16 @@ void Texture_AllRelease()
 	for (Texture& t:g_Textures)
 	{
 		t.filename.clear(); // ファイル名をクリア
-		SAFE_RELEASE(t.pTexture); // テクスチャの解放)
+		SAFE_RELEASE(t.pTexture)// テクスチャの解放)
+		SAFE_RELEASE(t.pTextureView)
 	}
 }
 
 void Texture_Release(int texid)
 {
 	if (texid < 0 || texid >= MAX_TEXTURES)return; // 範囲外のインデックスは無視
-	SAFE_RELEASE(g_Textures[texid].pTexture); // テクスチャの解放
+	SAFE_RELEASE(g_Textures[texid].pTexture)
+	SAFE_RELEASE(g_Textures[texid].pTextureView);// テクスチャの解放
 	g_Textures[texid].filename.clear(); // ファイル名をクリア
 	g_Textures[texid].width = 0; // 幅をリセット
 	g_Textures[texid].height = 0; // 高さをリセット
@@ -104,7 +106,7 @@ void Texture_Set(int texid)
 {
 	if (texid < 0 || texid >= MAX_TEXTURES)return; // 範囲外のインデックスは無視
 	g_SetTextureIndex = texid; // 現在のテクスチャインデックスを更新
-	g_pContext->PSSetShaderResources(0, 1, &g_Textures[texid].pTexture);
+	g_pContext->PSSetShaderResources(0, 1, &g_Textures[texid].pTextureView);
 
 }
 

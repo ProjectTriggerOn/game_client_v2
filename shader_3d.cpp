@@ -1,5 +1,7 @@
 #include <d3d11.h>
 #include <DirectXMath.h>
+
+#include "sampler.h"
 using namespace DirectX;
 #include "direct3d.h"
 #include "debug_ostream.h"
@@ -120,11 +122,6 @@ bool Shader_3D_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 		return false;
 	}
 
-
-
-
-
-
 	return true;
 }
 
@@ -209,5 +206,5 @@ void Shader_3D_Begin()
 	//サンプラーステートを描画パイプラインに設定
 	//g_pContext->PSSetSamplers(0, 1, &g_pSamplerState);
 
-	
+	//Sampler_SetFilterAnisotropic();
 }

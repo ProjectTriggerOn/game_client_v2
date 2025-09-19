@@ -123,9 +123,6 @@
     <ClInclude Include="polygon.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="DirectXTex.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="sprite.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -211,14 +208,7 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="DirectXTex.inl">
-      <Filter>Header Files</Filter>
-    </None>
     <None Include="ascii_texture_generator.py" />
-  </ItemGroup>
-  <ItemGroup>
-    <Library Include="DirectXTex_Debug.lib" />
-    <Library Include="DirectXTex_Release.lib" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="resource\texture\consolab_ascii_512.png">
