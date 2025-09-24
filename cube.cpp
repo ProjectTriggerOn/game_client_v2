@@ -20,8 +20,10 @@ struct Vertex3D
 namespace {
 	int g_CubeTexId = -1; // テクスチャID
 
-	constexpr int NUM_VERTEX = 6 * 2 * 3; // 頂点数
+	constexpr int NUM_VERTEX = 24; // 頂点数
+	constexpr int NUM_INDEX = 36;
 	ID3D11Buffer* g_pVertexBuffer = nullptr; // 頂点バッファ
+	ID3D11Buffer* g_pIndexBuffer = nullptr; // 頂点バッファ
 
 	// 注意！初期化で外部から設定されるもの。Release不要。
 	ID3D11Device* g_pDevice = nullptr;
@@ -36,50 +38,61 @@ namespace {
 
 	constexpr float SCALE_SPEED = 0.5f;
 
-	Vertex3D g_CubeVertex[36]
+	Vertex3D g_CubeVertex[]
 	{
 		// 前面 (z=-0.5f) 红色
-		{{-0.5f, 0.5f,-0.5f},{1.0f,0.0f,0.0f,1.0f}, {0.0f, 0.0f}},
-		{{ 0.5f,-0.5f,-0.5f},{1.0f,0.0f,0.0f,1.0f}, {0.25f, 0.5f}},
-		{{-0.5f,-0.5f,-0.5f},{1.0f,0.0f,0.0f,1.0f}, {0.0f, 0.5f}},
-		{{-0.5f, 0.5f,-0.5f},{1.0f,0.0f,0.0f,1.0f}, {0.0f, 0.0f}},
-		{{ 0.5f, 0.5f,-0.5f},{1.0f,0.0f,0.0f,1.0f}, {0.25f, 0.0f}},
+		{{-0.5f,-0.5f,-0.5f},{1.0f,0.0f,0.0f,1.0f}, {0.0f, 0.0f}},
+		{{-0.5f, 0.5f,-0.5f},{1.0f,0.0f,0.0f,1.0f}, {0.25f, 0.5f}},
+		{{ 0.5f, 0.5f,-0.5f},{1.0f,0.0f,0.0f,1.0f}, {0.0f, 0.5f}},
+//0		{{-0.5f,-0.5f,-0.5f},{1.0f,0.0f,0.0f,1.0f}, {0.0f, 0.0f}},
+//2		{{ 0.5f, 0.5f,-0.5f},{1.0f,0.0f,0.0f,1.0f}, {0.25f, 0.0f}},
 		{{ 0.5f,-0.5f,-0.5f},{1.0f,0.0f,0.0f,1.0f}, {0.25f, 0.5f}},
 		// 后面 (z=0.5f) 绿色
 		{{-0.5f, 0.5f, 0.5f},{0.0f,1.0f,0.0f,1.0f}, {0.5f, 0.0f}},//11
 		{{-0.5f,-0.5f, 0.5f},{0.0f,1.0f,0.0f,1.0f}, {0.5f, 0.5f}},//10
 		{{ 0.5f,-0.5f, 0.5f},{0.0f,1.0f,0.0f,1.0f}, {0.25f, 0.5f}},//00
-		{{-0.5f, 0.5f, 0.5f},{0.0f,1.0f,0.0f,1.0f}, {0.5f, 0.0f}},//11
-		{{ 0.5f,-0.5f, 0.5f},{0.0f,1.0f,0.0f,1.0f}, {0.25f, 0.5f}},//00
+//		{{-0.5f, 0.5f, 0.5f},{0.0f,1.0f,0.0f,1.0f}, {0.5f, 0.0f}},//11
+//		{{ 0.5f,-0.5f, 0.5f},{0.0f,1.0f,0.0f,1.0f}, {0.25f, 0.5f}},//00
 		{{ 0.5f, 0.5f, 0.5f},{0.0f,1.0f,0.0f,1.0f}, {0.25f, 0.0f}},//01
 		// 左面 (x=-0.5f) 蓝色
 		{{-0.5f, 0.5f, 0.5f},{0.0f,0.0f,1.0f,1.0f}, {0.75f, 0.0f}},//11
 		{{-0.5f, 0.5f,-0.5f},{0.0f,0.0f,1.0f,1.0f}, {0.75f, 0.5f}},//10
 		{{-0.5f,-0.5f,-0.5f},{0.0f,0.0f,1.0f,1.0f}, {0.5f, 0.5f}},//00
-		{{-0.5f, 0.5f, 0.5f},{0.0f,0.0f,1.0f,1.0f}, {0.75f, 0.0f}},//11
-		{{-0.5f,-0.5f,-0.5f},{0.0f,0.0f,1.0f,1.0f}, {0.5f, 0.5f}},//00
+//		{{-0.5f, 0.5f, 0.5f},{0.0f,0.0f,1.0f,1.0f}, {0.75f, 0.0f}},//11
+//		{{-0.5f,-0.5f,-0.5f},{0.0f,0.0f,1.0f,1.0f}, {0.5f, 0.5f}},//00
 		{{-0.5f,-0.5f, 0.5f},{0.0f,0.0f,1.0f,1.0f}, {0.5f, 0.0f}},//01
 		// 右面 (x=0.5f) 黄色
 		{{ 0.5f, 0.5f,-0.5f},{1.0f,1.0f,0.0f,1.0f},{0.25f, 0.5f}},//11
 		{{ 0.5f, 0.5f, 0.5f},{1.0f,1.0f,0.0f,1.0f},{0.25f, 1.0f}},//10
 		{{ 0.5f,-0.5f, 0.5f},{1.0f,1.0f,0.0f,1.0f},{0.0f, 1.0f}},//00
-		{{ 0.5f, 0.5f,-0.5f},{1.0f,1.0f,0.0f,1.0f},{0.25f, 0.5f}},//11
-		{{ 0.5f,-0.5f, 0.5f},{1.0f,1.0f,0.0f,1.0f},{0.0f, 1.0f}},//00
+//		{{ 0.5f, 0.5f,-0.5f},{1.0f,1.0f,0.0f,1.0f},{0.25f, 0.5f}},//11
+//		{{ 0.5f,-0.5f, 0.5f},{1.0f,1.0f,0.0f,1.0f},{0.0f, 1.0f}},//00
 		{{ 0.5f,-0.5f,-0.5f},{1.0f,1.0f,0.0f,1.0f},{0.0f, 0.5f}},//01
 		// 上面 (y=0.5f) 品红色
 		{{-0.5f, 0.5f,-0.5f},{1.0f,0.0f,1.0f,1.0f},{0.5f,  0.5f}},//11
 		{{-0.5f, 0.5f, 0.5f},{1.0f,0.0f,1.0f,1.0f},{0.5f,  1.0f}},//10
 		{{ 0.5f, 0.5f, 0.5f},{1.0f,0.0f,1.0f,1.0f},{0.25f,1.0f}},//00
-		{{-0.5f, 0.5f,-0.5f},{1.0f,0.0f,1.0f,1.0f},{0.5f,  0.5f}},//11
-		{{ 0.5f, 0.5f, 0.5f},{1.0f,0.0f,1.0f,1.0f},{0.25f,1.0f}},//00
+//		{{-0.5f, 0.5f,-0.5f},{1.0f,0.0f,1.0f,1.0f},{0.5f,  0.5f}},//11
+//		{{ 0.5f, 0.5f, 0.5f},{1.0f,0.0f,1.0f,1.0f},{0.25f,1.0f}},//00
 		{{ 0.5f, 0.5f,-0.5f},{1.0f,0.0f,1.0f,1.0f},{0.25f,0.5f}},//01
 		// 下面 (y=-0.5f) 青色
-		{{-0.5f,-0.5f,-0.5f},{0.0f,1.0f,1.0f,1.0f},{0.75f,  0.5f}},//
-		{{ 0.5f,-0.5f, 0.5f},{0.0f,1.0f,1.0f,1.0f},{0.75f,  1.0f}},//
-		{{-0.5f,-0.5f, 0.5f},{0.0f,1.0f,1.0f,1.0f},{0.5f, 1.0f}},//
-		{{-0.5f,-0.5f,-0.5f},{0.0f,1.0f,1.0f,1.0f},{0.75f,  0.5f}},//
+		{{-0.5f,-0.5f, 0.5f},{0.0f,1.0f,1.0f,1.0f},{0.75f,  0.5f}},//
+		{{-0.5f,-0.5f,-0.5f},{0.0f,1.0f,1.0f,1.0f},{0.75f,  1.0f}},//
 		{{ 0.5f,-0.5f,-0.5f},{0.0f,1.0f,1.0f,1.0f},{0.5f, 1.0f}},//
+//		{{-0.5f,-0.5f, 0.5f},{0.0f,1.0f,1.0f,1.0f},{0.75f,  0.5f}},//
+//		{{ 0.5f,-0.5f,-0.5f},{0.0f,1.0f,1.0f,1.0f},{0.5f, 1.0f}},//
 		{{ 0.5f,-0.5f, 0.5f},{0.0f,1.0f,1.0f,1.0f},{0.5f, 0.5f}},//
+	};
+	unsigned short g_CubeVertexIndex[36]
+	{
+		0,1, 2, 0, 2, 3,       // 前面
+
+		4,5, 6, 4, 6, 7,       // 後面
+		8,9,10, 8,10,11,       // 左面
+		12,13,14,12,14,15,     // 右面
+	   16,17,18,16,18,19,     // 上面
+	   20,21,22,20,22,23      // 下面
+		
 	};
 }
 
@@ -99,8 +112,16 @@ void Cube_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 
 	D3D11_SUBRESOURCE_DATA sd{};
 	sd.pSysMem = g_CubeVertex;
-
 	g_pDevice->CreateBuffer(&bd, &sd, &g_pVertexBuffer);
+
+	bd.Usage = D3D11_USAGE_DEFAULT;// 書き込み不可に設定
+	bd.ByteWidth = sizeof(unsigned short) * NUM_INDEX;
+	bd.BindFlags = D3D11_BIND_INDEX_BUFFER;
+
+	sd.pSysMem = g_CubeVertexIndex;
+
+	g_pDevice->CreateBuffer(&bd, &sd, &g_pIndexBuffer);
+
 	g_CubeTexId = Texture_LoadFromFile(L"resource/texture/cube_tex.png");
 }
 
@@ -118,7 +139,7 @@ void Cube_Draw(XMMATRIX mtxW)
 	UINT stride = sizeof(Vertex3D);
 	UINT offset = 0;
 	g_pContext->IASetVertexBuffers(0, 1, &g_pVertexBuffer, &stride, &offset);
-
+	g_pContext->IASetIndexBuffer(g_pIndexBuffer, DXGI_FORMAT_R16_UINT, 0);
 	Texture_Set(g_CubeTexId);
 
 	Shader_3D_SetWorldMatrix(mtxW);
@@ -127,7 +148,7 @@ void Cube_Draw(XMMATRIX mtxW)
 	g_pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	// ポリゴン描画命令発行
-	g_pContext->Draw(36, 0);
+	g_pContext->DrawIndexed(36, 0,0);
 }
 
 
