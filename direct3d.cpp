@@ -12,6 +12,7 @@ static IDXGISwapChain* g_pSwapChain = nullptr;
 static ID3D11BlendState* g_pBlendStateMultiply = nullptr; // ブレンドステート（乗算ブレンド用）
 static ID3D11DepthStencilState* g_pDepthStencilStateDepthDisable = nullptr; // 深度ステンシルステート（深度無効用）
 static ID3D11DepthStencilState* g_pDepthStencilStateDepthEnable = nullptr; // 深度ステンシルステート（深度有効用）
+static ID3D11RasterizerState* g_pRasterizerState = nullptr; // ラスタライザーステート（カリングなし用）
 /* バックバッファ関連 */
 static ID3D11RenderTargetView* g_pRenderTargetView = nullptr;
 static ID3D11Texture2D* g_pDepthStencilBuffer = nullptr;
@@ -136,6 +137,19 @@ bool Direct3D_Initialize(HWND hWnd)
 	g_pDevice->CreateDepthStencilState(&dsd, &g_pDepthStencilStateDepthEnable);
 
 	Direct3D_SetDepthEnable(true);
+
+	// ラスタライザステートの作成
+	D3D11_RASTERIZER_DESC rd = {};
+	rd.FillMode = D3D11_FILL_SOLID;
+	//rd.FillMode = D3D11_FILL_WIREFRAME;
+	rd.CullMode = D3D11_CULL_BACK;
+	//rd.CullMode = D3D11_CULL_NONE;
+	rd.DepthClipEnable = TRUE;
+	rd.MultisampleEnable = FALSE;
+	g_pDevice->CreateRasterizerState(&rd, &g_pRasterizerState);
+
+	// デバイスコンテキストにラスタライザーステートを設定
+	g_pDeviceContext->RSSetState(g_pRasterizerState);
 
     return true;
 }

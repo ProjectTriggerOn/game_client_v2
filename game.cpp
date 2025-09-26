@@ -5,6 +5,7 @@
 #include "camera.h"
 #include "circle.h"
 #include "key_logger.h"
+#include "mesh_field.h"
 #include "sampler.h"
 using namespace DirectX;
 
@@ -43,10 +44,11 @@ void Game_Draw()
 	Sampler_SetFilterAnisotropic();
 	XMMATRIX mtxWorld = XMMatrixIdentity();
 	Cube_Draw(mtxWorld);
+	MeshField_Draw(mtxWorld);
 
 
 	Camera_Debug();
-	Grid_Draw();
+	//Grid_Draw();
 	CircleD circle;
 	circle.center = { 0.0f,0.0f,0.0f };
 	circle.radius = 5.0f;

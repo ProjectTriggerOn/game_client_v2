@@ -31,6 +31,7 @@
 #include "circle.h"
 #include "cube.h"
 #include "fade.h"
+#include "mesh_field.h"
 #include "sampler.h"
 #include "scene.h"
 
@@ -79,6 +80,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 	Circle_DebugInitialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
 
 	Cube_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
+	MeshField_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
 
 	Grid_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
 

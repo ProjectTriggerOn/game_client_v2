@@ -17,8 +17,11 @@
       <UniqueIdentifier>{ba958b34-6b71-4a0b-a175-cf2ecf2e33d8}</UniqueIdentifier>
       <Extensions>hlsl;</Extensions>
     </Filter>
-    <Filter Include="imgui_lib Files">
-      <UniqueIdentifier>{106d3f14-36b6-4d14-8a75-bf97226df3f5}</UniqueIdentifier>
+    <Filter Include="Imgui Lib Files">
+      <UniqueIdentifier>{4039191d-034b-4e0c-b02d-8da088b59520}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Imgui Files">
+      <UniqueIdentifier>{3ee3efae-2c9a-4ca5-bff5-d26114a3394b}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -109,38 +112,44 @@
     <ClCompile Include="sampler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="debug_imgui.cpp">
+    <ClCompile Include="mesh_field.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="debug_imgui_camera.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="imgui\lib\imgui_demo.cpp">
+      <Filter>Imgui Lib Files</Filter>
     </ClCompile>
-    <ClCompile Include="lib\imgui.cpp">
-      <Filter>imgui_lib Files</Filter>
+    <ClCompile Include="imgui\lib\imgui_draw.cpp">
+      <Filter>Imgui Lib Files</Filter>
     </ClCompile>
-    <ClCompile Include="lib\imgui_demo.cpp">
-      <Filter>imgui_lib Files</Filter>
+    <ClCompile Include="imgui\lib\imgui_impl_dx11.cpp">
+      <Filter>Imgui Lib Files</Filter>
     </ClCompile>
-    <ClCompile Include="lib\imgui_draw.cpp">
-      <Filter>imgui_lib Files</Filter>
+    <ClCompile Include="imgui\lib\imgui_impl_win32.cpp">
+      <Filter>Imgui Lib Files</Filter>
     </ClCompile>
-    <ClCompile Include="lib\imgui_impl_dx11.cpp">
-      <Filter>imgui_lib Files</Filter>
+    <ClCompile Include="imgui\lib\imgui_tables.cpp">
+      <Filter>Imgui Lib Files</Filter>
     </ClCompile>
-    <ClCompile Include="lib\imgui_impl_win32.cpp">
-      <Filter>imgui_lib Files</Filter>
+    <ClCompile Include="imgui\lib\imgui_widgets.cpp">
+      <Filter>Imgui Lib Files</Filter>
     </ClCompile>
-    <ClCompile Include="lib\imgui_tables.cpp">
-      <Filter>imgui_lib Files</Filter>
+    <ClCompile Include="imgui\lib\imgui.cpp">
+      <Filter>Imgui Lib Files</Filter>
     </ClCompile>
-    <ClCompile Include="lib\imgui_widgets.cpp">
-      <Filter>imgui_lib Files</Filter>
+    <ClCompile Include="imgui\debug_imgui.cpp">
+      <Filter>Imgui Files</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui\debug_imgui_camera.cpp">
+      <Filter>Imgui Files</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui\debug_imgui_mesh_field.cpp">
+      <Filter>Imgui Files</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui\debug_imgui_render.cpp">
+      <Filter>Imgui Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="debug_ostream.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="game_window.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -225,32 +234,44 @@
     <ClInclude Include="debug_imgui.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="debug_imgui_camera.h">
+    <ClInclude Include="mesh_field.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="lib\imconfig.h">
-      <Filter>imgui_lib Files</Filter>
+    <ClInclude Include="imgui\lib\imgui_impl_dx11.h">
+      <Filter>Imgui Lib Files</Filter>
     </ClInclude>
-    <ClInclude Include="lib\imgui.h">
-      <Filter>imgui_lib Files</Filter>
+    <ClInclude Include="imgui\lib\imgui_impl_win32.h">
+      <Filter>Imgui Lib Files</Filter>
     </ClInclude>
-    <ClInclude Include="lib\imgui_impl_dx11.h">
-      <Filter>imgui_lib Files</Filter>
+    <ClInclude Include="imgui\lib\imgui_internal.h">
+      <Filter>Imgui Lib Files</Filter>
     </ClInclude>
-    <ClInclude Include="lib\imgui_impl_win32.h">
-      <Filter>imgui_lib Files</Filter>
+    <ClInclude Include="imgui\lib\imstb_rectpack.h">
+      <Filter>Imgui Lib Files</Filter>
     </ClInclude>
-    <ClInclude Include="lib\imgui_internal.h">
-      <Filter>imgui_lib Files</Filter>
+    <ClInclude Include="imgui\lib\imstb_textedit.h">
+      <Filter>Imgui Lib Files</Filter>
     </ClInclude>
-    <ClInclude Include="lib\imstb_rectpack.h">
-      <Filter>imgui_lib Files</Filter>
+    <ClInclude Include="imgui\lib\imstb_truetype.h">
+      <Filter>Imgui Lib Files</Filter>
     </ClInclude>
-    <ClInclude Include="lib\imstb_textedit.h">
-      <Filter>imgui_lib Files</Filter>
+    <ClInclude Include="imgui\lib\imconfig.h">
+      <Filter>Imgui Lib Files</Filter>
     </ClInclude>
-    <ClInclude Include="lib\imstb_truetype.h">
-      <Filter>imgui_lib Files</Filter>
+    <ClInclude Include="imgui\lib\imgui.h">
+      <Filter>Imgui Lib Files</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui\debug_imgui_render.h">
+      <Filter>Imgui Files</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui\debug_imgui.h">
+      <Filter>Imgui Files</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui\debug_imgui_camera.h">
+      <Filter>Imgui Files</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui\debug_imgui_mesh_field.h">
+      <Filter>Imgui Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

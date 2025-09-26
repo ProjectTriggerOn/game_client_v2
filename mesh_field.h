@@ -6,5 +6,8 @@ void MeshField_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext);
 
 void MeshField_Finalize();
 
+void MeshField_Draw(const DirectX::XMMATRIX& mtxW);
+
+
 
 #endif
