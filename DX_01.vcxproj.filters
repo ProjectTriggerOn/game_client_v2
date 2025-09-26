@@ -109,6 +109,9 @@
     <ClCompile Include="mesh_field.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="shader_field.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="game_window.h">
@@ -198,6 +201,9 @@
     <ClInclude Include="mesh_field.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="shader_field.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shader_pixel_2d.hlsl">
@@ -210,6 +216,9 @@
       <Filter>Shader Files</Filter>
     </FxCompile>
     <FxCompile Include="shader_vertex_3d.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
+    <FxCompile Include="shader_pixel_field.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
   </ItemGroup>

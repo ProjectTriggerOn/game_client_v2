@@ -1,7 +1,8 @@
 #include "mesh_field.h"
 
+#include "camera.h"
 #include "direct3d.h"
-#include "shader_3d.h"
+#include "shader_field.h"
 #include "texture.h"
 
 using namespace DirectX;
@@ -101,6 +102,7 @@ void MeshField_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 	g_pDevice->CreateBuffer(&bd, &sd, &g_pIndexBuffer);
 
 	g_MeshFieldTexId = Texture_LoadFromFile(L"resource/texture/Grass.png");
+
 }
 
 void MeshField_Finalize()
@@ -111,7 +113,7 @@ void MeshField_Finalize()
 void MeshField_Draw(const DirectX::XMMATRIX& mtxW)
 {
 	// シェーダーを描画パイプラインに設定
-	Shader_3D_Begin();
+	Shader_Field_Begin();
 	Texture_Set(g_MeshFieldTexId);
 	// 頂点バッファを描画パイプラインに設定
 	UINT stride = sizeof(Vertex3D);
@@ -125,7 +127,9 @@ void MeshField_Draw(const DirectX::XMMATRIX& mtxW)
 
 	//Shader_3D_SetWorldMatrix(mtxW);
 
-	Shader_3D_SetWorldMatrix(XMMatrixTranslation(-offset_x, 0.0f, -offset_z));
+	Shader_Field_SetWorldMatrix(XMMatrixTranslation(-offset_x, 0.0f, -offset_z));
+	Shader_Field_SetViewMatrix(XMLoadFloat4x4(&Camera_GetViewMatrix()));
+	Shader_Field_SetProjectMatrix(XMLoadFloat4x4(&Camera_GetPerspectiveMatrix()));
 
 	// プリミティブトポロジ設定
 	g_pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
