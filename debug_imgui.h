@@ -1,6 +1,6 @@
 /**
  * @file debug_imgui.h
- * @brief デバッグIMGUI
+ * @brief 繝�繝舌ャ繧ｰIMGUI
  */
 
 #ifndef DEBUG_IMGUI_H
