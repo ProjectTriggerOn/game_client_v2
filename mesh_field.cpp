@@ -33,8 +33,8 @@ namespace
 	// 注意！初期化で外部から設定されるもの。Release不要。
 	ID3D11Device* g_pDevice = nullptr;
 	ID3D11DeviceContext* g_pContext = nullptr;
-	int g_MeshFieldTexId = -1; // テクスチャID
-
+	int g_MeshFieldTexId0 = -1; // テクスチャID
+	int g_MeshFieldTexId1 = -1; // テクスチャID
 }
 
 void MeshField_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
@@ -73,12 +73,6 @@ void MeshField_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 		for (int x = 0; x < FIELD_MESH_H_COUNT; x++)
 		{
 			index = (x + z * FIELD_MESH_H_COUNT) * 6;
-			//g_MeshFieldVertexIndex[index + 0] = x + 0 + (z + 0) * FIELD_MESH_H_VERTEX_COUNT;
-			//g_MeshFieldVertexIndex[index + 1] = x + 1 + (z + 0) * FIELD_MESH_H_VERTEX_COUNT;
-			//g_MeshFieldVertexIndex[index + 2] = x + 0 + (z + 1) * FIELD_MESH_H_VERTEX_COUNT;
-			//g_MeshFieldVertexIndex[index + 3] = x + 1 + (z + 0) * FIELD_MESH_H_VERTEX_COUNT;
-			//g_MeshFieldVertexIndex[index + 4] = x + 1 + (z + 1) * FIELD_MESH_H_VERTEX_COUNT;
-			//g_MeshFieldVertexIndex[index + 5] = x + 0 + (z + 1) * FIELD_MESH_H_VERTEX_COUNT;
 			g_MeshFieldVertexIndex[index + 0] = x + (z + 0) * FIELD_MESH_H_VERTEX_COUNT;      //0 1    5
 			g_MeshFieldVertexIndex[index + 1] = x + (z + 1) * FIELD_MESH_H_VERTEX_COUNT + 1;  //5 6    10
 			g_MeshFieldVertexIndex[index + 2] = g_MeshFieldVertexIndex[index + 0] + 1;		  //1 2    6
@@ -101,7 +95,8 @@ void MeshField_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 
 	g_pDevice->CreateBuffer(&bd, &sd, &g_pIndexBuffer);
 
-	g_MeshFieldTexId = Texture_LoadFromFile(L"resource/texture/Grass.png");
+	g_MeshFieldTexId0 = Texture_LoadFromFile(L"resource/texture/Grass.png");
+	g_MeshFieldTexId1 = Texture_LoadFromFile(L"resource/texture/stone_001.jpg");
 
 }
 
@@ -114,7 +109,9 @@ void MeshField_Draw(const DirectX::XMMATRIX& mtxW)
 {
 	// シェーダーを描画パイプラインに設定
 	Shader_Field_Begin();
-	Texture_Set(g_MeshFieldTexId);
+	Texture_Set(g_MeshFieldTexId0,0);
+	Texture_Set(g_MeshFieldTexId1,1);
+
 	// 頂点バッファを描画パイプラインに設定
 	UINT stride = sizeof(Vertex3D);
 	UINT offset = 0;

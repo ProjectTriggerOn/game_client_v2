@@ -14,7 +14,7 @@ int Texture_LoadFromFile(const wchar_t* filename);
 
 void Texture_AllRelease();
 
-void Texture_Set(int texid);
+void Texture_Set(int texid, int slot = 0);
 
 unsigned int Texture_GetWidth(int texid);
 unsigned int Texture_GetHeight(int texid);

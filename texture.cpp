@@ -102,11 +102,11 @@ void Texture_Release(int texid)
 	}
 }
 
-void Texture_Set(int texid)
+void Texture_Set(int texid,int slot)
 {
 	if (texid < 0 || texid >= MAX_TEXTURES)return; // 範囲外のインデックスは無視
 	g_SetTextureIndex = texid; // 現在のテクスチャインデックスを更新
-	g_pContext->PSSetShaderResources(0, 1, &g_Textures[texid].pTextureView);
+	g_pContext->PSSetShaderResources(slot, 1, &g_Textures[texid].pTextureView);
 
 }
 
