@@ -166,6 +166,7 @@
     <ClCompile Include="grid.cpp" />
     <ClCompile Include="keyboard.cpp" />
     <ClCompile Include="key_logger.cpp" />
+    <ClCompile Include="light.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="mesh_field.cpp" />
     <ClCompile Include="mouse.cpp" />
@@ -199,6 +200,7 @@
     <ClInclude Include="grid.h" />
     <ClInclude Include="keyboard.h" />
     <ClInclude Include="key_logger.h" />
+    <ClInclude Include="light.h" />
     <ClInclude Include="mesh_field.h" />
     <ClInclude Include="mouse.h" />
     <ClInclude Include="polygon.h" />

@@ -31,6 +31,7 @@
 #include "circle.h"
 #include "cube.h"
 #include "fade.h"
+#include "light.h"
 #include "mesh_field.h"
 #include "sampler.h"
 #include "scene.h"
@@ -64,6 +65,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 
 	Shader_3D_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
 
+	Light_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
+
 	Sampler_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
 
 	Texture_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
@@ -84,7 +87,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 
 	
 
-	MeshField_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
+	//MeshField_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
 
 	Shader_Field_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
 

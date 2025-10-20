@@ -7,6 +7,7 @@
 #include "key_logger.h"
 #include "mesh_field.h"
 #include "sampler.h"
+#include "light.h"
 using namespace DirectX;
 
 namespace{
@@ -41,12 +42,16 @@ void Game_Update(double elapsed_time)
 
 void Game_Draw()
 {
+
+	Light_SetAmbient({ 0.3f,0.3f,0.3f });
+	Light_SetDirectionalWorld(
+		{ 0.0f,0.0f,1.0f,0.0f }, 
+           { 1.0f,1.0f,1.0f,1.0f });
+
 	Sampler_SetFilterAnisotropic();
 	XMMATRIX mtxWorld = XMMatrixIdentity();
 	Cube_Draw(mtxWorld);
-	MeshField_Draw(mtxWorld);
-
-
+	//MeshField_Draw(mtxWorld);
 	Camera_Debug();
 	//Grid_Draw();
 	CircleD circle;
