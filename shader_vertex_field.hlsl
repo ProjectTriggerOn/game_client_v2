@@ -2,7 +2,7 @@
 // 定数バッファ
 cbuffer VS_CONSTANT_BUFFER : register(b0)
 {
-   float4x4 world;
+    float4x4 world;
 
 }
 
@@ -38,6 +38,7 @@ struct VS_OUT
 {
     float4 posH : SV_POSITION; // 変換後の座標
     float4 color : COLOR0; // 色
+    float4 light_color : COLOR1; // ライトカラー
     float2 uv : TEXCOORD0; // UV
 };
 
@@ -59,9 +60,13 @@ VS_OUT main(VS_IN vi)
     // そこで逆行列の転置行列を使う
     float normalW = mul(float4(vi.normalL.xyz, 0.0f), world);
     normalW = normalize(normalW);
-    float d1 = max(0.0f,dot(-directional_world_vector, vi.normalL));
-	float3 color = vi.color.rgb * d1 * directional_color.rgb + ambient_color.rgb * vi.color;
-	vo.color = float4(color,vi.color.a);
+    float d1 = max(0.0f, dot(-directional_world_vector, vi.normalL));
+
+    vo.color = vi.color; //地面のテクスチャのブレンド値はそのまま渡す
+
+
+    float3 color = d1 * directional_color.rgb + ambient_color.rgb;
+    vo.light_color = float4(color, 1.0f);
 
     vo.uv = vi.uv;
     return vo;

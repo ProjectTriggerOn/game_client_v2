@@ -227,6 +227,9 @@
     <FxCompile Include="shader_pixel_field.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
+    <FxCompile Include="shader_vertex_field.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="ascii_texture_generator.py" />

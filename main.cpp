@@ -85,11 +85,11 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 
 	Cube_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
 
-	
-
-	//MeshField_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
-
 	Shader_Field_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
+
+	MeshField_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
+
+
 
 	Grid_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
 

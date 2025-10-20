@@ -10,6 +10,7 @@ using namespace DirectX;
 struct Vertex3D
 {
 	XMFLOAT3 position; // 頂点座標
+	XMFLOAT3 normal;   // 法線ベクトル
 	XMFLOAT4 color;
 	XMFLOAT2 uv; // uv座標
 };
@@ -60,8 +61,10 @@ void MeshField_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 				0.0f,
 				 z * FIELD_MESH_SIZE
 			};
-			g_MeshFieldVertex[index].color = { 1.0f,1.0f,1.0f,1.0f };
-			g_MeshFieldVertex[index].uv = {x*1.0f,z*1.0f};
+
+			g_MeshFieldVertex[index].normal = { 0.0f,1.0f,0.0f };
+			g_MeshFieldVertex[index].color = { 0.0f,1.0f,0.0f,1.0f };
+			g_MeshFieldVertex[index].uv = {x * 1.0f,z * 1.0f};
 		}
 
 	}

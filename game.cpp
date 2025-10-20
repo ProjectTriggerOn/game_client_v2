@@ -45,13 +45,13 @@ void Game_Draw()
 
 	Light_SetAmbient({ 0.3f,0.3f,0.3f });
 	Light_SetDirectionalWorld(
-		{ 0.0f,0.0f,1.0f,0.0f }, 
+		{ 0.0f,-1.0f,0.0f,0.0f }, 
            { 1.0f,1.0f,1.0f,1.0f });
 
 	Sampler_SetFilterAnisotropic();
 	XMMATRIX mtxWorld = XMMatrixIdentity();
 	Cube_Draw(mtxWorld);
-	//MeshField_Draw(mtxWorld);
+	MeshField_Draw(mtxWorld);
 	Camera_Debug();
 	//Grid_Draw();
 	CircleD circle;
