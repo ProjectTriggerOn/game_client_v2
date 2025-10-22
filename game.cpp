@@ -8,19 +8,25 @@
 #include "mesh_field.h"
 #include "sampler.h"
 #include "light.h"
+#include "model.h"
 using namespace DirectX;
 
 namespace{
 	XMFLOAT3 g_CubePosition{};
 	XMFLOAT3 g_CubeVelocity{};
+	MODEL* g_pModel = nullptr;
 }
 
 void Game_Initialize()
 {
 	
-	//Camera_Initialize({3.0f,2.45f,-3.0f},{-0.6f,-0.45f,0.66f},{-0.75,0.0,0.66});
-	Camera_Initialize();
-
+	Camera_Initialize({7.785f,13.557f,-12.537f},
+		{-0.291f,-0.777f,0.558f},
+		{ 0.887f,0,0.462f },
+		{-0.359f,0.629f,0.689f}
+	);
+	//Camera_Initialize();
+	g_pModel = ModelLoad("resource/model/Tree.fbx");
 }
 
 void Game_Update(double elapsed_time)
@@ -51,6 +57,7 @@ void Game_Draw()
 	Sampler_SetFilterAnisotropic();
 	XMMATRIX mtxWorld = XMMatrixIdentity();
 	Cube_Draw(mtxWorld);
+	ModelDraw(g_pModel, mtxWorld);
 	MeshField_Draw(mtxWorld);
 	Camera_Debug();
 	//Grid_Draw();
@@ -68,6 +75,7 @@ void Game_Finalize()
 	Grid_Finalize();
 	Circle_DebugFinalize();
 	Sampler_Finalize();
+	ModelRelease(g_pModel);
 }
 
 

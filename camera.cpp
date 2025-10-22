@@ -67,19 +67,21 @@ void Camera_Initialize()
 }
 
 void Camera_Initialize(const DirectX::XMFLOAT3& position, 
-					const DirectX::XMFLOAT3& front,const DirectX::XMFLOAT3& right)
+					const DirectX::XMFLOAT3& front,const DirectX::XMFLOAT3& right, const DirectX::XMFLOAT3& up)
 {
 
 	Camera_Initialize();
 	eyePosition = position;
 	XMVECTOR f = XMVector3Normalize(XMLoadFloat3(&front));
-	XMVECTOR r = XMVector3Normalize(
-		XMLoadFloat3(&right) * XMVECTOR {
-		1.0f,
-			0.0f,
-			1.0f
-	});
-	XMVECTOR u = XMVector3Normalize(XMVector3Cross(f, r));
+	XMVECTOR r = XMVector3Normalize(XMLoadFloat3(&right));
+	XMVECTOR u = XMVector3Normalize(XMLoadFloat3(&up));
+	//XMVECTOR r = XMVector3Normalize(
+	//	XMLoadFloat3(&right) * XMVECTOR {
+	//	1.0f,
+	//		0.0f,
+	//		1.0f
+	//});
+	//XMVECTOR u = XMVector3Normalize(XMVector3Cross(f, r));
 	XMStoreFloat3(&g_Camerafront,f );
 	XMStoreFloat3(&g_Cameraright,r);
 	XMStoreFloat3(&g_CameraUp, u);
