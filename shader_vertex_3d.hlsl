@@ -15,16 +15,7 @@ cbuffer VS_CONSTANT_BUFFER : register(b2)
 {
     float4x4 proj;
 }
-cbuffer VS_CONSTANT_BUFFER : register(b3)
-{
-    float4 ambient_color;
-}
 
-cbuffer VS_CONSTANT_BUFFER : register(b4)
-{
-    float4 directional_world_vector;
-    float4 directional_color;
-}
 
 struct VS_IN
 {
@@ -37,6 +28,8 @@ struct VS_IN
 struct VS_OUT
 {
     float4 posH : SV_POSITION; // 変換後の座標
+    float4 posW : POSITION0;
+    float4 normalW : NORMAL0; // 法線ワールド座標
     float4 color : COLOR0; // 色
     float2 uv : TEXCOORD0; // UV
 };
@@ -54,15 +47,14 @@ VS_OUT main(VS_IN vi)
     pos = mul(pos, view);
     vo.posH = mul(pos, proj);
 
-    // ライティング
     //普通のワールド変換行列を使うと拡大縮小の影響を受けてしまう
     // そこで逆行列の転置行列を使う
     float normalW = mul(float4(vi.normalL.xyz, 0.0f), world);
-    normalW = normalize(normalW);
-    float d1 = max(0.0f,dot(-directional_world_vector, vi.normalL));
-	float3 color = vi.color.rgb * d1 * directional_color.rgb + ambient_color.rgb * vi.color;
-	vo.color = float4(color,vi.color.a);
+    vo.normalW = normalize(normalW);
+    vo.posW = mul(vi.posL, world); //ワールド座標系に変換
 
+	vo.color = vi.color;
     vo.uv = vi.uv;
+
     return vo;
 }

@@ -52,12 +52,18 @@ void Game_Update(double elapsed_time)
 void Game_Draw()
 {
 
-	Light_SetAmbient({ 1.0f,1.0f,1.0f });
-	XMVECTOR v{ -1.0f,-1.0f,1.0f };
-	v = XMVector3Normalize(v);
-	XMFLOAT4 dir;
-	XMStoreFloat4(&dir, v);
-	Light_SetDirectionalWorld(dir, { 1.0,0.9,0.7,1.0 });
+	Light_SetAmbient({ 0.4f,0.4f,0.4f });
+	//XMVECTOR v{ 0.0f,-1.0f,0.0f };
+	//v = XMVector3Normalize(v);
+	//XMFLOAT4 dir;
+	//XMStoreFloat4(&dir, v);
+	//Light_SetDirectionalWorld(
+	//	dir,
+	//	{ 1.0f,0.9f,0.7f,1.0f },
+	//	Camera_GetPosition()
+	//	);
+	Light_SetDirectionalWorld({ 0.0f,-1.0f,0.0f,0.0f }, { 1.0f,0.9f,0.7f,1.0f }, Camera_GetPosition());//方向光
+
 
 	Sampler_SetFilterAnisotropic();
 	XMMATRIX mtxWorld = XMMatrixIdentity();
