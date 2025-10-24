@@ -38,7 +38,8 @@ struct VS_OUT
 {
     float4 posH : SV_POSITION; // 変換後の座標
     float4 color : COLOR0; // 色
-    float4 light_color : COLOR1; // ライトカラー
+    float4 directional : COLOR1; // ライトカラー
+    float4 ambient : COLOR2; // 環境光カラー
     float2 uv : TEXCOORD0; // UV
 };
 
@@ -64,9 +65,11 @@ VS_OUT main(VS_IN vi)
 
     vo.color = vi.color; //地面のテクスチャのブレンド値はそのまま渡す
 
+    vo.directional = float4(d1 * directional_color.rgb, 1.0f);
+    vo.ambient = float4(ambient_color.rgb, 1.0f);
 
-    float3 color = d1 * directional_color.rgb + ambient_color.rgb;
-    vo.light_color = float4(color, 1.0f);
+    //float3 color = d1 * directional_color.rgb + ambient_color.rgb;
+    //vo.light_color = float4(color, 1.0f);
 
     vo.uv = vi.uv;
     return vo;

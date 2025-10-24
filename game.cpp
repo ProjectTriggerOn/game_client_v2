@@ -15,18 +15,21 @@ namespace{
 	XMFLOAT3 g_CubePosition{};
 	XMFLOAT3 g_CubeVelocity{};
 	MODEL* g_pModel = nullptr;
+	MODEL* g_pModel0 = nullptr;
 }
 
 void Game_Initialize()
 {
 	
-	Camera_Initialize({7.785f,13.557f,-12.537f},
+	Camera_Initialize(
+		{1.0f,2,-2},
 		{-0.291f,-0.777f,0.558f},
 		{ 0.887f,0,0.462f },
 		{-0.359f,0.629f,0.689f}
 	);
 	//Camera_Initialize();
-	g_pModel = ModelLoad("resource/model/Tree.fbx");
+	g_pModel = ModelLoad("resource/model/test.fbx",0.1f);
+	g_pModel0 = ModelLoad("resource/model/heli.fbx",0.5f);
 }
 
 void Game_Update(double elapsed_time)
@@ -49,15 +52,24 @@ void Game_Update(double elapsed_time)
 void Game_Draw()
 {
 
-	Light_SetAmbient({ 0.3f,0.3f,0.3f });
-	Light_SetDirectionalWorld(
-		{ 0.0f,-1.0f,0.0f,0.0f }, 
-           { 1.0f,1.0f,1.0f,1.0f });
+	Light_SetAmbient({ 1.0f,1.0f,1.0f });
+	XMVECTOR v{ -1.0f,-1.0f,1.0f };
+	v = XMVector3Normalize(v);
+	XMFLOAT4 dir;
+	XMStoreFloat4(&dir, v);
+	Light_SetDirectionalWorld(dir, { 1.0,0.9,0.7,1.0 });
 
 	Sampler_SetFilterAnisotropic();
 	XMMATRIX mtxWorld = XMMatrixIdentity();
 	Cube_Draw(mtxWorld);
-	ModelDraw(g_pModel, mtxWorld);
+	ModelDraw(g_pModel, XMMatrixTranslation(-2.0f,1.0f,0.0f));
+	ModelDraw(g_pModel0,
+		XMMatrixRotationAxis({0.0f,1.0f,0.0f},
+			XMConvertToRadians(90))
+		*XMMatrixTranslation(0.0f, 1.0f,3.0f)
+	);
+	//ModelDraw(g_pModel0, mtxWorld);
+
 	MeshField_Draw(mtxWorld);
 	Camera_Debug();
 	//Grid_Draw();
@@ -76,6 +88,7 @@ void Game_Finalize()
 	Circle_DebugFinalize();
 	Sampler_Finalize();
 	ModelRelease(g_pModel);
+	ModelRelease(g_pModel0);
 }
 
 
