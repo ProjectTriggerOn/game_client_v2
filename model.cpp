@@ -231,15 +231,12 @@ void ModelDraw(MODEL* model, const DirectX::XMMATRIX& mtxW)
 {
 	// シェーダーを描画パイプラインに設定
 	Shader_3D_Begin();
-	Shader_3D_SetColor({ 1.0f,1.0f,1.0f,1.0f });
-	//Texture_Set();
+	// ワールド行列設定
 	Shader_3D_SetWorldMatrix(mtxW);
 	// プリミティブトポロジ設定
 	Direct3D_GetDeviceContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	for (unsigned int m = 0;m <model->AiScene->mNumMeshes;m++)
 	{
-
-
 		aiString texture;
 		aiMaterial* aiMaterial = model->AiScene->mMaterials[model->AiScene->mMeshes[m]->mMaterialIndex];
 		aiMaterial->GetTexture(aiTextureType_DIFFUSE, 0, &texture);
@@ -248,9 +245,13 @@ void ModelDraw(MODEL* model, const DirectX::XMMATRIX& mtxW)
 		//if (texture != aiString(""))
 		{
 			Direct3D_GetDeviceContext()->PSSetShaderResources(0, 1, &model->Texture[texture.data]);
+			Shader_3D_SetColor({ 1.0f,1.0f,1.0f,1.0f });
 		}else
 		{
 			Texture_Set(g_TextureWhite);
+			aiColor3D diffuse;
+			aiMaterial->Get(AI_MATKEY_COLOR_DIFFUSE, diffuse);
+			Shader_3D_SetColor(XMFLOAT4(diffuse.r, diffuse.g, diffuse.b, 1.0f));
 		}
 
 		//aiMaterial* aiMaterial = model->AiScene->mMaterials[model->AiScene->mMeshes[m]->mMaterialIndex];
