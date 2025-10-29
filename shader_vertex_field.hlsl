@@ -3,7 +3,6 @@
 cbuffer VS_CONSTANT_BUFFER : register(b0)
 {
     float4x4 world;
-
 }
 
 cbuffer VS_CONSTANT_BUFFER : register(b1)
@@ -30,16 +29,17 @@ struct VS_IN
 {
     float4 posL : POSITION0; // ローカル座標
     float4 normalL : NORMAL0; // 法線
-    float4 color : COLOR0; // 色
+    float4 blend : COLOR0; // 色
     float2 uv : TEXCOORD0; // UV
 };
 
 struct VS_OUT
 {
     float4 posH : SV_POSITION; // 変換後の座標
-    float4 color : COLOR0; // 色
-    float4 light_color : COLOR1; // ライトカラー
-    float2 uv : TEXCOORD0; // UV
+    float4 posW : POSITION0; // ワールド座標
+    float4 normalW : NORMAL0; // ワールド法線
+    float4 blend : COLOR0; // 色
+    float2 uv : TEXCOORD0; // uv
 };
 
 //=============================================================================
@@ -55,19 +55,13 @@ VS_OUT main(VS_IN vi)
     pos = mul(pos, view);
     vo.posH = mul(pos, proj);
 
-    // ライティング
-    //普通のワールド変換行列を使うと拡大縮小の影響を受けてしまう
-    // そこで逆行列の転置行列を使う
-    float normalW = mul(float4(vi.normalL.xyz, 0.0f), world);
-    normalW = normalize(normalW);
-    float d1 = max(0.0f, dot(-directional_world_vector, vi.normalL));
+    float4 normalW = mul(float4(vi.normalL.xyz, 0.0f), world);
+    vo.normalW = normalize(normalW);
+    vo.posW = mul(vi.posL, world);
 
-    vo.color = vi.color; //地面のテクスチャのブレンド値はそのまま渡す
-
-
-    float3 color = d1 * directional_color.rgb + ambient_color.rgb;
-    vo.light_color = float4(color, 1.0f);
+    vo.blend = vi.blend; //地面のテクスチャのブレンド値はそのまま渡す
 
     vo.uv = vi.uv;
+
     return vo;
 }

@@ -138,6 +138,8 @@ void Cube_Draw(XMMATRIX mtxW)
 	// シェーダーを描画パイプラインに設定
 	Shader_3D_Begin();
 
+	Shader_3D_SetColor({ 1.0f,1.0f,1.0f,1.0f });
+
 	// 頂点バッファを描画パイプラインに設定
 	UINT stride = sizeof(Vertex3D);
 	UINT offset = 0;

@@ -169,6 +169,7 @@
     <ClCompile Include="light.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="mesh_field.cpp" />
+    <ClCompile Include="model.cpp" />
     <ClCompile Include="mouse.cpp" />
     <ClCompile Include="polygon.cpp" />
     <ClCompile Include="sampler.cpp" />
@@ -202,6 +203,7 @@
     <ClInclude Include="key_logger.h" />
     <ClInclude Include="light.h" />
     <ClInclude Include="mesh_field.h" />
+    <ClInclude Include="model.h" />
     <ClInclude Include="mouse.h" />
     <ClInclude Include="polygon.h" />
     <ClInclude Include="sampler.h" />
