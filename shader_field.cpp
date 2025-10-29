@@ -15,6 +15,7 @@ namespace
 	ID3D11Buffer* g_pVSConstantBuffer0 = nullptr;
 	ID3D11Buffer* g_pVSConstantBuffer1 = nullptr;
 	ID3D11Buffer* g_pVSConstantBuffer2 = nullptr;
+	ID3D11Buffer* g_pPSConstantBuffer0 = nullptr;
 	ID3D11PixelShader* g_pPixelShader = nullptr;
 
 	// 注意！初期化で外部から設定されるもの。Release不要。
@@ -28,7 +29,7 @@ bool Shader_Field_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContex
 
 	// デバイスとデバイスコンテキストのチェック
 	if (!pDevice || !pContext) {
-		hal::dout << "Shader_Field_Initialize() : �^����ꂽ�f�o�C�X���R���e�L�X�g���s���ł�" << std::endl;
+		hal::dout << "Shader_Field_Initialize() : ERROR" << std::endl;
 		return false;
 	}
 
@@ -119,6 +120,11 @@ bool Shader_Field_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContex
 		return false;
 	}
 
+	buffer_desc.ByteWidth = sizeof(XMFLOAT4); // 
+	buffer_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER; //
+
+	g_pDevice->CreateBuffer(&buffer_desc, nullptr, &g_pPSConstantBuffer0);
+
 	return true;
 }
 
@@ -131,6 +137,7 @@ void Shader_Field_Finalize()
 	SAFE_RELEASE(g_pVSConstantBuffer0);
 	SAFE_RELEASE(g_pVSConstantBuffer1);
 	SAFE_RELEASE(g_pVSConstantBuffer2);
+	SAFE_RELEASE(g_pPSConstantBuffer0);
 	SAFE_RELEASE(g_pInputLayout);
 	SAFE_RELEASE(g_pVertexShader);
 }
@@ -186,6 +193,12 @@ void Shader_Field_SetProjectMatrix(const DirectX::XMMATRIX& matrix)
 
 }
 
+void Shader_Field_SetColor(const XMFLOAT4& color)
+{
+	g_pContext->UpdateSubresource(g_pPSConstantBuffer0, 0, nullptr, &color, 0, 0);
+
+}
+
 void Shader_Field_Begin()
 {
 	//頂点シェーダーとピクセルシェーダーを描画パイプラインに設定
@@ -199,5 +212,6 @@ void Shader_Field_Begin()
 	g_pContext->VSSetConstantBuffers(0, 1, &g_pVSConstantBuffer0);
 	g_pContext->VSSetConstantBuffers(1, 1, &g_pVSConstantBuffer1);
 	g_pContext->VSSetConstantBuffers(2, 1, &g_pVSConstantBuffer2);
+	g_pContext->PSSetConstantBuffers(0, 1, &g_pPSConstantBuffer0);
 
 }

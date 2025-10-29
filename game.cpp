@@ -64,10 +64,8 @@ void Game_Draw()
 	//	);
 	Light_SetDirectionalWorld({ 0.0f,-1.0f,0.0f,0.0f }, { 1.0f,0.9f,0.7f,1.0f });//方向光
 
-
 	Sampler_SetFilterAnisotropic();
 	XMMATRIX mtxWorld = XMMatrixIdentity();
-
 
 	Light_SetSpecularWorld(Camera_GetPosition(), 1.0f,
 		{ 0.1f,0.1f,0.1f,1.0f });
@@ -77,22 +75,14 @@ void Game_Draw()
 	Light_SetSpecularWorld(Camera_GetPosition(), 50.0f,
 		{ 1.0f,0.9f,0.7f,1.0f });
 	ModelDraw(g_pModel0,
-		XMMatrixRotationAxis({0.0f,1.0f,0.0f},
-			XMConvertToRadians(90))
-		*XMMatrixTranslation(0.0f, 1.0f,3.0f)
-	);
-
-
-	//ModelDraw(g_pModel0, mtxWorld);
+		XMMatrixRotationAxis({0.0f,1.0f,0.0f},XMConvertToRadians(90))
+		*XMMatrixTranslation(0.0f, 1.0f,3.0f));
 	Cube_Draw(mtxWorld);
-	MeshField_Draw(mtxWorld);
-	Camera_Debug();
-	//Grid_Draw();
-	CircleD circle;
-	circle.center = { 0.0f,0.0f,0.0f };
-	circle.radius = 5.0f;
-	Circle_DebugDraw(circle, { 1.0f,0.0f,0.0f,1.0f });
 
+	Light_SetSpecularWorld(Camera_GetPosition(), 10.0f,{ 0.3f,0.3f,0.3f,1.0f });
+	MeshField_Draw(mtxWorld);
+
+	Camera_Debug();
 }
 
 void Game_Finalize()

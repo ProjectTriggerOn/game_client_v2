@@ -29,7 +29,7 @@ bool Shader_3D_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 
 	// デバイスとデバイスコンテキストのチェック
 	if (!pDevice || !pContext) {
-		hal::dout << "Shader_3D_Initialize() : �^����ꂽ�f�o�C�X���R���e�L�X�g���s���ł�" << std::endl;
+		hal::dout << "Shader_3D_Initialize() : ERROR" << std::endl;
 		return false;
 	}
 
@@ -124,7 +124,6 @@ bool Shader_3D_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 	}
 
 	//pixel shader constant buffer
-	//D3D11_BUFFER_DESC buffer_desc{};
 	buffer_desc.ByteWidth = sizeof(XMFLOAT4); // 
 	buffer_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER; //
 
@@ -142,6 +141,7 @@ void Shader_3D_Finalize()
 	SAFE_RELEASE(g_pVSConstantBuffer0);
 	SAFE_RELEASE(g_pVSConstantBuffer1);
 	SAFE_RELEASE(g_pVSConstantBuffer2);
+	SAFE_RELEASE(g_pPSConstantBuffer0);
 	SAFE_RELEASE(g_pInputLayout);
 	SAFE_RELEASE(g_pVertexShader);
 }
