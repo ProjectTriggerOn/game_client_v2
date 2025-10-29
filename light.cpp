@@ -8,6 +8,9 @@ namespace {
 	ID3D11Device* g_pDevice = nullptr;
 	ID3D11Buffer* g_pPSConstantBuffer2 = nullptr;
 	ID3D11Buffer* g_pPSConstantBuffer3 = nullptr;
+	ID3D11Buffer* g_pPSConstantBuffer4 = nullptr;
+
+	PointLightList g_pointLights{};
 }
 
 //並行光源（拡散反射）
@@ -25,6 +28,8 @@ struct SpecularLight
 	XMFLOAT4 SpecularColor;
 };
 
+
+
 void Light_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 {
 	g_pDevice = pDevice;
@@ -41,10 +46,15 @@ void Light_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 
 	buffer_desc.ByteWidth = sizeof(SpecularLight);
 	g_pDevice->CreateBuffer(&buffer_desc, nullptr, &g_pPSConstantBuffer3);
+
+	buffer_desc.ByteWidth = sizeof(PointLightList);
+	g_pDevice->CreateBuffer(&buffer_desc, nullptr, &g_pPSConstantBuffer4);
+
 }
 
 void Light_Finalize(void)
 {
+	SAFE_RELEASE(g_pPSConstantBuffer4)
 	SAFE_RELEASE(g_pPSConstantBuffer3)
 	SAFE_RELEASE(g_pPSConstantBuffer2)
 	SAFE_RELEASE(g_pPSConstantBuffer1)
@@ -80,4 +90,36 @@ void Light_SetSpecularWorld(
 	g_pContext->UpdateSubresource(g_pPSConstantBuffer3, 0, nullptr, &light, 0, 0);
 	g_pContext->PSSetConstantBuffers(3, 1, &g_pPSConstantBuffer3);
 }
+
+void Light_SetPointLightByList(const PointLightList& pList)
+{
+	g_pContext->UpdateSubresource(g_pPSConstantBuffer4, 0, nullptr, &pList, 0, 0);
+	g_pContext->PSSetConstantBuffers(4, 1, &g_pPSConstantBuffer4);
+}
+
+void Light_SetPointLightCount(int count)
+{
+	g_pointLights.numPointLights = count;
+
+	g_pContext->UpdateSubresource(g_pPSConstantBuffer4, 0, nullptr, &g_pointLights, 0, 0);
+	g_pContext->PSSetConstantBuffers(4, 1, &g_pPSConstantBuffer4);
+}
+
+void Light_SetPointLightWorldByCount(const int index, const XMFLOAT3& position, float range, const XMFLOAT3& color)
+{ 
+	if (index >= g_pointLights.numPointLights)
+	{
+		return;
+	}
+
+	g_pointLights.pointLights[index].LightPosition = position;
+	g_pointLights.pointLights[index].range = range;
+	g_pointLights.pointLights[index].Color = {color.x,color.y,color.z,1.0f};
+
+	g_pContext->UpdateSubresource(g_pPSConstantBuffer4, 0, nullptr, &g_pointLights, 0, 0);
+	g_pContext->PSSetConstantBuffers(4, 1, &g_pPSConstantBuffer4);
+}
+
+
+
 

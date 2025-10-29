@@ -16,6 +16,7 @@ namespace{
 	XMFLOAT3 g_CubeVelocity{};
 	MODEL* g_pModel = nullptr;
 	MODEL* g_pModel0 = nullptr;
+	float g_angle = 0.0f;
 }
 
 void Game_Initialize()
@@ -34,6 +35,7 @@ void Game_Initialize()
 
 void Game_Update(double elapsed_time)
 {
+	g_angle += static_cast<float>(elapsed_time) * XMConvertToRadians(90.0f);
 	
 	Cube_Update(elapsed_time);
 	Camera_Update(elapsed_time);
@@ -52,19 +54,62 @@ void Game_Update(double elapsed_time)
 void Game_Draw()
 {
 
-	Light_SetAmbient({ 0.4f,0.4f,0.4f });
-	//XMVECTOR v{ 0.0f,-1.0f,0.0f };
-	//v = XMVector3Normalize(v);
-	//XMFLOAT4 dir;
-	//XMStoreFloat4(&dir, v);
-	//Light_SetDirectionalWorld(
-	//	dir,
-	//	{ 1.0f,0.9f,0.7f,1.0f },
-	//	Camera_GetPosition()
-	//	);
-	Light_SetDirectionalWorld({ 0.0f,-1.0f,0.0f,0.0f }, { 1.0f,0.9f,0.7f,1.0f });//方向光
+	Light_SetAmbient({ 0.0f,0.0f,0.0f });
+	XMVECTOR v{ 0.0f,-1.0f,0.0f };
+	v = XMVector3Normalize(v);
+	XMFLOAT4 dir;
+	XMStoreFloat4(&dir, v);
+	Light_SetDirectionalWorld(dir,{ 0.3f,0.25f,0.2f,1.0f });
+	//Light_SetDirectionalWorld({ 0.0f,-1.0f,0.0f,0.0f }, { 1.0f,0.9f,0.7f,1.0f });//方向光
+	//Light_SetDirectionalWorld({ 0.0f,-1.0f,0.0f,0.0f }, { 0.3f,0.25f,0.2f,1.0f });//方向光
+
+	PointLightList list{
+		{
+				{XMFLOAT3(0.0f,0.2f,0.0f),5.0f,XMFLOAT4(0.0f,1.0f,1.0f,1.0f)},
+				{XMFLOAT3(2.0f,2.0f,0.0f),5.0f,XMFLOAT4(1.0f,0.0f,1.0f,1.0f)},
+				{XMFLOAT3(-2.0f,0.2f,0.0f),5.0f,XMFLOAT4(1.0f,1.0f,0.0f,1.0f)},
+				{XMFLOAT3(0.0f,0.2f,2.0f),5.0f,XMFLOAT4(0.0f,0.0f,1.0f,1.0f)},
+		},
+		4,
+		XMFLOAT3(0,0,0)
+	};
+
+	//Light_SetPointLightByList(list);
+
+	Light_SetPointLightCount(3);
+
+	//点光源回転
+	XMMATRIX plRotation = XMMatrixRotationY(g_angle);
+
+	XMFLOAT3 plPos0,plPos1,plPos2;
+
+	XMStoreFloat3(&plPos0, XMVector3Transform({ 3.0f,2.0f,-3.0f }, plRotation));
+
+	XMStoreFloat3(&plPos1, XMVector3Transform({ -5.0f,3.0f,-5.0f }, plRotation));
+
+	XMStoreFloat3(&plPos2, XMVector3Transform({ -7.0f,4.0f,7.0f }, plRotation));
+
+	Light_SetPointLightWorldByCount(
+		0,
+		plPos0,
+		5.0f,
+		XMFLOAT3(0.0f, 2.0f, 1.0f)
+	);
+	Light_SetPointLightWorldByCount(
+		1,
+		plPos1,
+		3.0f,
+		XMFLOAT3(1.0f, 0.0f, 1.0f)
+	);
+	Light_SetPointLightWorldByCount(
+		2,
+		plPos2,
+		3.0f,
+		XMFLOAT3(1.0f, 1.0f, 0.0f)
+	);
 
 	Sampler_SetFilterAnisotropic();
+
 	XMMATRIX mtxWorld = XMMatrixIdentity();
 
 	Light_SetSpecularWorld(Camera_GetPosition(), 1.0f,
