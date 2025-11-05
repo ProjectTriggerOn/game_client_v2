@@ -171,6 +171,8 @@
     <ClCompile Include="mesh_field.cpp" />
     <ClCompile Include="model.cpp" />
     <ClCompile Include="mouse.cpp" />
+    <ClCompile Include="player.cpp" />
+    <ClCompile Include="player_cam_tps.cpp" />
     <ClCompile Include="polygon.cpp" />
     <ClCompile Include="sampler.cpp" />
     <ClCompile Include="scene.cpp" />
@@ -205,6 +207,8 @@
     <ClInclude Include="mesh_field.h" />
     <ClInclude Include="model.h" />
     <ClInclude Include="mouse.h" />
+    <ClInclude Include="player.h" />
+    <ClInclude Include="player_cam_tps.h" />
     <ClInclude Include="polygon.h" />
     <ClInclude Include="sampler.h" />
     <ClInclude Include="scene.h" />

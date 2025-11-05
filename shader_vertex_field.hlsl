@@ -14,16 +14,6 @@ cbuffer VS_CONSTANT_BUFFER : register(b2)
 {
     float4x4 proj;
 }
-cbuffer VS_CONSTANT_BUFFER : register(b3)
-{
-    float4 ambient_color;
-}
-
-cbuffer VS_CONSTANT_BUFFER : register(b4)
-{
-    float4 directional_world_vector;
-    float4 directional_color;
-}
 
 struct VS_IN
 {

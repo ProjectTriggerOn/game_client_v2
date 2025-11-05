@@ -7,6 +7,7 @@
 #include "assimp/scene.h"
 #include "assimp/postprocess.h"
 #include "assimp/matrix4x4.h"
+#include <d3d11.h>
 #pragma comment (lib, "assimp-vc143-mt.lib")
 
 

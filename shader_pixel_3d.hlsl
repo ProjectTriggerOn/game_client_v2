@@ -107,7 +107,6 @@ float4 main(PS_IN pi) : SV_TARGET
         float3 point_light_r = reflect(normalize(lightToPixel), normalW.xyz).xyz; //反射ベクトル
         float point_light_t = pow(max(dot(point_light_r, toEye), 0.0f), specular_power); //スペキュラ強度
 
-        //
 		color += point_light[i].color.rgb * point_light_t;
 
     }

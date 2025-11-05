@@ -128,8 +128,8 @@ void MeshField_Draw(const DirectX::XMMATRIX& mtxW)
 	//Shader_3D_SetWorldMatrix(mtxW);
 
 	Shader_Field_SetWorldMatrix(XMMatrixTranslation(-offset_x, 0.0f, -offset_z));
-	Shader_Field_SetViewMatrix(XMLoadFloat4x4(&Camera_GetViewMatrix()));
-	Shader_Field_SetProjectMatrix(XMLoadFloat4x4(&Camera_GetPerspectiveMatrix()));
+	//Shader_Field_SetViewMatrix(XMLoadFloat4x4(&Camera_GetViewMatrix()));
+	//Shader_Field_SetProjectMatrix(XMLoadFloat4x4(&Camera_GetPerspectiveMatrix()));
 	Shader_Field_SetColor({ 1.0f,1.0f,1.0f,1.0f });
 
 	// プリミティブトポロジ設定
