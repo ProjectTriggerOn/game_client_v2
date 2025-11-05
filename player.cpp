@@ -44,9 +44,9 @@ void Player_Update(double elapsed_time)
 	XMVECTOR velocity = XMLoadFloat3(&g_PlayerVelocity);
 
 	//移動
-	if (KeyLogger_IsTrigger(KK_J) && !g_isJump)
+	if (KeyLogger_IsTrigger(KK_SPACE) && !g_isJump)
 	{
-		velocity += {0.0f, 8.0f, 0.0f };
+		velocity += {0.0f, 20.0f, 0.0f };
 		g_isJump = true;
 	}
 
@@ -85,9 +85,9 @@ void Player_Update(double elapsed_time)
 
 	direction = XMVector3Normalize(direction);
 
-	velocity += direction * static_cast<float>(8000.0 / 50.0 * elapsed_time);
-	velocity += -direction * static_cast<float>(5000.0 / 50.0 * elapsed_time);
-	position += direction * static_cast<float>(10.0f * elapsed_time);
+	velocity += direction * static_cast<float>(2000.0 / 50.0 * elapsed_time);
+	velocity += -velocity* static_cast<float>(4.0f * elapsed_time);
+	position += direction * static_cast<float>(elapsed_time);
 
 
 	XMStoreFloat3(&g_PlayerPosition, position);
