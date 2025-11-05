@@ -46,17 +46,17 @@ void Player_Update(double elapsed_time)
 	//移動
 	if (KeyLogger_IsTrigger(KK_SPACE) && !g_isJump)
 	{
-		velocity += {0.0f, 20.0f, 0.0f };
+		velocity += {0.0f, 8.0f, 0.0f };
 		g_isJump = true;
 	}
 
 	//重力
-	XMVECTOR gravityDir = { 0.0f,-1.0f};
+	XMVECTOR gravityDir = { 0.0f,-1.0f };
 	velocity += gravityDir * 9.8f * 1.5f * static_cast<float>(elapsed_time);
 	position += velocity * static_cast<float>(elapsed_time);
 
 	//地面判定
-	if (XMVectorGetY(position) < 1.0f)
+	if (XMVectorGetY(position) < 0.0f)
 	{
 		position -= velocity * static_cast<float>(elapsed_time);
 		velocity *= { 1.0f, 0.0f, 1.0f };
@@ -68,26 +68,33 @@ void Player_Update(double elapsed_time)
 
 	if (KeyLogger_IsPressed(KK_W))
 	{
-		direction += front ;
+		direction += front;
 	}
 	if (KeyLogger_IsPressed(KK_S))
 	{
-		direction -= front ;
+		direction -= front;
 	}
+
+
 	if (KeyLogger_IsPressed(KK_A))
 	{
 		direction -= XMVector3Cross({ 0.0f,1.0f,0.0f }, front);
+
 	}
 	if (KeyLogger_IsPressed(KK_D))
 	{
 		direction += XMVector3Cross({ 0.0f,1.0f,0.0f }, front);
 	}
 
-	direction = XMVector3Normalize(direction);
+	//正規化
+	if (XMVector3IsNaN(direction)) {
+		direction = XMVector3Normalize(direction);
+		XMStoreFloat3(&g_PlayerFront, direction);
+	}
 
 	velocity += direction * static_cast<float>(2000.0 / 50.0 * elapsed_time);
 	velocity += -velocity* static_cast<float>(4.0f * elapsed_time);
-	position += direction * static_cast<float>(elapsed_time);
+	position += velocity * static_cast<float>(elapsed_time);
 
 
 	XMStoreFloat3(&g_PlayerPosition, position);
@@ -109,10 +116,23 @@ void Player_Draw()
 {
 	Light_SetSpecularWorld(PlayerCamTps_GetPosition(), 4.0f, { 0.3f,0.25f,0.2f,1.0f });
 
+	float dot = XMVectorGetX(
+		XMVector3Dot(
+			XMLoadFloat3(&g_PlayerFront),
+			XMVECTOR{ 1.0f,0.0f,0.0f }
+		)
+	);
+
+	float angle = acosf(dot);
+
+	XMMATRIX r = XMMatrixRotationY(angle);
+
 	XMMATRIX t = XMMatrixTranslation(
 		g_PlayerPosition.x,
-		g_PlayerPosition.y,
+		g_PlayerPosition.y + 1.0f,
 		g_PlayerPosition.z);
-	XMMATRIX world = t;
+
+	XMMATRIX world = r * t;
+
 	ModelDraw(g_PlayerModel,world);
 }
