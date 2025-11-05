@@ -86,13 +86,43 @@ void Player_Update(double elapsed_time)
 		direction += XMVector3Cross({ 0.0f,1.0f,0.0f }, front);
 	}
 
-	//正規化
-	if (XMVector3IsNaN(direction)) {
+	if (XMVectorGetX(XMVector3LengthSq(direction)) > 0.0f) {
+
 		direction = XMVector3Normalize(direction);
-		XMStoreFloat3(&g_PlayerFront, direction);
+
+
+		float dot = XMVectorGetX(XMVector3Dot(XMLoadFloat3(&g_PlayerFront), direction));
+
+		float angle = acosf(dot);
+
+		const float ROT_SPEED = XM_2PI * 2.0f * static_cast<float>(elapsed_time);
+
+		if (angle < ROT_SPEED)
+		{
+			front = direction;
+		}
+		else
+		{//回転行列を使って徐々に向きを変える
+
+			XMMATRIX r = XMMatrixIdentity();
+
+			if (XMVectorGetY(XMVector3Cross(XMLoadFloat3(&g_PlayerFront), direction)) < 0.0f)
+			{
+				r = XMMatrixRotationY(-ROT_SPEED);
+			}
+			else
+			{
+				r = XMMatrixRotationY(ROT_SPEED);
+			}
+
+			front = XMVector3TransformNormal(XMLoadFloat3(&g_PlayerFront), r);
+		}
+
+		velocity += front * static_cast<float>(2000.0 / 50.0 * elapsed_time);
+
+		XMStoreFloat3(&g_PlayerFront, front);
 	}
 
-	velocity += direction * static_cast<float>(2000.0 / 50.0 * elapsed_time);
 	velocity += -velocity* static_cast<float>(4.0f * elapsed_time);
 	position += velocity * static_cast<float>(elapsed_time);
 
@@ -116,14 +146,7 @@ void Player_Draw()
 {
 	Light_SetSpecularWorld(PlayerCamTps_GetPosition(), 4.0f, { 0.3f,0.25f,0.2f,1.0f });
 
-	float dot = XMVectorGetX(
-		XMVector3Dot(
-			XMLoadFloat3(&g_PlayerFront),
-			XMVECTOR{ 1.0f,0.0f,0.0f }
-		)
-	);
-
-	float angle = acosf(dot);
+	float angle = -atan2f(g_PlayerFront.z,g_PlayerFront.x) + XMConvertToRadians(270);
 
 	XMMATRIX r = XMMatrixRotationY(angle);
 
@@ -134,5 +157,5 @@ void Player_Draw()
 
 	XMMATRIX world = r * t;
 
-	ModelDraw(g_PlayerModel,world);
+	ModelDraw(g_PlayerModel, world);
 }

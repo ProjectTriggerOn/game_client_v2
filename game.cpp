@@ -30,7 +30,7 @@ void Game_Initialize()
 	//Camera_Initialize();
 	
 
-	Player_Initialize({ 0.0f,0.0f,0.0f }, { 0.0f,0.0f,-1.0f });
+	Player_Initialize({ 0.0f,0.0f,0.0f }, { 0.0f,0.0f,1.0f });
 	PlayerCamTps_Initialize();
 }
 

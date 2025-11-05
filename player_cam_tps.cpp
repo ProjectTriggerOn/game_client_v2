@@ -44,9 +44,15 @@ void PlayerCamTps_Finalize(void)
 
 void PlayerCamTps_Update(double elapsed_time)
 {
-	XMVECTOR position = XMLoadFloat3(&Player_GetPosition()) - XMLoadFloat3(&Player_GetFront()) * 5.0f;
-	position = XMVectorAdd(position, { 0.0f,3.0f,0.0f });
-	XMVECTOR target = XMLoadFloat3(&Player_GetPosition());
+	XMVECTOR position = XMLoadFloat3(&Player_GetPosition());
+
+	position = XMVectorMultiply(position, { 1.0f,0.0f,1.0f });
+
+	XMVECTOR target = position;
+
+	position = XMVectorAdd(position, { 0.0f,3.0f,-5.0f });
+
+
 	XMVECTOR front = XMVector3Normalize(target - position);
 
 	XMStoreFloat3(&g_CameraFront, front);
