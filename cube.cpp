@@ -161,3 +161,11 @@ void Cube_Update(double)
 {
 
 }
+
+AABB Cube_GetAABB(const DirectX::XMFLOAT3& cubePos)
+{
+	return {
+		{cubePos.x - 0.5f, cubePos.y - 0.5f, cubePos.z - 0.5f},
+		{cubePos.x + 0.5f, cubePos.y + 0.5f, cubePos.z + 0.5f}
+	};
+}

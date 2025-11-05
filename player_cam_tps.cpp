@@ -115,8 +115,10 @@ void PlayerCamTps_Update_Mouse(double elapsed_time)
             // Pitch限制，避免翻转
             constexpr float PITCH_MAX = DirectX::XM_PIDIV2 - 0.05f;
             constexpr float PITCH_MIN = -DirectX::XM_PIDIV4; // 视角朝上不要超过45°
-            if (g_cameraPitch > PITCH_MAX) g_cameraPitch = PITCH_MAX;
-            if (g_cameraPitch < PITCH_MIN) g_cameraPitch = PITCH_MIN;
+            //if (g_cameraPitch > PITCH_MAX) g_cameraPitch = PITCH_MAX;
+			g_cameraPitch = std::min(g_cameraPitch, PITCH_MAX);
+            //if (g_cameraPitch < PITCH_MIN) g_cameraPitch = PITCH_MIN;
+			g_cameraPitch = std::max(g_cameraPitch, PITCH_MIN);
 
             g_lastMouseX = ms.x;
             g_lastMouseY = ms.y;

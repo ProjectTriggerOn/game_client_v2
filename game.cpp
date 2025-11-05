@@ -72,13 +72,15 @@ void Game_Draw()
 
 	XMMATRIX mtxWorld = XMMatrixIdentity();
 
-	Player_Draw();
-
 	Light_SetSpecularWorld(Camera_GetPosition(), 10.0f,{ 0.3f,0.3f,0.3f,1.0f });
 
 	MeshField_Draw(mtxWorld);
 
-	//Camera_Debug();
+	Player_Draw();
+
+	XMMATRIX cube_mtxW = XMMatrixTranslation(3.0f, 0.5f, 2.0f);
+
+	Cube_Draw(cube_mtxW);
 }
 
 void Game_Finalize()

@@ -1,4 +1,6 @@
 #include "player.h"
+
+#include "cube.h"
 #include "model.h"
 #include "key_logger.h"
 #include "Light.h"
@@ -118,6 +120,16 @@ void Player_Update(double elapsed_time)
 	XMStoreFloat3(&g_PlayerPosition, position);
 	XMStoreFloat3(&g_PlayerVelocity, velocity);
 
+	//当たり判定実験
+	AABB player = Player_GetAABB();
+	AABB cube = Cube_GetAABB({ 3.0f, 0.5f, 2.0f });
+
+	if (Collision_IsOverLapAABB(player,cube))
+	{
+		XMStoreFloat3(&g_PlayerPosition, position - velocity * static_cast<float>(elapsed_time));
+		XMStoreFloat3(&g_PlayerVelocity, {0.0f,0.0f,0.0f});
+	}
+
 }
 
 XMFLOAT3& Player_GetPosition()
@@ -128,6 +140,15 @@ XMFLOAT3& Player_GetPosition()
 XMFLOAT3& Player_GetFront()
 {
 	return g_PlayerFront;
+}
+
+AABB Player_GetAABB()
+{
+	//y軸はプレイヤーの高さを考慮
+	return {
+		{g_PlayerPosition.x - 1.0f,  g_PlayerPosition.y, g_PlayerPosition.z - 1.0f },
+		{g_PlayerPosition.x + 1.0f,g_PlayerPosition.y + 2.0f, g_PlayerPosition.z + 1.0f}
+	};
 }
 
 void Player_Draw()
