@@ -12,6 +12,7 @@ void PlayerCamTps_Initialize(
 );
 void PlayerCamTps_Finalize();
 void PlayerCamTps_Update(double elapsed_time);
+void PlayerCamTps_Update_Mouse(double elapsed_time);
 
 const DirectX::XMFLOAT3& PlayerCamTps_GetFront();
 const DirectX::XMFLOAT3& PlayerCamTps_GetPosition();

@@ -38,7 +38,8 @@ void Game_Update(double elapsed_time)
 {
 	//Camera_Update(elapsed_time);
 	Player_Update(elapsed_time);
-	PlayerCamTps_Update(elapsed_time);
+	//PlayerCamTps_Update(elapsed_time);
+	PlayerCamTps_Update_Mouse(elapsed_time);
 
 }
 

@@ -54,44 +54,32 @@ void Player_Update(double elapsed_time)
 	XMVECTOR gravityDir = { 0.0f,-1.0f };
 	velocity += gravityDir * 9.8f * 1.5f * static_cast<float>(elapsed_time);
 	position += velocity * static_cast<float>(elapsed_time);
-
+	
 	//地面判定
 	if (XMVectorGetY(position) < 0.0f)
 	{
 		position -= velocity * static_cast<float>(elapsed_time);
 		velocity *= { 1.0f, 0.0f, 1.0f };
+
 		g_isJump = false;
 	}
 
-	XMVECTOR direction{};
-	XMVECTOR front = XMLoadFloat3(&PlayerCamTps_GetFront()) * XMVECTOR { 1.0f, 0.0f, 1.0f };
+	XMVECTOR moveDir = XMVectorZero();
 
-	if (KeyLogger_IsPressed(KK_W))
-	{
-		direction += front;
-	}
-	if (KeyLogger_IsPressed(KK_S))
-	{
-		direction -= front;
-	}
+	XMFLOAT3 camFront = PlayerCamTps_GetFront();
+	XMVECTOR front = XMVector3Normalize(XMVectorSet(camFront.x, 0.0f, camFront.z, 0.0f));
+	XMVECTOR right = XMVector3Normalize(XMVector3Cross(XMVectorSet(0, 1, 0, 0), front));
 
+	if (KeyLogger_IsPressed(KK_W)) moveDir += front;
+	if (KeyLogger_IsPressed(KK_S)) moveDir -= front;
+	if (KeyLogger_IsPressed(KK_D)) moveDir += right;
+	if (KeyLogger_IsPressed(KK_A)) moveDir -= right;
 
-	if (KeyLogger_IsPressed(KK_A))
-	{
-		direction -= XMVector3Cross({ 0.0f,1.0f,0.0f }, front);
+	if (XMVectorGetX(XMVector3LengthSq(moveDir)) > 0.0f) {
 
-	}
-	if (KeyLogger_IsPressed(KK_D))
-	{
-		direction += XMVector3Cross({ 0.0f,1.0f,0.0f }, front);
-	}
+		moveDir = XMVector3Normalize(moveDir);
 
-	if (XMVectorGetX(XMVector3LengthSq(direction)) > 0.0f) {
-
-		direction = XMVector3Normalize(direction);
-
-
-		float dot = XMVectorGetX(XMVector3Dot(XMLoadFloat3(&g_PlayerFront), direction));
+		float dot = XMVectorGetX(XMVector3Dot(XMLoadFloat3(&g_PlayerFront), moveDir));
 
 		float angle = acosf(dot);
 
@@ -99,14 +87,14 @@ void Player_Update(double elapsed_time)
 
 		if (angle < ROT_SPEED)
 		{
-			front = direction;
+			front = moveDir;
 		}
 		else
 		{//回転行列を使って徐々に向きを変える
 
 			XMMATRIX r = XMMatrixIdentity();
 
-			if (XMVectorGetY(XMVector3Cross(XMLoadFloat3(&g_PlayerFront), direction)) < 0.0f)
+			if (XMVectorGetY(XMVector3Cross(XMLoadFloat3(&g_PlayerFront), moveDir)) < 0.0f)
 			{
 				r = XMMatrixRotationY(-ROT_SPEED);
 			}
