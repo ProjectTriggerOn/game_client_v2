@@ -44,31 +44,54 @@ void Player_Update(double elapsed_time)
 
 	XMVECTOR position = XMLoadFloat3(&g_PlayerPosition);
 	XMVECTOR velocity = XMLoadFloat3(&g_PlayerVelocity);
+	XMVECTOR gravityVelocity = XMVectorZero();
 
 	//移動
+	//ジャンプ
 	if (KeyLogger_IsTrigger(KK_SPACE) && !g_isJump)
 	{
-		velocity += {0.0f, 8.0f, 0.0f };
+		velocity += {0.0f, 15.0f, 0.0f };
 		g_isJump = true;
 	}
 
 	//重力
-	XMVECTOR gravityDir = { 0.0f,-1.0f };
+	XMVECTOR gravityDir = { 0.0f, -1.0f };
 	velocity += gravityDir * 9.8f * 1.5f * static_cast<float>(elapsed_time);
-	position += velocity * static_cast<float>(elapsed_time);
-	
-	//地面判定
-	if (XMVectorGetY(position) < 0.0f)
-	{
-		position -= velocity * static_cast<float>(elapsed_time);
-		velocity *= { 1.0f, 0.0f, 1.0f };
 
+	gravityVelocity = velocity * static_cast<float>(elapsed_time);
+	position += gravityVelocity;
+
+	XMStoreFloat3(&g_PlayerPosition, position);
+	AABB player = Player_GetAABB();
+	AABB cube = Cube_GetAABB({ 3.0f, 0.5f, 2.0f });
+	
+	Hit hit = Collision_IsHitAABB(cube, player);
+	if (hit.isHit)
+	{
+		if (hit.normal.y>0.0f)
+		{
+			//position -= gravityVelocity;//めり込む前の位置に戻す
+
+			position = XMVectorSetY(position, cube.max.y);
+			gravityVelocity = XMVectorZero();
+			velocity *= { 1.0f, 0.0f, 1.0f };
+			g_isJump = false;
+		}
+	}
+
+	//地面に到達したら止まる
+	if (XMVectorGetY(position) <= 0.0f)
+	{
+		position = XMVectorSetY(position, 0.0f);
+		gravityVelocity = XMVectorZero();
+		velocity *= { 1.0f, 0.0f, 1.0f };
 		g_isJump = false;
 	}
 
 	XMVECTOR moveDir = XMVectorZero();
 
 	XMFLOAT3 camFront = PlayerCamTps_GetFront();
+
 	XMVECTOR front = XMVector3Normalize(XMVectorSet(camFront.x, 0.0f, camFront.z, 0.0f));
 	XMVECTOR right = XMVector3Normalize(XMVector3Cross(XMVectorSet(0, 1, 0, 0), front));
 
@@ -113,23 +136,40 @@ void Player_Update(double elapsed_time)
 		XMStoreFloat3(&g_PlayerFront, front);
 	}
 
-	velocity += -velocity* static_cast<float>(4.0f * elapsed_time);
+	velocity += -velocity * static_cast<float>(4.0f * elapsed_time);
 	position += velocity * static_cast<float>(elapsed_time);
 
+	if (hit.isHit)
+	{
+		if (hit.normal.x > 0.0f)
+		{
+			position = XMVectorSetX(position, cube.max.x + 1.0f);
+			velocity*= { 0.0f,1.0f,1.0f };
+		}
+		else if (hit.normal.x < 0.0f)
+		{
+			position = XMVectorSetX(position, cube.min.x - 1.0f);
+			velocity *= { 0.0f, 1.0f, 1.0f };
+		}
+		else if (hit.normal.y < 0.0f)
+		{
+			position = XMVectorSetY(position, cube.min.y - 2.0f);
+			velocity *= { 1.0f, 0.0f, 1.0f };
+		}
+		else if (hit.normal.z > 0.0f)
+		{
+			position = XMVectorSetZ(position, cube.max.z + 1.0f);
+			velocity *= { 1.0f, 1.0f, 0.0f };
+		}
+		else if (hit.normal.z < 0.0f)
+		{
+			position = XMVectorSetZ(position, cube.min.z - 1.0f);
+			velocity *= { 1.0f, 1.0f, 0.0f };
+		}
+	}
 
 	XMStoreFloat3(&g_PlayerPosition, position);
 	XMStoreFloat3(&g_PlayerVelocity, velocity);
-
-	//当たり判定実験
-	AABB player = Player_GetAABB();
-	AABB cube = Cube_GetAABB({ 3.0f, 0.5f, 2.0f });
-
-	if (Collision_IsOverLapAABB(player,cube))
-	{
-		XMStoreFloat3(&g_PlayerPosition, position - velocity * static_cast<float>(elapsed_time));
-		XMStoreFloat3(&g_PlayerVelocity, {0.0f,0.0f,0.0f});
-	}
-
 }
 
 XMFLOAT3& Player_GetPosition()

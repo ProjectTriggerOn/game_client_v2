@@ -7,6 +7,7 @@
 #include "direct3d.h"
 #include "shader.h"
 #include "texture.h"
+#include <algorithm>
 using namespace DirectX;
 
 
@@ -59,13 +60,41 @@ struct Vertex
 
 bool Collision_IsOverLapAABB(const AABB& a, const AABB& b)
 {
-	return a.min.x < b.max.x
-		&& a.max.x > b.min.x
-		&& a.min.y < b.max.y
-		&& a.max.y > b.min.y
-		&& a.min.z < b.max.z
-		&& a.max.z > b.min.z;
+	return a.min.x <= b.max.x
+		&& a.max.x >= b.min.x
+		&& a.min.y <= b.max.y
+		&& a.max.y >= b.min.y
+		&& a.min.z <= b.max.z
+		&& a.max.z >= b.min.z;
 }
+
+Hit Collision_IsHitAABB(const AABB& a, const AABB& b)
+{
+	Hit hit{};
+	hit.isHit = Collision_IsOverLapAABB(a, b);
+	if (!hit.isHit) return hit;
+
+	float xdepth = std::min(a.max.x, b.max.x) - std::max(a.min.x, b.min.x);
+	float ydepth = std::min(a.max.y, b.max.y) - std::max(a.min.y, b.min.y);
+	float zdepth = std::min(a.max.z, b.max.z) - std::max(a.min.z, b.min.z);
+
+	DirectX::XMFLOAT3 aCenter = a.GetCenter();
+	DirectX::XMFLOAT3 bCenter = b.GetCenter();
+	DirectX::XMFLOAT3 normal = { 0,0,0 };
+
+	if (xdepth <= ydepth && xdepth <= zdepth) {
+		normal.x = (bCenter.x > aCenter.x) ? 1.0f : -1.0f;
+	}
+	else if (ydepth <= xdepth && ydepth <= zdepth) {
+		normal.y = (bCenter.y > aCenter.y) ? 1.0f : -1.0f;
+	}
+	else {
+		normal.z = (bCenter.z > aCenter.z) ? 1.0f : -1.0f;
+	}
+	hit.normal = normal;
+	return hit;
+}
+
 
 void Collision_DebugInitialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 {

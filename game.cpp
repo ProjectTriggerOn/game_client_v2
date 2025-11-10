@@ -16,6 +16,8 @@ using namespace DirectX;
 namespace{
 
 	double g_AccumulatedTime = 0.0;
+	MODEL* g_pModel = nullptr;
+	MODEL* g_pModel0 = nullptr;
 }
 
 void Game_Initialize()
@@ -29,7 +31,8 @@ void Game_Initialize()
 	//);
 	//Camera_Initialize();
 	
-
+	g_pModel = ModelLoad("resource/model/tree.fbx", 1.0f);
+	g_pModel0 = ModelLoad("resource/model/heli.fbx", 0.5f);
 	Player_Initialize({ 0.0f,0.0f,0.0f }, { 0.0f,0.0f,1.0f });
 	PlayerCamTps_Initialize();
 }
@@ -38,8 +41,8 @@ void Game_Update(double elapsed_time)
 {
 	//Camera_Update(elapsed_time);
 	Player_Update(elapsed_time);
-	//PlayerCamTps_Update(elapsed_time);
-	PlayerCamTps_Update_Mouse(elapsed_time);
+	PlayerCamTps_Update(elapsed_time);
+	//PlayerCamTps_Update_Mouse(elapsed_time);
 
 }
 
@@ -81,6 +84,7 @@ void Game_Draw()
 	XMMATRIX cube_mtxW = XMMatrixTranslation(3.0f, 0.5f, 2.0f);
 
 	Cube_Draw(cube_mtxW);
+
 }
 
 void Game_Finalize()
