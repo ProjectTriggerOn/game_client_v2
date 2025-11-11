@@ -14,6 +14,8 @@ void Player_Update(double elapsed_time);
 XMFLOAT3& Player_GetPosition();
 XMFLOAT3& Player_GetFront();
 
+void Player_SetPosition(const XMFLOAT3& position);
+
 AABB Player_GetAABB();
 
 void Player_Draw();

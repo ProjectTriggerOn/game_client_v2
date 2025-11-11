@@ -182,6 +182,11 @@ XMFLOAT3& Player_GetFront()
 	return g_PlayerFront;
 }
 
+void Player_SetPosition(const XMFLOAT3& position)
+{
+	g_PlayerPosition = position;
+}
+
 AABB Player_GetAABB()
 {
 	//y軸はプレイヤーの高さを考慮

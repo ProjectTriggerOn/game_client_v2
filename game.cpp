@@ -1,10 +1,7 @@
 #include "game.h"
 #include "cube.h"
 #include "shader.h"
-#include "grid.h"
 #include "camera.h"
-#include "circle.h"
-#include "key_logger.h"
 #include "mesh_field.h"
 #include "sampler.h"
 #include "light.h"
@@ -40,9 +37,10 @@ void Game_Initialize()
 void Game_Update(double elapsed_time)
 {
 	//Camera_Update(elapsed_time);
-	Player_Update(elapsed_time);
-	PlayerCamTps_Update(elapsed_time);
+	//Player_Update(elapsed_time);
+	//PlayerCamTps_Update(elapsed_time);
 	//PlayerCamTps_Update_Mouse(elapsed_time);
+	PlayerCamTps_Update_Maya(elapsed_time);
 
 }
 
@@ -79,7 +77,7 @@ void Game_Draw()
 
 	MeshField_Draw(mtxWorld);
 
-	Player_Draw();
+	//Player_Draw();
 
 	ModelDraw(g_pModel0, XMMatrixTranslation(-5.0f, 0.0f, -5.0f));
 
