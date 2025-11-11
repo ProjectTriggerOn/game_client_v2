@@ -28,16 +28,6 @@ void InfiniteGrid_Finalize()
 
 void InfiniteGrid_Draw(const DirectX::XMMATRIX& mtxWorld)
 {
-	// 这里仅需设置 view/proj/inv_view/inv_proj
-	// 请由调用方自己设置这些参数（例：传入matrix或全局Camera参数等）
-	// 
-	// 例如：
-	// Shader_InfiniteGrid_SetViewMatrix(viewMtx);
-	// Shader_InfiniteGrid_SetProjectMatrix(projMtx);
-	// Shader_InfiniteGrid_SetInvViewMatrix(invViewMtx);
-	// Shader_InfiniteGrid_SetInvProjMatrix(invProjMtx);
-	Shader_InfiniteGrid_UpdateCB();
-
 	Shader_InfiniteGrid_Begin();
 
 	Sampler_SetFilterLinear();

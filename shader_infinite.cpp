@@ -5,17 +5,38 @@ using namespace DirectX;
 #include "direct3d.h"
 #include "debug_ostream.h"
 #include <fstream>
+
+struct ViewTransform
+{
+	DirectX::XMFLOAT4X4 g_mView;
+	DirectX::XMFLOAT4X4 g_mProj;
+	DirectX::XMFLOAT4X4 g_m_inv_view;
+	DirectX::XMFLOAT4X4 g_m_inv_proj;
+};
+struct GridParams
+{
+	DirectX::XMFLOAT4 grid_axis_widths;
+	DirectX::XMFLOAT4 grid_plane_params;
+	DirectX::XMFLOAT4 grid_fade_params;
+};
+
 namespace
 {
 	ID3D11VertexShader* g_pVertexShader = nullptr;
 	ID3D11InputLayout* g_pInputLayout = nullptr;
-	ID3D11Buffer* g_pVSConstantBuffer0 = nullptr;
+	ID3D11Buffer* g_pConstantBuffer0 = nullptr;
+	ID3D11Buffer* g_pPSConstantBuffer1 = nullptr;
 	ID3D11PixelShader* g_pPixelShader = nullptr;
 
 	// 注意！初期化で外部から設定されるもの。Release不要。
 	ID3D11Device* g_pDevice = nullptr;
 	ID3D11DeviceContext* g_pContext = nullptr;
+
+	ViewTransform g_viewTransform;
 }
+
+
+
 bool Shader_InfiniteGrid_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 {
 	HRESULT hr; // HRESULTはDirectXの関数の戻り値で、成功か失敗かを示す	
@@ -74,10 +95,15 @@ bool Shader_InfiniteGrid_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* 
 
 	// 
 	D3D11_BUFFER_DESC buffer_desc{};
-	buffer_desc.ByteWidth = sizeof(XMFLOAT4X4)*4; // 
+	buffer_desc.ByteWidth = sizeof(ViewTransform); // 
 	buffer_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER; //
 
-	g_pDevice->CreateBuffer(&buffer_desc, nullptr, &g_pVSConstantBuffer0);
+	g_pDevice->CreateBuffer(&buffer_desc, nullptr, &g_pConstantBuffer0);
+
+	buffer_desc.ByteWidth = sizeof(GridParams); // 
+	buffer_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER; //
+
+	g_pDevice->CreateBuffer(&buffer_desc, nullptr, &g_pPSConstantBuffer1);
 
 
 	//
@@ -109,17 +135,40 @@ bool Shader_InfiniteGrid_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* 
 
 void Shader_InfiniteGrid_Finalize()
 {
+	if (g_pVertexShader) { g_pVertexShader->Release(); g_pVertexShader = nullptr; }
+	if (g_pInputLayout) { g_pInputLayout->Release(); g_pInputLayout = nullptr; }
+	if (g_pPSConstantBuffer1) { g_pPSConstantBuffer1->Release(); g_pPSConstantBuffer1 = nullptr; }
+	if (g_pConstantBuffer0) { g_pConstantBuffer0->Release(); g_pConstantBuffer0 = nullptr; }
+	if (g_pPixelShader) { g_pPixelShader->Release(); g_pPixelShader = nullptr; }
 }
 
 void Shader_InfiniteGrid_SetProjectMatrix(const DirectX::XMMATRIX& matrix)
 {
+	XMStoreFloat4x4(&g_viewTransform.g_mProj, matrix);
+	XMMATRIX invProj = XMMatrixInverse(nullptr, matrix);
+	XMStoreFloat4x4(&g_viewTransform.g_m_inv_proj, invProj);
 
+	g_pContext->UpdateSubresource(g_pConstantBuffer0, 0, nullptr, &g_viewTransform, 0, 0);
 }
 
 void Shader_InfiniteGrid_SetWorldMatrix(const DirectX::XMMATRIX& matrix)
 {
+	XMStoreFloat4x4(&g_viewTransform.g_mView, matrix);
+	XMMATRIX invView = XMMatrixInverse(nullptr, matrix);
+	XMStoreFloat4x4(&g_viewTransform.g_m_inv_view, invView);
+
+	g_pContext->UpdateSubresource(g_pConstantBuffer0, 0, nullptr, &g_viewTransform, 0, 0);
 }
 
 void Shader_InfiniteGrid_Begin()
 {
+	g_pContext->IASetInputLayout(g_pInputLayout);
+	g_pContext->VSSetShader(g_pVertexShader, nullptr, 0);
+	g_pContext->PSSetShader(g_pPixelShader, nullptr, 0);
+
+	g_pContext->VSSetConstantBuffers(0, 1, &g_pConstantBuffer0);
+	g_pContext->PSSetConstantBuffers(0, 1, &g_pConstantBuffer0);
+	g_pContext->PSSetConstantBuffers(1, 1, &g_pPSConstantBuffer1);
+
 }
+
