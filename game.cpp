@@ -32,7 +32,7 @@ void Game_Initialize()
 	//Camera_Initialize();
 	
 	g_pModel = ModelLoad("resource/model/tree.fbx", 1.0f);
-	g_pModel0 = ModelLoad("resource/model/heli.fbx", 0.5f);
+	g_pModel0 = ModelLoad("resource/model/(Legacy)arms_assault_rifle_01.fbx", 20.0f);
 	Player_Initialize({ 0.0f,0.0f,0.0f }, { 0.0f,0.0f,1.0f });
 	PlayerCamTps_Initialize();
 }
@@ -80,6 +80,8 @@ void Game_Draw()
 	MeshField_Draw(mtxWorld);
 
 	Player_Draw();
+
+	ModelDraw(g_pModel0, XMMatrixTranslation(-5.0f, 0.0f, -5.0f));
 
 	XMMATRIX cube_mtxW = XMMatrixTranslation(3.0f, 0.5f, 2.0f);
 
