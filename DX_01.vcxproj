@@ -166,6 +166,7 @@
     <ClCompile Include="game.cpp" />
     <ClCompile Include="game_window.cpp" />
     <ClCompile Include="grid.cpp" />
+    <ClCompile Include="infinite_grid.cpp" />
     <ClCompile Include="keyboard.cpp" />
     <ClCompile Include="key_logger.cpp" />
     <ClCompile Include="light.cpp" />
@@ -183,6 +184,7 @@
     <ClCompile Include="shader.cpp" />
     <ClCompile Include="shader_3d.cpp" />
     <ClCompile Include="shader_field.cpp" />
+    <ClCompile Include="shader_infinite.cpp" />
     <ClCompile Include="sprite.cpp" />
     <ClCompile Include="sprite_anime.cpp" />
     <ClCompile Include="system_timer.cpp" />
@@ -204,6 +206,7 @@
     <ClInclude Include="game.h" />
     <ClInclude Include="game_window.h" />
     <ClInclude Include="grid.h" />
+    <ClInclude Include="infinite_grid.h" />
     <ClInclude Include="keyboard.h" />
     <ClInclude Include="key_logger.h" />
     <ClInclude Include="light.h" />
@@ -220,6 +223,7 @@
     <ClInclude Include="shader.h" />
     <ClInclude Include="shader_3d.h" />
     <ClInclude Include="shader_field.h" />
+    <ClInclude Include="shader_infinite.h" />
     <ClInclude Include="sprite.h" />
     <ClInclude Include="sprite_anime.h" />
     <ClInclude Include="system_timer.h" />
@@ -228,6 +232,26 @@
     <ClInclude Include="WICTextureLoader11.h" />
   </ItemGroup>
   <ItemGroup>
+    <FxCompile Include="infinite_grid_pixel.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">4.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">4.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
+    </FxCompile>
+    <FxCompile Include="infinite_grid_vertex.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">4.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">4.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
+    </FxCompile>
     <FxCompile Include="shader_pixel_2d.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>

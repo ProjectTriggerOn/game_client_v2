@@ -361,4 +361,11 @@ MigrationBackup/
 .ionide/
 
 # Fody - auto-generated XML schema
-FodyWeavers.xsd
+FodyWeavers.xsdFodyWeavers.xsd
+*.cso
+*.cso
+resource/shader/shader_vertex_field.cso
+resource/shader/shader_vertex_3d.cso
+resource/shader/shader_vertex_2d.cso
+resource/shader/shader_pixel_field.cso
+resource/shader/shader_pixel_2d.cso

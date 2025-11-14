@@ -31,11 +31,13 @@
 #include "circle.h"
 #include "cube.h"
 #include "fade.h"
+#include "infinite_grid.h"
 #include "light.h"
 #include "mesh_field.h"
 #include "sampler.h"
 #include "scene.h"
 #include "shader_field.h"
+#include "shader_infinite.h"
 
 
 //Window procedure prototype claim
@@ -65,6 +67,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 
 	Shader_3D_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
 
+	Shader_InfiniteGrid_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
+
 	Light_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
 
 	Sampler_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
@@ -88,6 +92,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 	Shader_Field_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
 
 	MeshField_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
+
+	InfiniteGrid_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
 
 
 
@@ -211,6 +217,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 	Shader_Finalize();
 
 	Shader_3D_Finalize();
+
+	Shader_InfiniteGrid_Finalize();
 
 	Polygon_Finalize();
 

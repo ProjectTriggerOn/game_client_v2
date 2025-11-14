@@ -1,4 +1,4 @@
-#include <assert.h>
+#include <cassert>
 #include "direct3d.h"
 #include "texture.h"
 #include "model.h"
@@ -77,23 +77,35 @@ MODEL* ModelLoad(const char* FileName,float scale)
 
 
 		{
-			unsigned int* index = new unsigned int[mesh->mNumFaces * 3];
-
-			for (unsigned int f = 0; f < mesh->mNumFaces; f++)
-			{
+			// 统计所有面三角形总数（多边形面拆分为多个三角形）
+			unsigned int numTriangles = 0;
+			for (unsigned int f = 0; f < mesh->mNumFaces; f++) {
 				const aiFace* face = &mesh->mFaces[f];
-
-				assert(face->mNumIndices == 3);
-
-				index[f * 3 + 0] = face->mIndices[0];
-				index[f * 3 + 1] = face->mIndices[1];
-				index[f * 3 + 2] = face->mIndices[2];
+				if (face->mNumIndices >= 3) {
+					numTriangles += (face->mNumIndices - 2);
+				}
+			}
+			unsigned int* index = new unsigned int[numTriangles * 3];
+			unsigned int idx = 0;
+			for (unsigned int f = 0; f < mesh->mNumFaces; f++) {
+				const aiFace* face = &mesh->mFaces[f];
+				if (face->mNumIndices < 3) {
+					// 跳过无效面
+					continue;
+				}
+				// 扇形三角化
+				for (unsigned int t = 0; t < face->mNumIndices - 2; t++) {
+					index[idx * 3 + 0] = face->mIndices[0];
+					index[idx * 3 + 1] = face->mIndices[t + 1];
+					index[idx * 3 + 2] = face->mIndices[t + 2];
+					idx++;
+				}
 			}
 
 			D3D11_BUFFER_DESC bd;
 			ZeroMemory(&bd, sizeof(bd));
 			bd.Usage = D3D11_USAGE_DEFAULT;
-			bd.ByteWidth = sizeof(unsigned int) * mesh->mNumFaces * 3;
+			bd.ByteWidth = sizeof(unsigned int) * numTriangles * 3;
 			bd.BindFlags = D3D11_BIND_INDEX_BUFFER;
 			bd.CPUAccessFlags = 0;
 

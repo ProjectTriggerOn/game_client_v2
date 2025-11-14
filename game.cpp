@@ -1,10 +1,8 @@
 #include "game.h"
 #include "cube.h"
 #include "shader.h"
-#include "grid.h"
 #include "camera.h"
-#include "circle.h"
-#include "key_logger.h"
+#include "infinite_grid.h"
 #include "mesh_field.h"
 #include "sampler.h"
 #include "light.h"
@@ -32,7 +30,7 @@ void Game_Initialize()
 	//Camera_Initialize();
 	
 	g_pModel = ModelLoad("resource/model/tree.fbx", 1.0f);
-	g_pModel0 = ModelLoad("resource/model/heli.fbx", 0.5f);
+	g_pModel0 = ModelLoad("resource/model/(Legacy)arms_assault_rifle_01.fbx", 20.0f);
 	Player_Initialize({ 0.0f,0.0f,0.0f }, { 0.0f,0.0f,1.0f });
 	PlayerCamTps_Initialize();
 }
@@ -40,50 +38,55 @@ void Game_Initialize()
 void Game_Update(double elapsed_time)
 {
 	//Camera_Update(elapsed_time);
-	Player_Update(elapsed_time);
-	PlayerCamTps_Update(elapsed_time);
+	//Player_Update(elapsed_time);
+	//PlayerCamTps_Update(elapsed_time);
 	//PlayerCamTps_Update_Mouse(elapsed_time);
+	PlayerCamTps_Update_Maya(elapsed_time);
 
 }
 
 void Game_Draw()
 {
-	Sampler_SetFilterAnisotropic();
+	//Sampler_SetFilterAnisotropic();
 
-	Light_SetAmbient({ 0.3f,0.3f,0.3f });
+	//Light_SetAmbient({ 0.3f,0.3f,0.3f });
 
-	XMVECTOR v{ 0.0f,-1.0f,0.0f };
-	v = XMVector3Normalize(v);
-	XMFLOAT4 dir;
-	XMStoreFloat4(&dir, v);
-	Light_SetDirectionalWorld(dir, { 1.0f,0.9f,0.7f,1.0f });
-	//Light_SetDirectionalWorld({ 0.0f,-1.0f,0.0f,0.0f }, { 1.0f,0.9f,0.7f,1.0f });//方向光
-	//Light_SetDirectionalWorld({ 0.0f,-1.0f,0.0f,0.0f }, { 0.3f,0.25f,0.2f,1.0f });//方向光
+	//XMVECTOR v{ 0.0f,-1.0f,0.0f };
+	//v = XMVector3Normalize(v);
+	//XMFLOAT4 dir;
+	//XMStoreFloat4(&dir, v);
+	//Light_SetDirectionalWorld(dir, { 1.0f,0.9f,0.7f,1.0f });
+	////Light_SetDirectionalWorld({ 0.0f,-1.0f,0.0f,0.0f }, { 1.0f,0.9f,0.7f,1.0f });//方向光
+	////Light_SetDirectionalWorld({ 0.0f,-1.0f,0.0f,0.0f }, { 0.3f,0.25f,0.2f,1.0f });//方向光
 
-	PointLightList list{
-	{
-			{XMFLOAT3(0.0f,0.2f,0.0f),5.0f,XMFLOAT4(0.0f,1.0f,1.0f,1.0f)},
-			{XMFLOAT3(2.0f,2.0f,0.0f),5.0f,XMFLOAT4(1.0f,0.0f,1.0f,1.0f)},
-			{XMFLOAT3(-2.0f,0.2f,0.0f),5.0f,XMFLOAT4(1.0f,1.0f,0.0f,1.0f)},
-			{XMFLOAT3(0.0f,0.2f,2.0f),5.0f,XMFLOAT4(0.0f,0.0f,1.0f,1.0f)},
-	},
-	4,
-	XMFLOAT3(0,0,0)
-	};
+	//PointLightList list{
+	//{
+	//		{XMFLOAT3(0.0f,0.2f,0.0f),5.0f,XMFLOAT4(0.0f,1.0f,1.0f,1.0f)},
+	//		{XMFLOAT3(2.0f,2.0f,0.0f),5.0f,XMFLOAT4(1.0f,0.0f,1.0f,1.0f)},
+	//		{XMFLOAT3(-2.0f,0.2f,0.0f),5.0f,XMFLOAT4(1.0f,1.0f,0.0f,1.0f)},
+	//		{XMFLOAT3(0.0f,0.2f,2.0f),5.0f,XMFLOAT4(0.0f,0.0f,1.0f,1.0f)},
+	//},
+	//4,
+	//XMFLOAT3(0,0,0)
+	//};
 
-	Light_SetPointLightByList(list);
+	//Light_SetPointLightByList(list);
 
-	XMMATRIX mtxWorld = XMMatrixIdentity();
+	//XMMATRIX mtxWorld = XMMatrixIdentity();
 
-	Light_SetSpecularWorld(Camera_GetPosition(), 10.0f,{ 0.3f,0.3f,0.3f,1.0f });
+	//Light_SetSpecularWorld(Camera_GetPosition(), 10.0f,{ 0.3f,0.3f,0.3f,1.0f });
 
-	MeshField_Draw(mtxWorld);
+	//MeshField_Draw(mtxWorld);
 
-	Player_Draw();
+	InfiniteGrid_Draw();
 
-	XMMATRIX cube_mtxW = XMMatrixTranslation(3.0f, 0.5f, 2.0f);
+	//Player_Draw();
 
-	Cube_Draw(cube_mtxW);
+	//ModelDraw(g_pModel0, XMMatrixTranslation(-5.0f, 0.0f, -5.0f));
+
+	//XMMATRIX cube_mtxW = XMMatrixTranslation(3.0f, 0.5f, 2.0f);
+
+	//Cube_Draw(cube_mtxW);
 
 }
 
