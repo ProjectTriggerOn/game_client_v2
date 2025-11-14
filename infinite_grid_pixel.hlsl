@@ -56,24 +56,24 @@ float4 grid(const float3 fragPos3D, float scale, float x_axis_width, float z_axi
     return color;
 }
 
-// 计算深度（NDC空间z）
 float computeDepth(const float3 pos, float4x4 g_mView, float4x4 g_mProj)
 {
-    float4x4 view_proj = mul(g_mProj, g_mView);
-    float4 clip_pos = mul(float4(pos, 1.0), view_proj);
+    float4 view_pos = mul(float4(pos, 1.0), g_mView);
+    float4 clip_pos = mul(view_pos, g_mProj);
     return clip_pos.z / clip_pos.w;
 }
 
-// 线性深度（0~1）
-float computeLinearDepth(const float3 pos, float4x4 g_mView, float4x4 g_mProj, float near_plane, float far_plane)
+float computeLinearDepth(const float3 pos, float4x4 g_mView, float4x4 g_mProj,
+                         float near_plane, float far_plane)
 {
-    float4x4 view_proj = mul(g_mProj, g_mView);
-    float4 clip_pos = mul(float4(pos, 1.0), view_proj);
+    float4 view_pos = mul(float4(pos, 1.0), g_mView);
+    float4 clip_pos = mul(view_pos, g_mProj);
     float clip_space_depth = clip_pos.z / clip_pos.w;
-    // 反推线性深度
-    float linearDepth = (2.0 * near_plane * far_plane) / (far_plane + near_plane - (2.0 * clip_space_depth - 1.0) * (far_plane - near_plane));
+    float linearDepth = (2.0 * near_plane * far_plane) /
+        (far_plane + near_plane - (2.0 * clip_space_depth - 1.0) * (far_plane - near_plane));
     return saturate(linearDepth / far_plane);
 }
+
 
 float4 main(draw_infinite_grid__VS_output input, out float depth : SV_Depth) : SV_Target
 {
@@ -109,4 +109,6 @@ float4 main(draw_infinite_grid__VS_output input, out float depth : SV_Depth) : S
     float4 outColor = (tex_decal * plane_color_intensity + grid(fragPos3D, plane_width_scale_1, x_axis_width, z_axis_width)) * float(t > 0);
     outColor.a *= fading;
     return outColor;
+    //return float4(1, 0, 0, 1); // 全屏红色
+
 }

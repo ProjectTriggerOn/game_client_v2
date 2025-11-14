@@ -1,4 +1,4 @@
-#include <assert.h>
+#include <cassert>
 #include "direct3d.h"
 #include "texture.h"
 #include "model.h"

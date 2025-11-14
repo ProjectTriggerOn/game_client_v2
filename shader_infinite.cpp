@@ -13,12 +13,7 @@ struct ViewTransform
 	DirectX::XMFLOAT4X4 g_m_inv_view;
 	DirectX::XMFLOAT4X4 g_m_inv_proj;
 };
-struct GridParams
-{
-	DirectX::XMFLOAT4 grid_axis_widths;
-	DirectX::XMFLOAT4 grid_plane_params;
-	DirectX::XMFLOAT4 grid_fade_params;
-};
+
 
 namespace
 {
@@ -144,20 +139,30 @@ void Shader_InfiniteGrid_Finalize()
 
 void Shader_InfiniteGrid_SetProjectMatrix(const DirectX::XMMATRIX& matrix)
 {
-	XMStoreFloat4x4(&g_viewTransform.g_mProj, matrix);
-	XMMATRIX invProj = XMMatrixInverse(nullptr, matrix);
+	
+	XMMATRIX transpose = XMMatrixTranspose(matrix);
+	XMMATRIX invProj = XMMatrixInverse(nullptr, transpose);
+	XMStoreFloat4x4(&g_viewTransform.g_mProj, transpose);
 	XMStoreFloat4x4(&g_viewTransform.g_m_inv_proj, invProj);
 
 	g_pContext->UpdateSubresource(g_pConstantBuffer0, 0, nullptr, &g_viewTransform, 0, 0);
 }
 
-void Shader_InfiniteGrid_SetWorldMatrix(const DirectX::XMMATRIX& matrix)
+
+void Shader_InfiniteGrid_SetViewMatrix(const DirectX::XMMATRIX& matrix)
 {
-	XMStoreFloat4x4(&g_viewTransform.g_mView, matrix);
-	XMMATRIX invView = XMMatrixInverse(nullptr, matrix);
+
+	XMMATRIX transpose = XMMatrixTranspose(matrix);
+	XMMATRIX invView = XMMatrixInverse(nullptr, transpose);
+	XMStoreFloat4x4(&g_viewTransform.g_mView, transpose);
 	XMStoreFloat4x4(&g_viewTransform.g_m_inv_view, invView);
 
 	g_pContext->UpdateSubresource(g_pConstantBuffer0, 0, nullptr, &g_viewTransform, 0, 0);
+}
+
+void Shader_InfiniteGrid_SetGridParams(const GridParams& params)
+{
+	g_pContext->UpdateSubresource(g_pPSConstantBuffer1, 0, nullptr, &params, 0, 0);
 }
 
 void Shader_InfiniteGrid_Begin()

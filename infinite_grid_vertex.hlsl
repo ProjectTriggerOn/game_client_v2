@@ -29,19 +29,23 @@ struct draw_infinite_grid__VS_output
     float3    far_point : TEXCOORD1;
 };
 
-// 屏幕空间->世界空间反投影
-float3 unproject_point(
-    float x,
-    float y,
-    float z,
-    float4x4 inv_view,
-    float4x4 inv_proj)
+float3 unproject_point(float x, float y, float z, float4x4 inv_view, float4x4 inv_proj)
 {
-    // 注意顺序：先投影逆，再视图逆
-    float4x4 inv_view_inv_proj = mul(inv_view, inv_proj);
-    float4 unprojected_point = mul(float4(x, y, z, 1.0), inv_view_inv_proj);
-    return unprojected_point.xyz / unprojected_point.w;
+    // Step1：屏幕->NDC（实际上x/y/z就是三角形的NDC坐标输入）
+    float4 p = float4(x, y, z, 1.0);
+
+    // Step2: 先乘inv_proj变View空间
+    p = mul(p, inv_proj);
+    p /= p.w; // 必须做透视除法
+
+    // Step3: 再乘inv_view变World空间
+    p = mul(p, inv_view);
+    p /= p.w;
+
+    return p.xyz;
 }
+
+
 
 draw_infinite_grid__VS_output main(draw_infinite_grid__VS_input input)
 {
