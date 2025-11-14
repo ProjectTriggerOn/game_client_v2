@@ -94,6 +94,12 @@ float4 main(draw_infinite_grid__VS_output input, out float depth : SV_Depth) : S
     float t = -input.near_point.y / (input.far_point.y - input.near_point.y);
     float3 fragPos3D = input.near_point + t * (input.far_point - input.near_point);
 
+    // 射线未击中XZ平面时直接丢弃，避免写入无效深度
+    if (t <= 0.0f)
+    {
+        clip(-1);
+    }
+
     // 采样贴图
     float2 uv = fragPos3D.xz * plane_width_scale_0;
     float4 tex_decal = gex_decal.Sample(g_sam_linear, uv);
@@ -106,8 +112,11 @@ float4 main(draw_infinite_grid__VS_output input, out float depth : SV_Depth) : S
     float fading = smoothstep(grid_fade_end, grid_fade_start, linearDepth);
 
     // 叠加贴图和格子线
-    float4 outColor = (tex_decal * plane_color_intensity + grid(fragPos3D, plane_width_scale_1, x_axis_width, z_axis_width)) * float(t > 0);
+    float4 outColor = (0 * plane_color_intensity + grid(fragPos3D, plane_width_scale_1, x_axis_width, z_axis_width));
     outColor.a *= fading;
+
+    // 透明区域不写入颜色/深度，允许看到网格另一侧
+    clip(outColor.a - 1e-4f);
     return outColor;
     //return float4(1, 0, 0, 1); // 全屏红色
 

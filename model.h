@@ -23,6 +23,6 @@ struct MODEL
 };
 
 
-MODEL* ModelLoad(const char* FileNam,float scale = 1.0f);
+MODEL* ModelLoad(const char* FileNam,float scale = 1.0f,bool isBlender=false);
 void ModelRelease(MODEL* model);
 void ModelDraw(MODEL* model,const DirectX::XMMATRIX& mtxW);

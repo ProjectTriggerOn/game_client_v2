@@ -20,9 +20,24 @@ struct Vertex3D
 namespace 
 {
 	int g_TextureWhite = -1;
+	XMFLOAT3 ConvertPosition(const aiVector3D& src, bool isBlender)
+	{
+		if (!isBlender)
+			return XMFLOAT3(src.x, src.y, src.z);
+		return XMFLOAT3(src.x, -src.z, src.y); // Blender Z 上 → DirectX Y 上
+	}
+
+	XMFLOAT3 ConvertNormal(const aiVector3D& src, bool isBlender)
+	{
+		if (!isBlender)
+			return XMFLOAT3(src.x, src.y, src.z);
+		return XMFLOAT3(src.x, -src.z, src.y);
+	}
 }
 
-MODEL* ModelLoad(const char* FileName,float scale)
+
+
+MODEL* ModelLoad(const char* FileName,float scale,bool isBlender)
 {
 	MODEL* model = new MODEL;
 
@@ -46,16 +61,12 @@ MODEL* ModelLoad(const char* FileName,float scale)
 
 			for (unsigned int v = 0; v < mesh->mNumVertices; v++)
 			{
-				vertex[v].position = XMFLOAT3(
-					mesh->mVertices[v].x * scale,
-					mesh->mVertices[v].y * scale,
-					mesh->mVertices[v].z * scale);
+				XMFLOAT3 pos = ConvertPosition(mesh->mVertices[v], isBlender);
+				vertex[v].position = XMFLOAT3(pos.x * scale, pos.y * scale, pos.z * scale);
+				XMFLOAT3 normal = ConvertNormal(mesh->mNormals[v], isBlender);
+				vertex[v].normal = normal;
 				vertex[v].uv = XMFLOAT2(mesh->mTextureCoords[0][v].x, mesh->mTextureCoords[0][v].y);
 				vertex[v].color = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-				vertex[v].normal = XMFLOAT3(
-					mesh->mNormals[v].x * scale,
-					mesh->mNormals[v].y * scale,
-					mesh->mNormals[v].z * scale);
 			}
 
 			D3D11_BUFFER_DESC bd;
@@ -281,3 +292,5 @@ void ModelDraw(MODEL* model, const DirectX::XMMATRIX& mtxW)
 			model->AiScene->mMeshes[m]->mNumFaces*3, 0, 0);
 	}
 }
+
+
