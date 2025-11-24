@@ -174,6 +174,7 @@
     <ClCompile Include="map.cpp" />
     <ClCompile Include="mesh_field.cpp" />
     <ClCompile Include="model.cpp" />
+    <ClCompile Include="model_ani.cpp" />
     <ClCompile Include="mouse.cpp" />
     <ClCompile Include="player.cpp" />
     <ClCompile Include="player_cam_tps.cpp" />
@@ -183,6 +184,7 @@
     <ClCompile Include="score.cpp" />
     <ClCompile Include="shader.cpp" />
     <ClCompile Include="shader_3d.cpp" />
+    <ClCompile Include="shader_3d_ani.cpp" />
     <ClCompile Include="shader_field.cpp" />
     <ClCompile Include="shader_infinite.cpp" />
     <ClCompile Include="sprite.cpp" />
@@ -213,6 +215,7 @@
     <ClInclude Include="map.h" />
     <ClInclude Include="mesh_field.h" />
     <ClInclude Include="model.h" />
+    <ClInclude Include="model_ani.h" />
     <ClInclude Include="mouse.h" />
     <ClInclude Include="player.h" />
     <ClInclude Include="player_cam_tps.h" />
@@ -222,6 +225,7 @@
     <ClInclude Include="score.h" />
     <ClInclude Include="shader.h" />
     <ClInclude Include="shader_3d.h" />
+    <ClInclude Include="shader_3d_ani.h" />
     <ClInclude Include="shader_field.h" />
     <ClInclude Include="shader_infinite.h" />
     <ClInclude Include="sprite.h" />
@@ -273,11 +277,23 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
     </FxCompile>
+    <FxCompile Include="shader_vertex_3d_ani.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+    </FxCompile>
     <FxCompile Include="shader_vertex_field.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+    </FxCompile>
+    <FxCompile Include="shader_pixel_3d_ani.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

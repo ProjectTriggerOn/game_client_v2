@@ -133,6 +133,12 @@
     <ClCompile Include="shader_infinite.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="model_ani.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="shader_3d_ani.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="game_window.h">
@@ -246,6 +252,12 @@
     <ClInclude Include="shader_infinite.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="model_ani.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="shader_3d_ani.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shader_pixel_2d.hlsl">
@@ -270,6 +282,12 @@
       <Filter>Shader Files</Filter>
     </FxCompile>
     <FxCompile Include="infinite_grid_pixel.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
+    <FxCompile Include="shader_pixel_3d_ani.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
+    <FxCompile Include="shader_vertex_3d_ani.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
   </ItemGroup>

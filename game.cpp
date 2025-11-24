@@ -7,6 +7,7 @@
 #include "sampler.h"
 #include "light.h"
 #include "model.h"
+#include "model_ani.h"
 #include "player.h"
 #include "player_cam_tps.h"
 using namespace DirectX;
@@ -15,7 +16,7 @@ namespace{
 
 	double g_AccumulatedTime = 0.0;
 	MODEL* g_pModel = nullptr;
-	MODEL* g_pModel0 = nullptr;
+	MODEL_ANI* g_pModel0 = nullptr;
 }
 
 void Game_Initialize()
@@ -29,7 +30,9 @@ void Game_Initialize()
 	//);
 	//Camera_Initialize();
 	
-	g_pModel = ModelLoad("resource/model/test.fbx", 0.1f,false);
+	//g_pModel = ModelLoad("resource/model/test.fbx", 0.1f,false);
+	g_pModel0 = ModelAni_Load("resource/model/vld.fbx", 10.0f);
+	ModelAni_SetAnimation(g_pModel0, 0);
 	//g_pModel0 = ModelLoad("resource/model/(Legacy)arms_assault_rifle_01.fbx", 10.0f);
 	Player_Initialize({ 0.0f,0.0f,0.0f }, { 0.0f,0.0f,1.0f });
 	PlayerCamTps_Initialize();
@@ -42,6 +45,7 @@ void Game_Update(double elapsed_time)
 	//PlayerCamTps_Update(elapsed_time);
 	//PlayerCamTps_Update_Mouse(elapsed_time);
 	PlayerCamTps_Update_Maya(elapsed_time);
+	ModelAni_Update(g_pModel0, elapsed_time);
 
 }
 
@@ -51,7 +55,8 @@ void Game_Draw()
 
 	Light_SetAmbient({ 0.3f,0.3f,0.3f });
 
-	Player_Draw();
+	//Player_Draw();
+	ModelAni_Draw(g_pModel0, XMMatrixIdentity());
 
 	XMVECTOR v{ 0.0f,-1.0f,0.0f };
 	v = XMVector3Normalize(v);
@@ -80,7 +85,7 @@ void Game_Draw()
 
 	//ModelDraw(g_pModel, mtxW);
 
-	InfiniteGrid_Draw();
+	//InfiniteGrid_Draw();
 
 	//Cube_Draw(mtxW);
 
@@ -92,6 +97,9 @@ void Game_Finalize()
 {
 	Camera_Finalize();
 	Light_Finalize();
+	InfiniteGrid_Finalize();
+	Player_Finalize();
+	ModelAni_Release(g_pModel0);
 }
 
 

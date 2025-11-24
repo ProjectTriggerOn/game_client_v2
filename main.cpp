@@ -36,6 +36,7 @@
 #include "mesh_field.h"
 #include "sampler.h"
 #include "scene.h"
+#include "shader_3d_ani.h"
 #include "shader_field.h"
 #include "shader_infinite.h"
 
@@ -68,6 +69,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 	Shader_3D_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
 
 	Shader_InfiniteGrid_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
+
+	Shader_3D_Ani_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
 
 	Light_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
 
@@ -219,6 +222,16 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 	Shader_3D_Finalize();
 
 	Shader_InfiniteGrid_Finalize();
+
+	Light_Finalize();
+
+	Sampler_Finalize();
+
+	InfiniteGrid_Finalize();
+
+	Grid_Finalize();
+
+	Shader_3D_Ani_Finalize();
 
 	Polygon_Finalize();
 

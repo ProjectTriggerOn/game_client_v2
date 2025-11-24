@@ -7,6 +7,7 @@
 #include "shader_field.h"
 #include "shader_infinite.h"
 #include "mouse.h"
+#include "shader_3d_ani.h"
 using namespace DirectX;
 namespace 
 {
@@ -159,6 +160,8 @@ void PlayerCamTps_Update_Mouse(double elapsed_time)
     XMMATRIX mtxView = XMMatrixLookAtLH(position, focus, up);
     Shader_3D_SetViewMatrix(mtxView);
     Shader_Field_SetViewMatrix(mtxView);
+	Shader_InfiniteGrid_SetViewMatrix(mtxView);
+	Shader_3D_Ani_SetViewMatrix(mtxView);
 
     // 投影矩阵
     float aspectRatio = static_cast<float>(Direct3D_GetBackBufferWidth()) / static_cast<float>(Direct3D_GetBackBufferHeight());
@@ -168,6 +171,8 @@ void PlayerCamTps_Update_Mouse(double elapsed_time)
     XMMATRIX mtxPerspective = XMMatrixPerspectiveFovLH(fov, aspectRatio, nearZ, farZ);
     Shader_3D_SetProjectMatrix(mtxPerspective);
     Shader_Field_SetProjectMatrix(mtxPerspective);
+	Shader_InfiniteGrid_SetProjectMatrix(mtxPerspective);
+	Shader_3D_Ani_SetProjectMatrix(mtxPerspective);
 
     // 存储当前摄像机位置、前方向
     XMStoreFloat3(&eyePosition, {camPos.x,camPos.y,camPos.z});
@@ -267,6 +272,7 @@ void PlayerCamTps_Update_Maya(double elapsed_time)
     Shader_3D_SetViewMatrix(mtxView);
     Shader_Field_SetViewMatrix(mtxView);
 	Shader_InfiniteGrid_SetViewMatrix(mtxView);
+	Shader_3D_Ani_SetViewMatrix(mtxView);
 
     // 投影矩阵
     float aspectRatio = static_cast<float>(Direct3D_GetBackBufferWidth()) / static_cast<float>(Direct3D_GetBackBufferHeight());
@@ -277,6 +283,7 @@ void PlayerCamTps_Update_Maya(double elapsed_time)
     Shader_3D_SetProjectMatrix(mtxPerspective);
     Shader_Field_SetProjectMatrix(mtxPerspective);
 	Shader_InfiniteGrid_SetProjectMatrix(mtxPerspective);
+	Shader_3D_Ani_SetProjectMatrix(mtxPerspective);
 
     // 存储当前摄像机位置、前方向
     XMStoreFloat3(&eyePosition, { camPos.x,camPos.y,camPos.z });
