@@ -48,11 +48,11 @@ namespace
 	}
 }
 
-MODEL_ANI* ModelAni_Load(const char* FileName, float scale)
+MODEL_ANI* ModelAni_Load(const char* FileName)
 {
 	MODEL_ANI* model = new MODEL_ANI;
 
-	unsigned int flags = aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_FlipUVs | aiProcess_JoinIdenticalVertices | aiProcess_LimitBoneWeights  |  aiProcess_ConvertToLeftHanded;
+	unsigned int flags = aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_FlipUVs | aiProcess_JoinIdenticalVertices | aiProcess_LimitBoneWeights | aiProcess_ConvertToLeftHanded;
 	model->AiScene = aiImportFile(FileName, flags);
 
 	if (!model->AiScene)
@@ -130,7 +130,7 @@ MODEL_ANI* ModelAni_Load(const char* FileName, float scale)
 
 		for (unsigned int v = 0; v < mesh->mNumVertices; v++)
 		{
-			vertices[v].position = XMFLOAT3(mesh->mVertices[v].x * scale, mesh->mVertices[v].y * scale, mesh->mVertices[v].z * scale);
+			vertices[v].position = XMFLOAT3(mesh->mVertices[v].x , mesh->mVertices[v].y , mesh->mVertices[v].z);
 			vertices[v].normal = XMFLOAT3(mesh->mNormals[v].x, mesh->mNormals[v].y, mesh->mNormals[v].z);
 			if (mesh->mTextureCoords[0])
 				vertices[v].uv = XMFLOAT2(mesh->mTextureCoords[0][v].x, mesh->mTextureCoords[0][v].y);
@@ -446,11 +446,19 @@ void ModelAni_Update(MODEL_ANI* model, double elapsedTime)
 	}
 }
 
-void ModelAni_Draw(MODEL_ANI* model, const DirectX::XMMATRIX& mtxW)
+void ModelAni_Draw(MODEL_ANI* model, const DirectX::XMMATRIX& mtxW,bool isBlender)
 {
 	Shader_3D_Ani_Begin();
-	Shader_3D_Ani_SetWorldMatrix(mtxW);
-	
+
+	XMMATRIX mtxWorld = mtxW;
+
+	if (isBlender)
+	{
+		mtxWorld = XMMatrixRotationX(XMConvertToRadians(90.0f)) * mtxW;
+	}
+
+	Shader_3D_Ani_SetWorldMatrix(mtxWorld);
+
 	// Prepare Bone Matrices
 	std::vector<XMFLOAT4X4> boneMatrices(model->Bones.size());
 	for (size_t i = 0; i < model->Bones.size(); i++)

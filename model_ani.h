@@ -91,8 +91,8 @@ struct MODEL_ANI
 	DirectX::XMFLOAT4X4 GlobalInverseTransform;
 };
 
-MODEL_ANI* ModelAni_Load(const char* FileName, float scale = 1.0f);
+MODEL_ANI* ModelAni_Load(const char* FileName);
 void ModelAni_Release(MODEL_ANI* model);
 void ModelAni_Update(MODEL_ANI* model, double elapsedTime);
-void ModelAni_Draw(MODEL_ANI* model, const DirectX::XMMATRIX& mtxW);
+void ModelAni_Draw(MODEL_ANI* model, const DirectX::XMMATRIX& mtxW, bool isBlender);
 void ModelAni_SetAnimation(MODEL_ANI* model, int index);

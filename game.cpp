@@ -31,7 +31,7 @@ void Game_Initialize()
 	//Camera_Initialize();
 	
 	//g_pModel = ModelLoad("resource/model/test.fbx", 0.1f,false);
-	g_pModel0 = ModelAni_Load("resource/model/vld.fbx", 10.0f);
+	g_pModel0 = ModelAni_Load("resource/model/vld.fbx");
 	ModelAni_SetAnimation(g_pModel0, 0);
 	//g_pModel0 = ModelLoad("resource/model/(Legacy)arms_assault_rifle_01.fbx", 10.0f);
 	Player_Initialize({ 0.0f,0.0f,0.0f }, { 0.0f,0.0f,1.0f });
@@ -56,7 +56,12 @@ void Game_Draw()
 	Light_SetAmbient({ 0.3f,0.3f,0.3f });
 
 	//Player_Draw();
-	ModelAni_Draw(g_pModel0, XMMatrixIdentity());
+
+	XMMATRIX mtxW = XMMatrixIdentity();
+
+	mtxW = XMMatrixTranslation(0.0f,-1.0f,0.0f)* mtxW;
+
+	ModelAni_Draw(g_pModel0, mtxW,true);
 
 	XMVECTOR v{ 0.0f,-1.0f,0.0f };
 	v = XMVector3Normalize(v);
@@ -81,11 +86,11 @@ void Game_Draw()
 
 	
 
-	XMMATRIX mtxW = XMMatrixIdentity();
+
 
 	//ModelDraw(g_pModel, mtxW);
 
-	//InfiniteGrid_Draw();
+	InfiniteGrid_Draw();
 
 	//Cube_Draw(mtxW);
 
