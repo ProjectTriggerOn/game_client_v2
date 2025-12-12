@@ -36,6 +36,9 @@ namespace
 
 	float g_fov;
 
+	ID3D11Buffer* g_pViewBuffer = nullptr;
+	ID3D11Buffer* g_pProjectionBuffer = nullptr;
+
 }
 
 void Camera_Initialize()
@@ -63,6 +66,17 @@ void Camera_Initialize()
 	);
 
 #endif // _DEBUG || DEBUG
+
+	// Create Constant Buffers
+	D3D11_BUFFER_DESC buffer_desc{};
+	buffer_desc.ByteWidth = sizeof(XMFLOAT4X4);
+	buffer_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	buffer_desc.Usage = D3D11_USAGE_DEFAULT;
+	buffer_desc.CPUAccessFlags = 0;
+
+	Direct3D_GetDevice()->CreateBuffer(&buffer_desc, nullptr, &g_pViewBuffer);
+	Direct3D_GetDevice()->CreateBuffer(&buffer_desc, nullptr, &g_pProjectionBuffer);
+
 
 }
 
@@ -219,6 +233,23 @@ const DirectX::XMFLOAT3& Camera_GetFront()
 const DirectX::XMFLOAT3& Camera_GetPosition()
 {
 	return eyePosition;
+}
+
+void Camera_SetMatrixToShader(const DirectX::XMMATRIX& view, const DirectX::XMMATRIX& proj)
+{
+	XMFLOAT4X4 transpose;
+
+	// View Matrix
+	XMStoreFloat4x4(&transpose, XMMatrixTranspose(view));
+	Direct3D_GetDeviceContext()->UpdateSubresource(g_pViewBuffer, 0, nullptr, &transpose, 0, 0);
+
+	// Projection Matrix
+	XMStoreFloat4x4(&transpose, XMMatrixTranspose(proj));
+	Direct3D_GetDeviceContext()->UpdateSubresource(g_pProjectionBuffer, 0, nullptr, &transpose, 0, 0);
+
+	// Bind to Slots 1 and 2
+	Direct3D_GetDeviceContext()->VSSetConstantBuffers(1, 1, &g_pViewBuffer);
+	Direct3D_GetDeviceContext()->VSSetConstantBuffers(2, 1, &g_pProjectionBuffer);
 }
 
 void Camera_SetFov()

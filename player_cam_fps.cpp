@@ -20,6 +20,9 @@ namespace
 	float g_cameraPitch = 0.0f;
 	bool g_invertY = false;
 
+	XMFLOAT4X4 g_ViewMatrix{};
+	XMFLOAT4X4 g_ProjectionMatrix{};
+
 	// Mouse sensitivity
 	constexpr float SENSITIVITY = 0.002f;
 }
@@ -106,10 +109,9 @@ void PlayerCamFps_Update(double elapsed_time)
 	XMMATRIX view = XMMatrixLookToLH(eyePos, front, up);
 
 	// 5. Set Matrices to Shaders
-	Shader_3D_SetViewMatrix(view);
-	Shader_Field_SetViewMatrix(view);
 	Shader_InfiniteGrid_SetViewMatrix(view);
-	Shader_3D_Ani_SetViewMatrix(view);
+
+	XMStoreFloat4x4(&g_ViewMatrix, view);
 
 	// 6. Projection Matrix
 	float aspectRatio = static_cast<float>(Direct3D_GetBackBufferWidth()) / static_cast<float>(Direct3D_GetBackBufferHeight());
@@ -118,10 +120,10 @@ void PlayerCamFps_Update(double elapsed_time)
 	float farZ = 1000.0f;
 	XMMATRIX projection = XMMatrixPerspectiveFovLH(fov, aspectRatio, nearZ, farZ);
 
-	Shader_3D_SetProjectMatrix(projection);
-	Shader_Field_SetProjectMatrix(projection);
+
 	Shader_InfiniteGrid_SetProjectMatrix(projection);
-	Shader_3D_Ani_SetProjectMatrix(projection);
+
+	XMStoreFloat4x4(&g_ProjectionMatrix, projection);
 }
 
 const DirectX::XMFLOAT3& PlayerCamFps_GetFront()
@@ -142,4 +144,14 @@ void PlayerCamFps_SetInvertY(bool invert)
 bool PlayerCamFps_GetInvertY()
 {
 	return g_invertY;
+}
+
+const DirectX::XMFLOAT4X4& PlayerCamFps_GetViewMatrix()
+{
+	return g_ViewMatrix;
+}
+
+const DirectX::XMFLOAT4X4& PlayerCamFps_GetProjectMatrix()
+{
+	return g_ProjectionMatrix;
 }

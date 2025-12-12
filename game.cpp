@@ -36,6 +36,7 @@ void Game_Initialize()
 	ModelAni_SetAnimation(g_pModel0, 0);
 	//g_pModel0 = ModelLoad("resource/model/(Legacy)arms_assault_rifle_01.fbx", 10.0f);
 	Player_Initialize({ 0.0f,0.0f,0.0f }, { 0.0f,0.0f,1.0f });
+	Camera_Initialize();
 	//PlayerCamTps_Initialize();
 	PlayerCamFps_Initialize();
 	PlayerCamFps_SetInvertY(true);
@@ -60,6 +61,14 @@ void Game_Draw()
 	Light_SetAmbient({ 0.3f,0.3f,0.3f });
 
 	//Player_Draw();
+
+	XMFLOAT4X4 mtxView = PlayerCamFps_GetViewMatrix();
+	XMFLOAT4X4 mtxProj = PlayerCamFps_GetProjectMatrix();
+	XMMATRIX view = XMLoadFloat4x4(&mtxView);
+	XMMATRIX proj = XMLoadFloat4x4(&mtxProj);
+	XMFLOAT3 cam_pos = PlayerCamTps_GetPosition();
+
+	Camera_SetMatrixToShader(view, proj);
 
 	XMMATRIX mtxW = XMMatrixIdentity();
 
@@ -88,13 +97,13 @@ void Game_Draw()
 
 	Light_SetPointLightByList(list);
 
-	
-
-
+	Light_SetSpecularWorld(PlayerCamFps_GetPosition(), 4.0f, { 0.3f,0.25f,0.2f,1.0f });
 
 	//ModelDraw(g_pModel, mtxW);
 
-	InfiniteGrid_Draw();
+	MeshField_Draw(mtxW);
+
+	//InfiniteGrid_Draw();
 
 	//Cube_Draw(mtxW);
 

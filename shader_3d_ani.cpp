@@ -13,8 +13,6 @@ namespace
 	ID3D11VertexShader* g_pVertexShader = nullptr;
 	ID3D11InputLayout* g_pInputLayout = nullptr;
 	ID3D11Buffer* g_pVSConstantBuffer0 = nullptr; // World
-	ID3D11Buffer* g_pVSConstantBuffer1 = nullptr; // View
-	ID3D11Buffer* g_pVSConstantBuffer2 = nullptr; // Projection
 	ID3D11Buffer* g_pVSConstantBuffer3 = nullptr; // Bones
 	ID3D11Buffer* g_pPSConstantBuffer0 = nullptr; // Material Color
 	ID3D11PixelShader* g_pPixelShader = nullptr;
@@ -84,8 +82,6 @@ bool Shader_3D_Ani_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pConte
 	buffer_desc.Usage = D3D11_USAGE_DEFAULT;
 
 	g_pDevice->CreateBuffer(&buffer_desc, nullptr, &g_pVSConstantBuffer0);
-	g_pDevice->CreateBuffer(&buffer_desc, nullptr, &g_pVSConstantBuffer1);
-	g_pDevice->CreateBuffer(&buffer_desc, nullptr, &g_pVSConstantBuffer2);
 
 	// Bone Buffer
 	buffer_desc.ByteWidth = sizeof(BoneBuffer);
@@ -123,8 +119,6 @@ void Shader_3D_Ani_Finalize()
 {
 	if (g_pPixelShader) g_pPixelShader->Release();
 	if (g_pVSConstantBuffer0) g_pVSConstantBuffer0->Release();
-	if (g_pVSConstantBuffer1) g_pVSConstantBuffer1->Release();
-	if (g_pVSConstantBuffer2) g_pVSConstantBuffer2->Release();
 	if (g_pVSConstantBuffer3) g_pVSConstantBuffer3->Release();
 	if (g_pPSConstantBuffer0) g_pPSConstantBuffer0->Release();
 	if (g_pInputLayout) g_pInputLayout->Release();
@@ -140,16 +134,10 @@ void Shader_3D_Ani_SetWorldMatrix(const DirectX::XMMATRIX& matrix)
 
 void Shader_3D_Ani_SetViewMatrix(const DirectX::XMMATRIX& matrix)
 {
-	XMFLOAT4X4 transpose;
-	XMStoreFloat4x4(&transpose, XMMatrixTranspose(matrix));
-	g_pContext->UpdateSubresource(g_pVSConstantBuffer1, 0, nullptr, &transpose, 0, 0);
 }
 
 void Shader_3D_Ani_SetProjectMatrix(const DirectX::XMMATRIX& matrix)
 {
-	XMFLOAT4X4 transpose;
-	XMStoreFloat4x4(&transpose, XMMatrixTranspose(matrix));
-	g_pContext->UpdateSubresource(g_pVSConstantBuffer2, 0, nullptr, &transpose, 0, 0);
 }
 
 void Shader_3D_Ani_SetBoneMatrices(const DirectX::XMFLOAT4X4* matrices, int count)
@@ -178,8 +166,6 @@ void Shader_3D_Ani_Begin()
 	g_pContext->PSSetShader(g_pPixelShader, nullptr, 0);
 	g_pContext->IASetInputLayout(g_pInputLayout);
 	g_pContext->VSSetConstantBuffers(0, 1, &g_pVSConstantBuffer0);
-	g_pContext->VSSetConstantBuffers(1, 1, &g_pVSConstantBuffer1);
-	g_pContext->VSSetConstantBuffers(2, 1, &g_pVSConstantBuffer2);
 	g_pContext->VSSetConstantBuffers(3, 1, &g_pVSConstantBuffer3);
 	g_pContext->PSSetConstantBuffers(0, 1, &g_pPSConstantBuffer0);
 }

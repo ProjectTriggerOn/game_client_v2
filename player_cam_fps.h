@@ -10,7 +10,11 @@ void PlayerCamFps_Update(double elapsed_time);
 const DirectX::XMFLOAT3& PlayerCamFps_GetFront();
 const DirectX::XMFLOAT3& PlayerCamFps_GetPosition();
 
-void PlayerCamFps_SetInvertY(bool invert);
+void PlayerCamFps_SetInvertY(bool invert = true);
 bool PlayerCamFps_GetInvertY();
+
+
+const DirectX::XMFLOAT4X4& PlayerCamFps_GetViewMatrix();
+const DirectX::XMFLOAT4X4& PlayerCamFps_GetProjectMatrix();
 
 #endif
