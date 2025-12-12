@@ -139,6 +139,9 @@
     <ClCompile Include="shader_3d_ani.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="player_cam_fps.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="game_window.h">
@@ -256,6 +259,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="shader_3d_ani.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="player_cam_fps.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -10,6 +10,7 @@
 #include "model_ani.h"
 #include "player.h"
 #include "player_cam_tps.h"
+#include "player_cam_fps.h"
 using namespace DirectX;
 
 namespace{
@@ -35,7 +36,9 @@ void Game_Initialize()
 	ModelAni_SetAnimation(g_pModel0, 0);
 	//g_pModel0 = ModelLoad("resource/model/(Legacy)arms_assault_rifle_01.fbx", 10.0f);
 	Player_Initialize({ 0.0f,0.0f,0.0f }, { 0.0f,0.0f,1.0f });
-	PlayerCamTps_Initialize();
+	//PlayerCamTps_Initialize();
+	PlayerCamFps_Initialize();
+	PlayerCamFps_SetInvertY(true);
 }
 
 void Game_Update(double elapsed_time)
@@ -44,7 +47,8 @@ void Game_Update(double elapsed_time)
 	//Player_Update(elapsed_time);
 	//PlayerCamTps_Update(elapsed_time);
 	//PlayerCamTps_Update_Mouse(elapsed_time);
-	PlayerCamTps_Update_Maya(elapsed_time);
+	//PlayerCamTps_Update_Maya(elapsed_time);
+	PlayerCamFps_Update(elapsed_time);
 	ModelAni_Update(g_pModel0, elapsed_time);
 
 }
