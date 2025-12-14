@@ -45,6 +45,8 @@ void PlayerCamFps_Update(double elapsed_time)
 	Mouse_State ms;
 	Mouse_GetState(&ms);
 
+	Mouse_SetMode(MOUSE_POSITION_MODE_RELATIVE);
+
 	// Calculate delta mouse movement
 	int dx = 0;
 	int dy = 0;

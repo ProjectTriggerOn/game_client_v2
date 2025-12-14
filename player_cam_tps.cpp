@@ -186,6 +186,9 @@ void PlayerCamTps_Update_Maya(double elapsed_time)
     Mouse_State ms;
     Mouse_GetState(&ms);
 
+    Mouse_SetMode(MOUSE_POSITION_MODE_ABSOLUTE);
+	Mouse_SetVisible(true);
+
     // 检查 Alt 键
     bool altDown = KeyLogger_IsPressed(KK_LEFTALT);
     static int lastX = 0, lastY = 0;

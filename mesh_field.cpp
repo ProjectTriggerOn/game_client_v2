@@ -98,7 +98,7 @@ void MeshField_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 
 	g_pDevice->CreateBuffer(&bd, &sd, &g_pIndexBuffer);
 
-	g_MeshFieldTexId0 = Texture_LoadFromFile(L"resource/texture/Grass.png");
+	g_MeshFieldTexId0 = Texture_LoadFromFile(L"resource/texture/grid.png");
 	g_MeshFieldTexId1 = Texture_LoadFromFile(L"resource/texture/stone_001.jpg");
 
 }
@@ -125,12 +125,8 @@ void MeshField_Draw(const DirectX::XMMATRIX& mtxW)
 	float offset_x = FIELD_MESH_H_COUNT * FIELD_MESH_SIZE * 0.5f;
 	float offset_z = FIELD_MESH_V_COUNT * FIELD_MESH_SIZE * 0.5f;
 
-	//Shader_3D_SetWorldMatrix(mtxW);
-
 	Shader_Field_SetWorldMatrix(XMMatrixTranslation(-offset_x, 0.0f, -offset_z));
-	//Shader_Field_SetViewMatrix(XMLoadFloat4x4(&Camera_GetViewMatrix()));
-	//Shader_Field_SetProjectMatrix(XMLoadFloat4x4(&Camera_GetPerspectiveMatrix()));
-	Shader_Field_SetColor({ 1.0f,1.0f,1.0f,1.0f });
+	Shader_Field_SetColor({ 0.51f,0.53f,0.57f,1.0f });
 
 	// プリミティブトポロジ設定
 	g_pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);

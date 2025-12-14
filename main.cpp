@@ -60,7 +60,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 
 	Mouse_Initialize(hWnd);
 
-	Mouse_SetMode(MOUSE_POSITION_MODE_ABSOLUTE);
+	//Mouse_SetMode(MOUSE_POSITION_MODE_ABSOLUTE);
 
 	InitAudio();
 
