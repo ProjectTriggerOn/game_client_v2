@@ -31,7 +31,7 @@ void Player_Fps::Initialize(const DirectX::XMFLOAT3& position, const DirectX::XM
 	XMStoreFloat3(&m_MoveDir, XMVector3Normalize(XMLoadFloat3(&front)));
 	XMStoreFloat3(&m_ModelFront, XMVector3Normalize(XMLoadFloat3(&front)));
 	
-	m_Model = ModelAni_Load("resource/model/arms002.fbx");
+	m_Model = ModelAni_Load("resource/model/arms009.fbx");
 
 	if (!m_Model)
 	{
@@ -144,7 +144,7 @@ void Player_Fps::Update(double elapsed_time)
 	if (m_Model)
 	{
 		// index 0: Idle, index 1: Walk (Assuming Typical)
-		int animIndex = isMoving ? 1 : 0;
+		int animIndex = isMoving ? 2 : 0;
 		if (m_Model->CurrentAnimationIndex != animIndex && animIndex < (int)m_Model->Animations.size())
 		{
 			ModelAni_SetAnimation(m_Model, animIndex);
