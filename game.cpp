@@ -2,6 +2,7 @@
 #include "cube.h"
 #include "shader.h"
 #include "camera.h"
+#include "direct3d.h"
 #include "infinite_grid.h"
 #include "keyboard.h"
 #include "key_logger.h"
@@ -13,6 +14,7 @@
 #include "player.h"
 #include "player_cam_tps.h"
 #include "player_cam_fps.h"
+#include "player_fps.h"
 using namespace DirectX;
 
 namespace{
@@ -20,7 +22,8 @@ namespace{
 	double g_AccumulatedTime = 0.0;
 	MODEL* g_pModel = nullptr;
 	MODEL_ANI* g_pModel0 = nullptr;
-	bool isDebugCam = true;
+	bool isDebugCam = false;
+	Player_Fps* g_PlayerFps;
 }
 
 void Game_Initialize()
@@ -38,7 +41,9 @@ void Game_Initialize()
 	g_pModel0 = ModelAni_Load("resource/model/arms002.fbx");
 	ModelAni_SetAnimation(g_pModel0, 0);
 	//g_pModel0 = ModelLoad("resource/model/(Legacy)arms_assault_rifle_01.fbx", 10.0f);
-	Player_Initialize({ 0.0f,0.0f,0.0f }, { 0.0f,0.0f,1.0f });
+	//Player_Initialize({ 0.0f,0.0f,0.0f }, { 0.0f,0.0f,1.0f });
+	g_PlayerFps = new Player_Fps();
+	g_PlayerFps->Initialize({ 0.0f,3.0f,0.0f }, { 0.0f,0.0f,1.0f });
 	Camera_Initialize();
 	PlayerCamTps_Initialize();
 	PlayerCamFps_Initialize();
@@ -47,19 +52,24 @@ void Game_Initialize()
 
 void Game_Update(double elapsed_time)
 {
-	ModelAni_Update(g_pModel0, elapsed_time);
+	//ModelAni_Update(g_pModel0, elapsed_time);
+	
 
 	if (KeyLogger_IsTrigger(KK_C)) {
 		isDebugCam = !isDebugCam;
 	}
+
+	g_PlayerFps->Update(elapsed_time);
 
 	if (isDebugCam)
 	{
 		PlayerCamTps_Update_Maya(elapsed_time);
 	}
 	else {
-		PlayerCamFps_Update(elapsed_time);
+		PlayerCamFps_Update(elapsed_time,g_PlayerFps->GetEyePosition());
 	}
+
+	
 
 }
 
@@ -81,8 +91,9 @@ void Game_Draw()
 
 	mtxW = XMMatrixTranslation(0.0f,-1.0f,0.0f)* mtxW;
 
-	ModelAni_SetAnimation(g_pModel0, 1);
-	ModelAni_Draw(g_pModel0, mtxW,true);
+	//ModelAni_SetAnimation(g_pModel0, 1);
+	//ModelAni_Draw(g_pModel0, mtxW,true);
+	
 
 	XMVECTOR v{ 0.0f,-1.0f,0.0f };
 	v = XMVector3Normalize(v);
@@ -114,6 +125,8 @@ void Game_Draw()
 	XMFLOAT3(0,0,0)
 	};
 
+	g_PlayerFps->Draw();
+
 	//Light_SetPointLightByList(whiteList);
 
 	Light_SetSpecularWorld(cam_pos, 4.0f, { 0.3f,0.3f,0.3f,1.0f });
@@ -135,7 +148,10 @@ void Game_Finalize()
 	Camera_Finalize();
 	Light_Finalize();
 	InfiniteGrid_Finalize();
-	Player_Finalize();
+	//Player_Finalize();
+	PlayerCamTps_Finalize();
+	PlayerCamFps_Finalize();
+	g_PlayerFps->Finalize();
 	ModelAni_Release(g_pModel0);
 }
 

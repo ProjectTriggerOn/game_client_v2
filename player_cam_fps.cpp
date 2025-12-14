@@ -32,7 +32,6 @@ void PlayerCamFps_Initialize()
 	g_cameraYaw = 0.0f;
 	g_cameraPitch = 0.0f;
 	g_CameraFront = { 0.0f, 0.0f, 1.0f };
-	Mouse_SetMode(MOUSE_POSITION_MODE_RELATIVE);
 }
 
 void PlayerCamFps_Finalize()
@@ -110,9 +109,6 @@ void PlayerCamFps_Update(double elapsed_time)
 	XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 	XMMATRIX view = XMMatrixLookToLH(eyePos, front, up);
 
-	// 5. Set Matrices to Shaders
-	Shader_InfiniteGrid_SetViewMatrix(view);
-
 	XMStoreFloat4x4(&g_ViewMatrix, view);
 
 	// 6. Projection Matrix
@@ -122,8 +118,87 @@ void PlayerCamFps_Update(double elapsed_time)
 	float farZ = 1000.0f;
 	XMMATRIX projection = XMMatrixPerspectiveFovLH(fov, aspectRatio, nearZ, farZ);
 
+	XMStoreFloat4x4(&g_ProjectionMatrix, projection);
+}
 
-	Shader_InfiniteGrid_SetProjectMatrix(projection);
+void PlayerCamFps_Update(double elapsed_time, const DirectX::XMFLOAT3& position)
+{
+	// 1. Update Rotation from Mouse
+	Mouse_State ms;
+	Mouse_GetState(&ms);
+
+	Mouse_SetMode(MOUSE_POSITION_MODE_RELATIVE);
+
+	// Calculate delta mouse movement
+	int dx = 0;
+	int dy = 0;
+
+	if (ms.positionMode == MOUSE_POSITION_MODE_RELATIVE)
+	{
+		dx = ms.x;
+		dy = ms.y;
+	}
+	else
+	{
+		static int lastMouseX = ms.x;
+		static int lastMouseY = ms.y;
+		static bool firstMouse = true;
+
+		if (firstMouse)
+		{
+			lastMouseX = ms.x;
+			lastMouseY = ms.y;
+			firstMouse = false;
+		}
+
+		dx = ms.x - lastMouseX;
+		dy = ms.y - lastMouseY;
+		lastMouseX = ms.x;
+		lastMouseY = ms.y;
+	}
+
+	// Apply rotation
+	g_cameraYaw += dx * SENSITIVITY;
+	if (g_invertY)
+	{
+		g_cameraPitch -= dy * SENSITIVITY;
+	}
+	else
+	{
+		g_cameraPitch += dy * SENSITIVITY;
+	}
+
+	// Clamp pitch to avoid flipping
+	constexpr float PITCH_LIMIT = XM_PIDIV2 - 0.01f;
+	g_cameraPitch = std::max(-PITCH_LIMIT, std::min(g_cameraPitch, PITCH_LIMIT));
+
+	// 2. Calculate Camera Front Vector
+	// Spherical coordinates to Cartesian coordinates
+	float x = cosf(g_cameraPitch) * sinf(g_cameraYaw);
+	float y = sinf(g_cameraPitch);
+	float z = cosf(g_cameraPitch) * cosf(g_cameraYaw);
+
+	XMVECTOR front = XMVector3Normalize(XMVectorSet(x, y, z, 0.0f));
+	XMStoreFloat3(&g_CameraFront, front);
+
+	// 3. Update Camera Position
+	// Direct assignment: The input position is now treated as the Eye/Camera position.
+	// The offset logic should be handled by the caller (e.g. Player_Fps class).
+	g_CameraPosition = position;
+	DirectX::XMVECTOR vPos = XMLoadFloat3(&g_CameraPosition);
+
+	// 4. Create View Matrix
+	XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+	XMMATRIX view = XMMatrixLookToLH(vPos, front, up);
+
+	XMStoreFloat4x4(&g_ViewMatrix, view);
+
+	// 6. Projection Matrix
+	float aspectRatio = static_cast<float>(Direct3D_GetBackBufferWidth()) / static_cast<float>(Direct3D_GetBackBufferHeight());
+	float fov = XM_PIDIV4; // 45 degrees
+	float nearZ = 0.1f;
+	float farZ = 1000.0f;
+	XMMATRIX projection = XMMatrixPerspectiveFovLH(fov, aspectRatio, nearZ, farZ);
 
 	XMStoreFloat4x4(&g_ProjectionMatrix, projection);
 }
@@ -136,6 +211,16 @@ const DirectX::XMFLOAT3& PlayerCamFps_GetFront()
 const DirectX::XMFLOAT3& PlayerCamFps_GetPosition()
 {
 	return g_CameraPosition;
+}
+
+void PlayerCamFps_SetPosition(const DirectX::XMFLOAT3& position)
+{
+	g_CameraPosition = position;
+}
+
+void PlayerCamFps_SetFront(const DirectX::XMFLOAT3& front)
+{
+	g_CameraFront = front;
 }
 
 void PlayerCamFps_SetInvertY(bool invert)
