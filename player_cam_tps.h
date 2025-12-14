@@ -18,6 +18,9 @@ void PlayerCamTps_Update_Maya(double elapsed_time);
 const DirectX::XMFLOAT3& PlayerCamTps_GetFront();
 const DirectX::XMFLOAT3& PlayerCamTps_GetPosition();
 
+const DirectX::XMFLOAT4X4& PlayerCamTps_GetPerspectiveMatrix();
+const DirectX::XMFLOAT4X4& PlayerCamTps_GetViewMatrix();
+
 
 
 

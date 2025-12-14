@@ -7,6 +7,7 @@
 #include "shader_field.h"
 #include "shader_infinite.h"
 #include "mouse.h"
+#include "shader_3d_ani.h"
 using namespace DirectX;
 namespace 
 {
@@ -157,8 +158,10 @@ void PlayerCamTps_Update_Mouse(double elapsed_time)
 
     // 生成视图矩阵
     XMMATRIX mtxView = XMMatrixLookAtLH(position, focus, up);
-    Shader_3D_SetViewMatrix(mtxView);
-    Shader_Field_SetViewMatrix(mtxView);
+
+	Shader_InfiniteGrid_SetViewMatrix(mtxView);
+
+	XMStoreFloat4x4(&g_ViewMatrix, mtxView);
 
     // 投影矩阵
     float aspectRatio = static_cast<float>(Direct3D_GetBackBufferWidth()) / static_cast<float>(Direct3D_GetBackBufferHeight());
@@ -166,8 +169,10 @@ void PlayerCamTps_Update_Mouse(double elapsed_time)
     float nearZ = 0.1f;
     float farZ = 1000.0f;
     XMMATRIX mtxPerspective = XMMatrixPerspectiveFovLH(fov, aspectRatio, nearZ, farZ);
-    Shader_3D_SetProjectMatrix(mtxPerspective);
-    Shader_Field_SetProjectMatrix(mtxPerspective);
+
+	Shader_InfiniteGrid_SetProjectMatrix(mtxPerspective);
+
+	XMStoreFloat4x4(&g_PerspectiveMatrix, mtxPerspective);
 
     // 存储当前摄像机位置、前方向
     XMStoreFloat3(&eyePosition, {camPos.x,camPos.y,camPos.z});
@@ -180,6 +185,9 @@ void PlayerCamTps_Update_Maya(double elapsed_time)
 {
     Mouse_State ms;
     Mouse_GetState(&ms);
+
+    Mouse_SetMode(MOUSE_POSITION_MODE_ABSOLUTE);
+	Mouse_SetVisible(true);
 
     // 检查 Alt 键
     bool altDown = KeyLogger_IsPressed(KK_LEFTALT);
@@ -229,8 +237,8 @@ void PlayerCamTps_Update_Maya(double elapsed_time)
         else if (dragButton == 3) {
             // Alt+右键：缩放（推拉摄像机）
             g_cameraDistance += dy * 0.05f;
-            if (g_cameraDistance < 2.0f) g_cameraDistance = 2.0f;
-            if (g_cameraDistance > 20.0f) g_cameraDistance = 20.0f;
+			g_cameraDistance = std::max(2.0f, g_cameraDistance);
+			g_cameraDistance = std::min(20.0f, g_cameraDistance);
         }
     }
     else {
@@ -241,8 +249,8 @@ void PlayerCamTps_Update_Maya(double elapsed_time)
     // 滚轮缩放
     if (ms.scrollWheelValue != 0) {
         g_cameraDistance -= ms.scrollWheelValue * 0.001f;
-        if (g_cameraDistance < 2.0f) g_cameraDistance = 2.0f;
-        if (g_cameraDistance > 20.0f) g_cameraDistance = 20.0f;
+        g_cameraDistance = std::max(2.0f, g_cameraDistance);
+        g_cameraDistance = std::min(20.0f, g_cameraDistance);
         Mouse_ResetScrollWheelValue();
     }
 
@@ -264,9 +272,8 @@ void PlayerCamTps_Update_Maya(double elapsed_time)
 
     // 生成视图矩阵
     XMMATRIX mtxView = XMMatrixLookAtLH(position, focus, up);
-    Shader_3D_SetViewMatrix(mtxView);
-    Shader_Field_SetViewMatrix(mtxView);
 	Shader_InfiniteGrid_SetViewMatrix(mtxView);
+	XMStoreFloat4x4(&g_ViewMatrix, mtxView);
 
     // 投影矩阵
     float aspectRatio = static_cast<float>(Direct3D_GetBackBufferWidth()) / static_cast<float>(Direct3D_GetBackBufferHeight());
@@ -274,9 +281,10 @@ void PlayerCamTps_Update_Maya(double elapsed_time)
     float nearZ = 0.1f;
     float farZ = 1000.0f;
     XMMATRIX mtxPerspective = XMMatrixPerspectiveFovLH(fov, aspectRatio, nearZ, farZ);
-    Shader_3D_SetProjectMatrix(mtxPerspective);
-    Shader_Field_SetProjectMatrix(mtxPerspective);
+
 	Shader_InfiniteGrid_SetProjectMatrix(mtxPerspective);
+
+	XMStoreFloat4x4(&g_PerspectiveMatrix, mtxPerspective);
 
     // 存储当前摄像机位置、前方向
     XMStoreFloat3(&eyePosition, { camPos.x,camPos.y,camPos.z });
@@ -292,6 +300,16 @@ const DirectX::XMFLOAT3& PlayerCamTps_GetFront()
 const DirectX::XMFLOAT3& PlayerCamTps_GetPosition()
 {
 	return eyePosition;
+}
+
+const DirectX::XMFLOAT4X4& PlayerCamTps_GetPerspectiveMatrix()
+{
+	return g_PerspectiveMatrix;
+}
+
+const DirectX::XMFLOAT4X4& PlayerCamTps_GetViewMatrix()
+{
+	return g_ViewMatrix;
 }
 
 

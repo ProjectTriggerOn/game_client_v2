@@ -5,6 +5,7 @@
 #include "key_logger.h"
 #include "Light.h"
 #include "player_cam_tps.h"
+#include "player_cam_fps.h"
 using namespace DirectX;
 
 namespace 
@@ -32,7 +33,7 @@ void Player_Initialize(
 	g_PlayerVelocity = XMFLOAT3{ 0.0f,0.0f,0.0f };
 	XMStoreFloat3(&g_PlayerFront,XMVector3Normalize(XMLoadFloat3(&front)));
 	//g_PlayerModel = ModelLoad("resource/model/test.fbx", 0.1f);
-	g_PlayerModel = ModelLoad("resource/model/(Legacy)arms_assault_rifle_01.fbx", 10.0f,true);
+	g_PlayerModel = ModelLoad("resource/model/test.fbx", 0.1f,false);
 }
 
 void Player_Finalize()
@@ -91,7 +92,7 @@ void Player_Update(double elapsed_time)
 
 	XMVECTOR moveDir = XMVectorZero();
 
-	XMFLOAT3 camFront = PlayerCamTps_GetFront();
+	XMFLOAT3 camFront = PlayerCamFps_GetFront();
 
 	XMVECTOR front = XMVector3Normalize(XMVectorSet(camFront.x, 0.0f, camFront.z, 0.0f));
 	XMVECTOR right = XMVector3Normalize(XMVector3Cross(XMVectorSet(0, 1, 0, 0), front));
@@ -199,7 +200,7 @@ AABB Player_GetAABB()
 
 void Player_Draw()
 {
-	Light_SetSpecularWorld(PlayerCamTps_GetPosition(), 4.0f, { 0.3f,0.25f,0.2f,1.0f });
+	Light_SetSpecularWorld(PlayerCamFps_GetPosition(), 4.0f, { 0.3f,0.25f,0.2f,1.0f });
 
 	float angle = -atan2f(g_PlayerFront.z,g_PlayerFront.x) + XMConvertToRadians(270);
 
@@ -212,7 +213,7 @@ void Player_Draw()
 
 	XMMATRIX world = XMMatrixIdentity();
 
-	world = XMMatrixTranslation(0.0f, -7.0f, 0.0f);
+	world = XMMatrixTranslation(0.0f, 0.0f, 0.0f);
 
 	ModelDraw(g_PlayerModel, world);
 }

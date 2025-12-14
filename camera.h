@@ -20,6 +20,8 @@ const DirectX::XMFLOAT4X4& Camera_GetPerspectiveMatrix();
 const DirectX::XMFLOAT3& Camera_GetFront();
 const DirectX::XMFLOAT3& Camera_GetPosition();
 
+void Camera_SetMatrixToShader(const DirectX::XMMATRIX& view, const DirectX::XMMATRIX& proj);
+
 void Camera_SetFov();
 
 void Camera_Debug();
