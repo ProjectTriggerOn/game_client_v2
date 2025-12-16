@@ -21,7 +21,10 @@ namespace
 }
 
 Animator::Animator()
-	: m_Model(nullptr), m_CurrentAnimationIndex(-1), m_CurrentTime(0.0), m_Loop(true)
+	: m_Model(nullptr)
+	, m_CurrentAnimationIndex(-1), m_CurrentTime(0.0), m_Loop(true)
+	, m_PrevAnimationIndex(-1), m_PrevTime(0.0), m_PrevLoop(false)
+	, m_IsBlending(false), m_BlendFactor(0.0), m_TransitionTime(0.0), m_TransitionDuration(0.0)
 {
 }
 
@@ -47,12 +50,12 @@ void Animator::Init(MODEL_ANI* model)
 		
 		if (!m_Model->Animations.empty())
 		{
-			Play(0, true);
+			Play(0, true, 0.0);
 		}
 	}
 }
 
-void Animator::Play(const std::string& name, bool loop)
+void Animator::Play(const std::string& name, bool loop, double blendTime)
 {
 	if (!m_Model) return;
 
@@ -60,20 +63,50 @@ void Animator::Play(const std::string& name, bool loop)
 	{
 		if (m_Model->Animations[i].name == name)
 		{
-			Play(i, loop);
+			Play(i, loop, blendTime);
 			return;
 		}
 	}
 }
 
-void Animator::Play(int index, bool loop)
+void Animator::Play(int index, bool loop, double blendTime)
 {
 	if (!m_Model) return;
+	if (index == m_CurrentAnimationIndex)
+	{
+		// If same animation, just update loop status? Or restart?
+		// Usually if playing same, we just update loop. 
+		// If we want to restart, we should stop first or handle it. 
+		// For now simple behavior: if same, do nothing or just update loop.
+		m_Loop = loop;
+		return; 
+	}
+
 	if (index >= 0 && index < (int)m_Model->Animations.size())
 	{
-		m_CurrentAnimationIndex = index;
-		m_CurrentTime = 0.0;
-		m_Loop = loop;
+		if (blendTime > 0.0 && m_CurrentAnimationIndex != -1)
+		{
+			// Start Transition
+			m_PrevAnimationIndex = m_CurrentAnimationIndex;
+			m_PrevTime = m_CurrentTime;
+			m_PrevLoop = m_Loop;
+			
+			m_CurrentAnimationIndex = index;
+			m_CurrentTime = 0.0;
+			m_Loop = loop;
+			
+			m_IsBlending = true;
+			m_TransitionDuration = blendTime;
+			m_TransitionTime = 0.0;
+		}
+		else
+		{
+			// Instant Switch
+			m_CurrentAnimationIndex = index;
+			m_CurrentTime = 0.0;
+			m_Loop = loop;
+			m_IsBlending = false;
+		}
 	}
 }
 
@@ -82,49 +115,54 @@ void Animator::Update(double elapsedTime)
 	if (!m_Model || m_CurrentAnimationIndex == -1) return;
 	if (m_Model->Animations.empty()) return;
 
-	const Animation& anim = m_Model->Animations[m_CurrentAnimationIndex];
+	// Update Current Animation Time
+	const Animation& animCurrent = m_Model->Animations[m_CurrentAnimationIndex];
+	m_CurrentTime += elapsedTime * animCurrent.ticksPerSecond;
 	
-	m_CurrentTime += elapsedTime * anim.ticksPerSecond;
-	
-	if (m_Loop)
+	if (m_Loop) m_CurrentTime = fmod(m_CurrentTime, animCurrent.duration);
+	else if (m_CurrentTime >= animCurrent.duration) m_CurrentTime = animCurrent.duration;
+
+	// Update Previous Animation Time (if blending)
+	if (m_IsBlending)
 	{
-		m_CurrentTime = fmod(m_CurrentTime, anim.duration);
-	}
-	else
-	{
-		if (m_CurrentTime >= anim.duration)
+		const Animation& animPrev = m_Model->Animations[m_PrevAnimationIndex];
+		m_PrevTime += elapsedTime * animPrev.ticksPerSecond;
+		
+		if (m_PrevLoop) m_PrevTime = fmod(m_PrevTime, animPrev.duration);
+		else if (m_PrevTime >= animPrev.duration) m_PrevTime = animPrev.duration;
+		
+		m_TransitionTime += elapsedTime; // Real time
+		if (m_TransitionTime >= m_TransitionDuration)
 		{
-			m_CurrentTime = anim.duration;
+			m_IsBlending = false;
+			m_TransitionTime = 0.0;
 		}
 	}
 
 	// Calculate transformations
-	// Identify root bones (parentIndex == -1) and traverse
 	for (int i = 0; i < (int)m_Model->Bones.size(); ++i)
 	{
 		if (m_Model->Bones[i].parentIndex == -1)
 		{
-			UpdateBoneTransforms(i, XMMatrixIdentity(), anim);
+			UpdateGlobalTransforms(i, XMMatrixIdentity(), animCurrent);
 		}
 	}
 }
 
-void Animator::UpdateBoneTransforms(int boneIndex, const DirectX::XMMATRIX& parentTransform, const Animation& anim)
+void Animator::GetBoneSRT(int boneIndex, const Animation& anim, double time, XMVECTOR& outS, XMVECTOR& outR, XMVECTOR& outT) const
 {
 	const Bone& boneDef = m_Model->Bones[boneIndex];
 	
-	// Start with local transformation from bind pose? 
-	// Or identity. The AnimationChannel will override it if present.
-	// If the bone is NOT animated, it should probably stick to its default local transform (Bind Pose).
-	// Currently Model_Ani stores `localMatrix` in Bone which was initialized to node transform.
-	// Since we are decoupling, we should read that initialization value. 
-	// But `Bone` struct in `model_ani.h` has `localMatrix` which currently changes every frame in the old code.
-	// I need to be careful. In `ModelAni_Load`, `bone.localMatrix` is initialized to the NODE transformation. 
-	// So we should assume that is the default.
-	
+	// Default to local matrix components (Bind Pose)
 	XMMATRIX nodeTransform = XMLoadFloat4x4(&boneDef.localMatrix);
-	
-	// Find animation channel for this bone
+	XMVECTOR s, r, t;
+	if (!XMMatrixDecompose(&s, &r, &t, nodeTransform)) {
+		// Fallback
+		s = XMVectorSet(1,1,1,1);
+		r = XMQuaternionIdentity();
+		t = XMVectorSet(0,0,0,1);
+	}
+
 	const AnimationChannel* channel = nullptr;
 	for (const auto& ch : anim.channels)
 	{
@@ -138,70 +176,96 @@ void Animator::UpdateBoneTransforms(int boneIndex, const DirectX::XMMATRIX& pare
 	if (channel)
 	{
 		// Interpolate Position
-		XMVECTOR pos = XMVectorSet(0, 0, 0, 1);
 		if (!channel->positionKeys.empty()) {
-			int idx = FindKeyIndex(m_CurrentTime, channel->positionKeys);
+			int idx = FindKeyIndex(time, channel->positionKeys);
 			int nextIdx = (idx + 1) % channel->positionKeys.size();
 			double t1 = channel->positionKeys[idx].time;
 			double t2 = channel->positionKeys[nextIdx].time;
 			double dt = t2 - t1;
 			if (dt < 0) dt += anim.duration;
-			float factor = (float)((m_CurrentTime - t1) / dt);
+			float factor = (float)((time - t1) / dt);
 			if (dt == 0) factor = 0;
 			
 			XMVECTOR p1 = XMLoadFloat3(&channel->positionKeys[idx].value);
 			XMVECTOR p2 = XMLoadFloat3(&channel->positionKeys[nextIdx].value);
-			pos = XMVectorLerp(p1, p2, factor);
+			t = XMVectorLerp(p1, p2, factor);
 		}
 		
 		// Interpolate Rotation
-		XMVECTOR rot = XMVectorSet(0, 0, 0, 1);
 		if (!channel->rotationKeys.empty()) {
-			int idx = FindKeyIndex(m_CurrentTime, channel->rotationKeys);
+			int idx = FindKeyIndex(time, channel->rotationKeys);
 			int nextIdx = (idx + 1) % channel->rotationKeys.size();
 			double t1 = channel->rotationKeys[idx].time;
 			double t2 = channel->rotationKeys[nextIdx].time;
 			double dt = t2 - t1;
 			if (dt < 0) dt += anim.duration;
-			float factor = (float)((m_CurrentTime - t1) / dt);
+			float factor = (float)((time - t1) / dt);
 			if (dt == 0) factor = 0;
 
+			// Handle different Rotation representations (Quaternions usually)
 			XMVECTOR r1 = XMLoadFloat4(&channel->rotationKeys[idx].value);
 			XMVECTOR r2 = XMLoadFloat4(&channel->rotationKeys[nextIdx].value);
-			rot = XMQuaternionSlerp(r1, r2, factor);
+			r = XMQuaternionSlerp(r1, r2, factor);
 		}
 		
 		// Interpolate Scale
-		XMVECTOR scale = XMVectorSet(1, 1, 1, 1);
 		if (!channel->scalingKeys.empty()) {
-			int idx = FindKeyIndex(m_CurrentTime, channel->scalingKeys);
+			int idx = FindKeyIndex(time, channel->scalingKeys);
 			int nextIdx = (idx + 1) % channel->scalingKeys.size();
 			double t1 = channel->scalingKeys[idx].time;
 			double t2 = channel->scalingKeys[nextIdx].time;
 			double dt = t2 - t1;
 			if (dt < 0) dt += anim.duration;
-			float factor = (float)((m_CurrentTime - t1) / dt);
+			float factor = (float)((time - t1) / dt);
 			if (dt == 0) factor = 0;
 
 			XMVECTOR s1 = XMLoadFloat3(&channel->scalingKeys[idx].value);
 			XMVECTOR s2 = XMLoadFloat3(&channel->scalingKeys[nextIdx].value);
-			scale = XMVectorLerp(s1, s2, factor);
+			s = XMVectorLerp(s1, s2, factor);
 		}
-
-		nodeTransform = XMMatrixScalingFromVector(scale) * XMMatrixRotationQuaternion(rot) * XMMatrixTranslationFromVector(pos);
 	}
+	
+	outS = s;
+	outR = r;
+	outT = t;
+}
 
-	XMMATRIX globalTransform = nodeTransform * parentTransform;
+void Animator::UpdateGlobalTransforms(int boneIndex, const DirectX::XMMATRIX& parentTransform, const Animation& anim)
+{
+	const Bone& boneDef = m_Model->Bones[boneIndex];
+	
+	XMVECTOR s, r, t;
+
+	// Calculate Current Animation Local Transform
+	GetBoneSRT(boneIndex, anim, m_CurrentTime, s, r, t);
+
+	if (m_IsBlending)
+	{
+		const Animation& prevAnim = m_Model->Animations[m_PrevAnimationIndex];
+		XMVECTOR prevS, prevR, prevT;
+		GetBoneSRT(boneIndex, prevAnim, m_PrevTime, prevS, prevR, prevT);
+		
+		float factor = (float)(m_TransitionTime / m_TransitionDuration);
+		factor = std::max(0.0f, std::min(1.0f, factor));
+		
+		s = XMVectorLerp(prevS, s, factor);
+		r = XMQuaternionSlerp(prevR, r, factor);
+		t = XMVectorLerp(prevT, t, factor);
+	}
+	
+	XMMATRIX localTransform = XMMatrixScalingFromVector(s) * XMMatrixRotationQuaternion(r) * XMMatrixTranslationFromVector(t);
+	XMMATRIX globalTransform = localTransform * parentTransform;
+	
 	XMStoreFloat4x4(&m_GlobalMatrices[boneIndex], globalTransform);
 
-	// Calculate Final Matrix
+	// Final Matrix
 	XMMATRIX offset = XMLoadFloat4x4(&boneDef.offsetMatrix);
 	XMMATRIX finalM = offset * globalTransform;
 	XMStoreFloat4x4(&m_FinalBoneMatrices[boneIndex], finalM);
 
 	for (int childIndex : boneDef.children)
 	{
-		UpdateBoneTransforms(childIndex, globalTransform, anim);
+		UpdateGlobalTransforms(childIndex, globalTransform, anim);
 	}
 }
 
