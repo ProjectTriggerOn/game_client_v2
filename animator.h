@@ -14,8 +14,10 @@ public:
 
 	void Init(MODEL_ANI* model);
 	void Update(double elapsedTime);
-	void Play(const std::string& name, bool loop = true, double blendTime = 0.2);
-	void Play(int index, bool loop = true, double blendTime = 0.2);
+	void Play(const std::string& name, bool loop = true);
+	void Play(int index, bool loop = true);
+	void PlayCrossFade(const std::string& name, bool loop = true, double blendTime = 0.2);
+	void PlayCrossFade(int index, bool loop = true, double blendTime = 0.2);
 
 	// Returns the matrices to be sent to the shader
 	const std::vector<DirectX::XMFLOAT4X4>& GetFinalBoneMatrices() const;

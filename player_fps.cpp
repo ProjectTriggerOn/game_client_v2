@@ -17,7 +17,9 @@ Player_Fps::Player_Fps()
 	, m_Height(2.0f)
 	, m_isJump(false)
 	, m_Model(nullptr)
+	, m_Animator(nullptr)
 	, m_StateMachine(nullptr)
+	
 {
 }
 
@@ -183,7 +185,7 @@ void Player_Fps::Update(double elapsed_time)
 		}
 		if (m_Animator->GetCurrentAnimationIndex() != animIndex)
 		{
-			m_Animator->Play(animIndex, true, 0.2); // Enable cross fade
+			m_Animator->PlayCrossFade(animIndex, true, 0.1); // Enable cross fade
 		}
 		m_Animator->Update(elapsed_time);
 	}

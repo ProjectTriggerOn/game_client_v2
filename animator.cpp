@@ -50,12 +50,12 @@ void Animator::Init(MODEL_ANI* model)
 		
 		if (!m_Model->Animations.empty())
 		{
-			Play(0, true, 0.0);
+			Play(0, true);
 		}
 	}
 }
 
-void Animator::Play(const std::string& name, bool loop, double blendTime)
+void Animator::PlayCrossFade(const std::string& name, bool loop, double blendTime)
 {
 	if (!m_Model) return;
 
@@ -63,13 +63,13 @@ void Animator::Play(const std::string& name, bool loop, double blendTime)
 	{
 		if (m_Model->Animations[i].name == name)
 		{
-			Play(i, loop, blendTime);
+			PlayCrossFade(i, loop, blendTime);
 			return;
 		}
 	}
 }
 
-void Animator::Play(int index, bool loop, double blendTime)
+void Animator::PlayCrossFade(int index, bool loop, double blendTime)
 {
 	if (!m_Model) return;
 	if (index == m_CurrentAnimationIndex)
@@ -146,6 +146,31 @@ void Animator::Update(double elapsedTime)
 		{
 			UpdateGlobalTransforms(i, XMMatrixIdentity(), animCurrent);
 		}
+	}
+}
+
+void Animator::Play(const std::string& name, bool loop)
+{
+	if (!m_Model) return;
+
+	for (int i = 0; i < (int)m_Model->Animations.size(); ++i)
+	{
+		if (m_Model->Animations[i].name == name)
+		{
+			Play(i, loop);
+			return;
+		}
+	}
+}
+
+void Animator::Play(int index, bool loop)
+{
+	if (!m_Model) return;
+	if (index >= 0 && index < (int)m_Model->Animations.size())
+	{
+		m_CurrentAnimationIndex = index;
+		m_CurrentTime = 0.0;
+		m_Loop = loop;
 	}
 }
 
