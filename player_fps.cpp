@@ -1,5 +1,6 @@
 #include "player_fps.h"
 #include "player_cam_fps.h"
+#include "animator.h"
 #include "key_logger.h"
 #include "cube.h"
 #include "direct3d.h"
@@ -37,14 +38,20 @@ void Player_Fps::Initialize(const DirectX::XMFLOAT3& position, const DirectX::XM
 	
 	m_Model = ModelAni_Load("resource/model/arms009.fbx");
 
-	if (!m_Model)
+	if (m_Model)
 	{
-		// Log or handle error if needed
+		m_Animator = new Animator();
+		m_Animator->Init(m_Model);
 	}
 }
 
 void Player_Fps::Finalize()
 {
+	if (m_Animator)
+	{
+		delete m_Animator;
+		m_Animator = nullptr;
+	}
 	if (m_Model)
 	{
 		ModelAni_Release(m_Model);
@@ -157,7 +164,7 @@ void Player_Fps::Update(double elapsed_time)
 	XMStoreFloat3(&m_Velocity, velocity);
 
 	// Update Model Animation
-	if (m_Model)
+	if (m_Model && m_Animator)
 	{
 		int animIndex = 0;
 		switch (m_StateMachine->GetPlayerState())
@@ -174,11 +181,11 @@ void Player_Fps::Update(double elapsed_time)
 				animIndex = 2;
 			break;
 		}
-		if (m_Model->CurrentAnimationIndex != animIndex && animIndex < (int)m_Model->Animations.size())
+		if (m_Animator->GetCurrentAnimationIndex() != animIndex)
 		{
-			ModelAni_SetAnimation(m_Model, animIndex);
+			m_Animator->Play(animIndex);
 		}
-		ModelAni_Update(m_Model, elapsed_time);
+		m_Animator->Update(elapsed_time);
 	}
 
 }
@@ -213,7 +220,6 @@ void Player_Fps::Draw()
 	// Assuming default model forward is +Z.
 	
 
-
 	XMMATRIX world = XMMatrixIdentity();
 	world = XMMatrixRotationX(XMConvertToRadians(-90.0f)) * world; // Rotate -90 degrees around X to align model's up with world's up
 
@@ -228,7 +234,7 @@ void Player_Fps::Draw()
 	world = XMMatrixRotationY(XMConvertToRadians(180.0f))  * world; // Rotate 180 degrees around Y to face camera
 	world = XMMatrixTranslation(0.0f, -1.0825f, 0.0f) * world; // Adjust vertical position if needed
 
-	ModelAni_Draw(m_Model, world, true); // isBlender=false as we constructed the matrix manually
+	ModelAni_Draw(m_Model, world, m_Animator, true); // isBlender=false as we constructed the matrix manually
 }
 
 const DirectX::XMFLOAT3& Player_Fps::GetPosition() const

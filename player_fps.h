@@ -37,6 +37,7 @@ private:
 	bool m_isJump;
 
 	MODEL_ANI* m_Model;
+	class Animator* m_Animator;
 
 	PlayerStateMachine* m_StateMachine;
 };

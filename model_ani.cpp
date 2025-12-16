@@ -4,7 +4,6 @@
 #include "shader_3d_ani.h"
 #include "WICTextureLoader11.h"
 #include <iostream>
-#include <algorithm>
 #include <set>
 
 using namespace DirectX;
@@ -150,6 +149,8 @@ MODEL_ANI* ModelAni_Load(const char* FileName)
 			std::string boneName = bone->mName.C_Str();
 			int boneIndex = 0;
 
+// ... (Load logic unchanged up to Bone init)
+	
 			if (model->BoneMapping.find(boneName) == model->BoneMapping.end())
 			{
 				boneIndex = (int)model->Bones.size();
@@ -157,7 +158,6 @@ MODEL_ANI* ModelAni_Load(const char* FileName)
 				newBone.name = boneName;
 				newBone.offsetMatrix = ToXMFLOAT4X4(bone->mOffsetMatrix);
 				XMStoreFloat4x4(&newBone.localMatrix, XMMatrixIdentity());
-				XMStoreFloat4x4(&newBone.globalMatrix, XMMatrixIdentity());
 				model->Bones.push_back(newBone);
 				model->BoneMapping[boneName] = boneIndex;
 			}
@@ -235,20 +235,6 @@ MODEL_ANI* ModelAni_Load(const char* FileName)
 	}
 
 	// Build Bone Hierarchy
-	// We need to traverse the node graph to find parents
-	// Assimp nodes have names. If a node name matches a bone name, we can link them.
-	// But Assimp nodes are the structure. Bones are just offsets.
-	// We need to map the node hierarchy to our bone list.
-	// Actually, we should traverse the node tree. If a node corresponds to a bone, we set its parent.
-	
-	// Helper lambda to traverse
-	// We can't use lambda easily with recursion in C++11 without std::function, but let's use a standard recursive function if needed.
-	// Or just iterate bones and find parents? No, bones don't store parent info in aiMesh::mBones.
-	// We must traverse aiNode.
-	
-	// Let's create a map of NodeName -> BoneIndex
-	// Already have BoneMapping.
-	
 	struct NodeTraverser {
 		MODEL_ANI* model;
 		void Traverse(aiNode* node, int parentIndex) {
@@ -326,128 +312,7 @@ void ModelAni_Release(MODEL_ANI* model)
 	delete model;
 }
 
-void ModelAni_Update(MODEL_ANI* model, double elapsedTime)
-{
-	if (!model) return;
-	if (model->Animations.empty()) return;
-
-	Animation& anim = model->Animations[model->CurrentAnimationIndex];
-	model->CurrentTime += elapsedTime * anim.ticksPerSecond;
-	model->CurrentTime = fmod(model->CurrentTime, anim.duration);
-
-	// Reset bone matrices to identity before applying animation?
-	// No, we calculate them from scratch.
-	
-	// For each channel, calculate local transform
-	for (const auto& channel : anim.channels)
-	{
-		Bone& bone = model->Bones[channel.boneIndex];
-		
-		// Interpolate Position
-		XMVECTOR pos = XMVectorSet(0, 0, 0, 1);
-		if (!channel.positionKeys.empty()) {
-			int idx = FindKeyIndex(model->CurrentTime, channel.positionKeys);
-			int nextIdx = (idx + 1) % channel.positionKeys.size();
-			double t1 = channel.positionKeys[idx].time;
-			double t2 = channel.positionKeys[nextIdx].time;
-			double dt = t2 - t1;
-			if (dt < 0) dt += anim.duration;
-			float factor = (float)((model->CurrentTime - t1) / dt);
-			if (dt == 0) factor = 0;
-			
-			XMVECTOR p1 = XMLoadFloat3(&channel.positionKeys[idx].value);
-			XMVECTOR p2 = XMLoadFloat3(&channel.positionKeys[nextIdx].value);
-			pos = XMVectorLerp(p1, p2, factor);
-		}
-		
-		// Interpolate Rotation
-		XMVECTOR rot = XMVectorSet(0, 0, 0, 1);
-		if (!channel.rotationKeys.empty()) {
-			int idx = FindKeyIndex(model->CurrentTime, channel.rotationKeys);
-			int nextIdx = (idx + 1) % channel.rotationKeys.size();
-			double t1 = channel.rotationKeys[idx].time;
-			double t2 = channel.rotationKeys[nextIdx].time;
-			double dt = t2 - t1;
-			if (dt < 0) dt += anim.duration;
-			float factor = (float)((model->CurrentTime - t1) / dt);
-			if (dt == 0) factor = 0;
-
-			XMVECTOR r1 = XMLoadFloat4(&channel.rotationKeys[idx].value);
-			XMVECTOR r2 = XMLoadFloat4(&channel.rotationKeys[nextIdx].value);
-			rot = XMQuaternionSlerp(r1, r2, factor);
-		}
-		
-		// Interpolate Scale
-		XMVECTOR scale = XMVectorSet(1, 1, 1, 1);
-		if (!channel.scalingKeys.empty()) {
-			int idx = FindKeyIndex(model->CurrentTime, channel.scalingKeys);
-			int nextIdx = (idx + 1) % channel.scalingKeys.size();
-			double t1 = channel.scalingKeys[idx].time;
-			double t2 = channel.scalingKeys[nextIdx].time;
-			double dt = t2 - t1;
-			if (dt < 0) dt += anim.duration;
-			float factor = (float)((model->CurrentTime - t1) / dt);
-			if (dt == 0) factor = 0;
-
-			XMVECTOR s1 = XMLoadFloat3(&channel.scalingKeys[idx].value);
-			XMVECTOR s2 = XMLoadFloat3(&channel.scalingKeys[nextIdx].value);
-			scale = XMVectorLerp(s1, s2, factor);
-		}
-		
-		XMMATRIX m = XMMatrixScalingFromVector(scale) * XMMatrixRotationQuaternion(rot) * XMMatrixTranslationFromVector(pos);
-		XMStoreFloat4x4(&bone.localMatrix, m);
-	}
-	
-	// Update Global Matrices
-	// We need to traverse hierarchy again or just iterate if sorted by depth?
-	// Bones are not guaranteed to be sorted by depth in the vector.
-	// But we can use a recursive helper.
-	
-	// Wait, we need to update ALL bones, even those not animated (they keep their default local transform? Assimp nodes have default transform).
-	// Actually, we should initialize localMatrix from node->mTransformation initially.
-	// But for now, let's assume all bones are animated or identity if not.
-	// Better: The `localMatrix` in Bone struct should be initialized to node transformation.
-	// I did `XMStoreFloat4x4(&newBone.localMatrix, XMMatrixIdentity());` in Load.
-	// I should probably fix that to use the node's transformation if no animation.
-	// But for now, let's implement the recursive update.
-	
-	// Find root bones (parentIndex == -1)
-	for (int i = 0; i < model->Bones.size(); i++) {
-		if (model->Bones[i].parentIndex == -1) {
-			// Calculate Global
-			// Recursive function
-			// We can't use lambda with capture easily for recursion.
-			// Let's use a stack or just a separate function?
-			// Or just iterate multiple times? No.
-			// Let's define a helper function outside or struct.
-		}
-	}
-	
-	// Actually, let's just do a simple loop if we can ensure order.
-	// But we can't.
-	// Let's use a helper struct.
-	struct HierarchyUpdater {
-		std::vector<Bone>& bones;
-		void Update(int index, XMMATRIX parentTransform) {
-			XMMATRIX local = XMLoadFloat4x4(&bones[index].localMatrix);
-			XMMATRIX global = local * parentTransform;
-			XMStoreFloat4x4(&bones[index].globalMatrix, global);
-			
-			for (int child : bones[index].children) {
-				Update(child, global);
-			}
-		}
-	};
-	
-	HierarchyUpdater updater{model->Bones};
-	for (int i = 0; i < model->Bones.size(); i++) {
-		if (model->Bones[i].parentIndex == -1) {
-			updater.Update(i, XMMatrixIdentity());
-		}
-	}
-}
-
-void ModelAni_Draw(MODEL_ANI* model, const DirectX::XMMATRIX& mtxW,bool isBlender)
+void ModelAni_Draw(MODEL_ANI* model, const DirectX::XMMATRIX& mtxW, Animator* animator, bool isBlender)
 {
 	if (!model) return;
 	Shader_3D_Ani_Begin();
@@ -461,34 +326,11 @@ void ModelAni_Draw(MODEL_ANI* model, const DirectX::XMMATRIX& mtxW,bool isBlende
 
 	Shader_3D_Ani_SetWorldMatrix(mtxWorld);
 
-	// Prepare Bone Matrices
-	std::vector<XMFLOAT4X4> boneMatrices(model->Bones.size());
-	for (size_t i = 0; i < model->Bones.size(); i++)
+	if (animator)
 	{
-		// Final Matrix = Offset * Global * InverseRoot?
-		// Usually: Final = Offset * Global
-		// Offset transforms from Mesh Space to Bone Space.
-		// Global transforms from Bone Space to Mesh Space (animated).
-		// So Vertex * Offset * Global = VertexAnimated.
-		
-		XMMATRIX offset = XMLoadFloat4x4(&model->Bones[i].offsetMatrix);
-		XMMATRIX global = XMLoadFloat4x4(&model->Bones[i].globalMatrix);
-		// Also need to apply GlobalInverseTransform of the model root if necessary?
-		// Assimp docs say: mOffsetMatrix is the inverse of the global transformation of the bone in bind pose.
-		// So Offset * Global should be correct.
-		
-		// Wait, Assimp's global transform includes the root transform.
-		// If we render with mtxW, we are in World Space.
-		// The bone matrices should transform from Mesh Space to Mesh Space (deformed).
-		
-		// Final Matrix = Offset * Global
-		// We do NOT multiply by GlobalInverseTransform here because we WANT the Root Node's transform (which includes coordinate conversion) to apply.
-		XMMATRIX finalM = offset * global;
-		
-		XMStoreFloat4x4(&boneMatrices[i], finalM);
+		const auto& boneMatrices = animator->GetFinalBoneMatrices();
+		Shader_3D_Ani_SetBoneMatrices(boneMatrices.data(), (int)boneMatrices.size());
 	}
-	
-	Shader_3D_Ani_SetBoneMatrices(boneMatrices.data(), (int)boneMatrices.size());
 	
 	Direct3D_GetDeviceContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	
@@ -519,15 +361,5 @@ void ModelAni_Draw(MODEL_ANI* model, const DirectX::XMMATRIX& mtxW,bool isBlende
 		Direct3D_GetDeviceContext()->IASetIndexBuffer(mesh.IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
 		
 		Direct3D_GetDeviceContext()->DrawIndexed(mesh.IndexCount, 0, 0);
-	}
-}
-
-void ModelAni_SetAnimation(MODEL_ANI* model, int index)
-{
-	if (!model) return;
-	if (index >= 0 && index < model->Animations.size())
-	{
-		model->CurrentAnimationIndex = index;
-		model->CurrentTime = 0;
 	}
 }

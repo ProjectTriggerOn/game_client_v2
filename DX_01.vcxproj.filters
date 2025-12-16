@@ -148,6 +148,9 @@
     <ClCompile Include="player_state_mechine.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="animator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="game_window.h">
@@ -274,6 +277,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="player_state_mechine.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="animator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

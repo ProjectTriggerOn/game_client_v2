@@ -15,6 +15,7 @@
 #include "assimp/matrix4x4.h"
 #pragma comment (lib, "assimp-vc143-mt.lib")
 #include "assimp/scene.h"
+#include "animator.h"
 
 struct Vertex3D_Ani
 {
@@ -30,8 +31,7 @@ struct Bone
 {
 	std::string name;
 	DirectX::XMFLOAT4X4 offsetMatrix; // Inverse Bind Pose Matrix
-	DirectX::XMFLOAT4X4 localMatrix;  // Local transformation (relative to parent)
-	DirectX::XMFLOAT4X4 globalMatrix; // Global transformation (relative to model root)
+	DirectX::XMFLOAT4X4 localMatrix;  // Local transformation (Bind Pose)
 	
 	int parentIndex = -1;
 	std::vector<int> children;
@@ -85,14 +85,10 @@ struct MODEL_ANI
 	std::map<std::string, int> BoneMapping; // Name to Index
 	
 	std::vector<Animation> Animations;
-	int CurrentAnimationIndex = 0;
-	double CurrentTime = 0.0;
 	
 	DirectX::XMFLOAT4X4 GlobalInverseTransform;
 };
 
 MODEL_ANI* ModelAni_Load(const char* FileName);
 void ModelAni_Release(MODEL_ANI* model);
-void ModelAni_Update(MODEL_ANI* model, double elapsedTime);
-void ModelAni_Draw(MODEL_ANI* model, const DirectX::XMMATRIX& mtxW, bool isBlender);
-void ModelAni_SetAnimation(MODEL_ANI* model, int index);
+void ModelAni_Draw(MODEL_ANI* model, const DirectX::XMMATRIX& mtxW, Animator* animator, bool isBlender);

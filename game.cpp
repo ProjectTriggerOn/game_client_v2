@@ -39,7 +39,7 @@ void Game_Initialize()
 	
 	//g_pModel = ModelLoad("resource/model/test.fbx", 0.1f,false);
 	g_pModel0 = ModelAni_Load("resource/model/arms002.fbx");
-	ModelAni_SetAnimation(g_pModel0, 0);
+	//ModelAni_SetAnimation(g_pModel0, 0);
 	//g_pModel0 = ModelLoad("resource/model/(Legacy)arms_assault_rifle_01.fbx", 10.0f);
 	//Player_Initialize({ 0.0f,0.0f,0.0f }, { 0.0f,0.0f,1.0f });
 	g_PlayerFps = new Player_Fps();
