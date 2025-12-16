@@ -328,6 +328,7 @@ void ModelAni_Release(MODEL_ANI* model)
 
 void ModelAni_Update(MODEL_ANI* model, double elapsedTime)
 {
+	if (!model) return;
 	if (model->Animations.empty()) return;
 
 	Animation& anim = model->Animations[model->CurrentAnimationIndex];
@@ -448,6 +449,7 @@ void ModelAni_Update(MODEL_ANI* model, double elapsedTime)
 
 void ModelAni_Draw(MODEL_ANI* model, const DirectX::XMMATRIX& mtxW,bool isBlender)
 {
+	if (!model) return;
 	Shader_3D_Ani_Begin();
 
 	XMMATRIX mtxWorld = mtxW;
@@ -522,6 +524,7 @@ void ModelAni_Draw(MODEL_ANI* model, const DirectX::XMMATRIX& mtxW,bool isBlende
 
 void ModelAni_SetAnimation(MODEL_ANI* model, int index)
 {
+	if (!model) return;
 	if (index >= 0 && index < model->Animations.size())
 	{
 		model->CurrentAnimationIndex = index;

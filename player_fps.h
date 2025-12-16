@@ -2,6 +2,7 @@
 #include <DirectXMath.h>
 #include "collision.h"
 #include "model_ani.h"
+#include "player_state_mechine.h"
 
 class Player_Fps
 {
@@ -36,4 +37,6 @@ private:
 	bool m_isJump;
 
 	MODEL_ANI* m_Model;
+
+	PlayerStateMachine* m_StateMachine;
 };

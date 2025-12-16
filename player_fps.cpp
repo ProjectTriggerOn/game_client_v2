@@ -12,10 +12,11 @@ Player_Fps::Player_Fps()
 	, m_Velocity({ 0,0,0 })
 	, m_ModelFront({ 0,0,1 })
 	, m_MoveDir({ 0,0,1 })
-	, m_CamRelativePos({ 0.0f, 0.0f, 0.3f })
+	, m_CamRelativePos({ 0.0f, 0.0f,0.3f })
 	, m_Height(2.0f)
 	, m_isJump(false)
 	, m_Model(nullptr)
+	, m_StateMachine(nullptr)
 {
 }
 
@@ -28,8 +29,11 @@ void Player_Fps::Initialize(const DirectX::XMFLOAT3& position, const DirectX::XM
 {
 	m_Position = position;
 	m_Velocity = { 0.0f, 0.0f, 0.0f };
+
 	XMStoreFloat3(&m_MoveDir, XMVector3Normalize(XMLoadFloat3(&front)));
 	XMStoreFloat3(&m_ModelFront, XMVector3Normalize(XMLoadFloat3(&front)));
+
+	m_StateMachine = new PlayerStateMachine();
 	
 	m_Model = ModelAni_Load("resource/model/arms009.fbx");
 
@@ -110,17 +114,29 @@ void Player_Fps::Update(double elapsed_time)
 	if (KeyLogger_IsPressed(KK_S)) moveDir -= front;
 	if (KeyLogger_IsPressed(KK_D)) moveDir += right;
 	if (KeyLogger_IsPressed(KK_A)) moveDir -= right;
+	bool tryRunning = KeyLogger_IsPressed(KK_LEFTSHIFT);
 
-	bool isMoving = false;
-	if (XMVectorGetX(XMVector3LengthSq(moveDir)) > 0.0f)
-	{
-		isMoving = true;
+	if (XMVectorGetX(XMVector3LengthSq(moveDir)) > 0.0f) {
+
 		moveDir = XMVector3Normalize(moveDir);
-		
-		// Apply Movement Velocity
-		velocity += moveDir * static_cast<float>(2000.0 / 50.0 * elapsed_time);
-		
+
+		if (tryRunning && 
+			m_StateMachine->GetAimState() == AimState::HIP && 
+			m_StateMachine->GetActionState() == ActionState::NONE) {
+			m_StateMachine->SetPlayerState(PlayerState::RUNNING);
+			float running = static_cast<float>(2000.0 / 50.0 * elapsed_time);
+			velocity += moveDir * running;
+		}
+		else {
+			m_StateMachine->SetPlayerState(PlayerState::WALKING);
+			float walking = static_cast<float>(1500.0 / 50.0 * elapsed_time);
+			velocity += moveDir * walking;
+		}
+
 		XMStoreFloat3(&m_MoveDir, moveDir);
+	}
+	else {
+		m_StateMachine->SetPlayerState(PlayerState::IDLE);
 	}
 
 	// Friction / Damping
@@ -143,8 +159,21 @@ void Player_Fps::Update(double elapsed_time)
 	// Update Model Animation
 	if (m_Model)
 	{
-		// index 0: Idle, index 1: Walk (Assuming Typical)
-		int animIndex = isMoving ? 2 : 0;
+		int animIndex = 0;
+		switch (m_StateMachine->GetPlayerState())
+		{
+			case PlayerState::IDLE:
+				m_StateMachine->SetAimState(AimState::HIP);
+				m_StateMachine->SetActionState(ActionState::NONE);
+				animIndex = 0;
+				break;
+			case PlayerState::WALKING:
+				animIndex = 1;
+				break;
+			case PlayerState::RUNNING:
+				animIndex = 2;
+			break;
+		}
 		if (m_Model->CurrentAnimationIndex != animIndex && animIndex < (int)m_Model->Animations.size())
 		{
 			ModelAni_SetAnimation(m_Model, animIndex);
@@ -197,7 +226,7 @@ void Player_Fps::Draw()
 	world.r[3] = XMVectorSetW(modelPos, 1.0f);
 
 	world = XMMatrixRotationY(XMConvertToRadians(180.0f))  * world; // Rotate 180 degrees around Y to face camera
-	world = XMMatrixTranslation(0.0f, -1.13f, 0.0f) * world; // Adjust vertical position if needed
+	world = XMMatrixTranslation(0.0f, -1.0825f, 0.0f) * world; // Adjust vertical position if needed
 
 	ModelAni_Draw(m_Model, world, true); // isBlender=false as we constructed the matrix manually
 }
