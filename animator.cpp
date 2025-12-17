@@ -72,36 +72,73 @@ void Animator::PlayCrossFade(const std::string& name, bool loop, double blendTim
 void Animator::PlayCrossFade(int index, bool loop, double blendTime)
 {
 	if (!m_Model) return;
+
+	// 1. 如果目标就是当前正在播的主动画，只更新循环状态，不重置
 	if (index == m_CurrentAnimationIndex)
 	{
-		// If same animation, just update loop status? Or restart?
-		// Usually if playing same, we just update loop. 
-		// If we want to restart, we should stop first or handle it. 
-		// For now simple behavior: if same, do nothing or just update loop.
 		m_Loop = loop;
-		return; 
+		return;
 	}
 
 	if (index >= 0 && index < (int)m_Model->Animations.size())
 	{
+		// ---------------------------------------------------------
+		// 【核心修复】：检测是否切回了正在淡出的动画 (A -> B -> A)
+		// ---------------------------------------------------------
+		if (m_IsBlending && index == m_PrevAnimationIndex)
+		{
+			// 此时：Prev 是 A, Curr 是 B, 进度走了 30%
+			// 目标：切回 A
+
+			// 1. 交换 Current 和 Prev 的身份
+			std::swap(m_CurrentAnimationIndex, m_PrevAnimationIndex);
+			std::swap(m_CurrentTime, m_PrevTime);
+			std::swap(m_Loop, m_PrevLoop);
+
+			// 2. 关键：反转混合进度
+			// 现在的进度是 "从 Prev 到 Curr" (比如走了 0.3s)
+			// 交换后，视觉上我们需要 "从 新Prev 到 新Curr" 走了 0.7s 的位置
+			// 也就是倒着走回去
+
+			// 计算当前的归一化进度 (0.0 ~ 1.0)
+			double currentFactor = 0.0;
+			if (m_TransitionDuration > 0.0) {
+				currentFactor = m_TransitionTime / m_TransitionDuration;
+			}
+
+			// 反转进度 (1.0 - 0.3 = 0.7)
+			double invertedFactor = 1.0 - currentFactor;
+
+			// 重新设置新的过渡参数
+			m_TransitionDuration = blendTime; // 使用新的混合时间
+			m_TransitionTime = invertedFactor * m_TransitionDuration; // 映射回时间
+
+			// 保持混合状态为 true
+			m_IsBlending = true;
+
+			return; // 搞定，直接退出
+		}
+
+		// ---------------------------------------------------------
+		// 正常流程：开启一个新的混合 (A -> C)
+		// ---------------------------------------------------------
 		if (blendTime > 0.0 && m_CurrentAnimationIndex != -1)
 		{
-			// Start Transition
 			m_PrevAnimationIndex = m_CurrentAnimationIndex;
 			m_PrevTime = m_CurrentTime;
 			m_PrevLoop = m_Loop;
-			
+
 			m_CurrentAnimationIndex = index;
-			m_CurrentTime = 0.0;
+			m_CurrentTime = 0.0; // 新动画从头开始
 			m_Loop = loop;
-			
+
 			m_IsBlending = true;
 			m_TransitionDuration = blendTime;
 			m_TransitionTime = 0.0;
 		}
 		else
 		{
-			// Instant Switch
+			// 无混合直接切换
 			m_CurrentAnimationIndex = index;
 			m_CurrentTime = 0.0;
 			m_Loop = loop;

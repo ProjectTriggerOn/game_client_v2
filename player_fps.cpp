@@ -185,7 +185,7 @@ void Player_Fps::Update(double elapsed_time)
 		}
 		if (m_Animator->GetCurrentAnimationIndex() != animIndex)
 		{
-			m_Animator->PlayCrossFade(animIndex, true, 0.1); // Enable cross fade
+			m_Animator->PlayCrossFade(animIndex, true, 0.2); // Enable cross fade
 		}
 		m_Animator->Update(elapsed_time);
 	}
