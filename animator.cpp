@@ -156,6 +156,13 @@ bool Animator::IsCurrAniFinished() const
 	return m_CurrentTime >= animCurrent.duration;
 }
 
+bool Animator::OnCurrAniStarted() const
+{
+	if (!m_Model || m_CurrentAnimationIndex == -1) return false;
+	if (m_Model->Animations.empty()) return false;
+	return m_CurrentTime == 0.0;
+}
+
 float Animator::GetCurrAniProgress() const
 {
 	if (!m_Model || m_CurrentAnimationIndex == -1) return 0.0f;
@@ -170,9 +177,11 @@ void Animator::Update(double elapsedTime)
 	if (!m_Model || m_CurrentAnimationIndex == -1) return;
 	if (m_Model->Animations.empty()) return;
 
+	double scaledTime = elapsedTime * m_Speed;
+
 	// Update Current Animation Time
 	const Animation& animCurrent = m_Model->Animations[m_CurrentAnimationIndex];
-	m_CurrentTime += elapsedTime * animCurrent.ticksPerSecond;
+	m_CurrentTime += scaledTime * animCurrent.ticksPerSecond;
 	
 	if (m_Loop) m_CurrentTime = fmod(m_CurrentTime, animCurrent.duration);
 	else if (m_CurrentTime >= animCurrent.duration) m_CurrentTime = animCurrent.duration;
@@ -181,12 +190,12 @@ void Animator::Update(double elapsedTime)
 	if (m_IsBlending)
 	{
 		const Animation& animPrev = m_Model->Animations[m_PrevAnimationIndex];
-		m_PrevTime += elapsedTime * animPrev.ticksPerSecond;
+		m_PrevTime += scaledTime * animPrev.ticksPerSecond;
 		
 		if (m_PrevLoop) m_PrevTime = fmod(m_PrevTime, animPrev.duration);
 		else if (m_PrevTime >= animPrev.duration) m_PrevTime = animPrev.duration;
 		
-		m_TransitionTime += elapsedTime; // Real time
+		m_TransitionTime += scaledTime; // Real time
 		if (m_TransitionTime >= m_TransitionDuration)
 		{
 			m_IsBlending = false;

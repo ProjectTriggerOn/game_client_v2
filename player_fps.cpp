@@ -20,6 +20,8 @@ Player_Fps::Player_Fps()
 	, m_Model(nullptr)
 	, m_Animator(nullptr)
 	, m_StateMachine(nullptr)
+	, m_WeaponRPM(600.0)
+	, m_FireCounter(0)
 	
 {
 }
@@ -133,7 +135,9 @@ void Player_Fps::Update(double elapsed_time , const Mouse_State& ms)
 	bool isPressingLeft = ms.leftButton;
 	bool isPressingRight = ms.rightButton;
 
-	if (isPressingRight && m_StateMachine->GetWeaponState()!=WeaponState::ADS)
+	if (isPressingRight && 
+		m_StateMachine->GetWeaponState() != WeaponState::ADS && 
+		m_StateMachine->GetWeaponState() != WeaponState::ADS_FIRING)
 	{
 		m_StateMachine->SetWeaponState(WeaponState::ADS_IN);
 	}
@@ -142,6 +146,41 @@ void Player_Fps::Update(double elapsed_time , const Mouse_State& ms)
 		(m_StateMachine->GetWeaponState() == WeaponState::ADS || m_StateMachine->GetWeaponState() == WeaponState::ADS_IN))
 	{
 		m_StateMachine->SetWeaponState(WeaponState::ADS_OUT);
+	}
+
+	if (isPressingLeft)
+	{
+		if (m_StateMachine->GetWeaponState() == WeaponState::ADS)
+		{
+			m_Animator->SetSpeed(5.0);
+			m_StateMachine->SetWeaponState(WeaponState::ADS_FIRING);
+
+		}
+		else if (m_StateMachine->GetWeaponState() == WeaponState::HIP)
+		{
+			m_Animator->SetSpeed(5.0);
+			m_StateMachine->SetWeaponState(WeaponState::HIP_FIRING);
+		}
+	}
+	else
+	{
+		m_Animator->SetSpeed(1.0);
+		if (m_StateMachine->GetWeaponState() == WeaponState::ADS_FIRING)
+		{
+			m_StateMachine->SetWeaponState(WeaponState::ADS);
+		}
+		else if (m_StateMachine->GetWeaponState() == WeaponState::HIP_FIRING)
+		{
+			m_StateMachine->SetWeaponState(WeaponState::HIP);
+		}
+	}
+
+	if (m_StateMachine->GetWeaponState() == WeaponState::ADS_FIRING)
+	{
+		if (m_Animator->OnCurrAniStarted())
+		{
+			m_FireCounter++;
+		}
 	}
 
 	if (XMVectorGetX(XMVector3LengthSq(moveDir)) > 0.0f) {
@@ -331,4 +370,26 @@ std::string Player_Fps::GetCurrentAniName() const
 		}
 	}
 	return "No Animation";
+}
+
+float Player_Fps::GetCurrentAniDuration() const
+{
+	if (m_Model && m_Animator)
+	{
+		int aniIndex = m_Animator->GetCurrentAnimationIndex();
+		if (aniIndex >= 0 && aniIndex < static_cast<int>(m_Model->Animations.size()))
+		{
+			return static_cast<float>(m_Model->Animations[aniIndex].duration);
+		}
+	}
+	return 0.0f;
+}
+
+float Player_Fps::GetCurrentAniProgress() const
+{	
+	if (m_Animator)
+	{
+		return m_Animator->GetCurrAniProgress();
+	}
+	return 0.0f;
 }

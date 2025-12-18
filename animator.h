@@ -19,7 +19,10 @@ public:
 	void PlayCrossFade(const std::string& name, bool loop = true, double blendTime = 0.2);
 	void PlayCrossFade(int index, bool loop = true, double blendTime = 0.2);
 	bool IsCurrAniFinished() const;
+	bool OnCurrAniStarted() const;
 	float GetCurrAniProgress() const;
+	double GetSpeed() const { return m_Speed; }
+	void SetSpeed(double speed) { m_Speed = speed; }
 
 	// Returns the matrices to be sent to the shader
 	const std::vector<DirectX::XMFLOAT4X4>& GetFinalBoneMatrices() const;
@@ -36,6 +39,7 @@ private:
 	int m_CurrentAnimationIndex;
 	double m_CurrentTime;
 	bool m_Loop;
+	double m_Speed;
 
 	// Cross Fade (Blending)
 	int m_PrevAnimationIndex;

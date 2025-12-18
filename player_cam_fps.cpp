@@ -263,6 +263,9 @@ void PlayerCamFps_Debug(const Player_Fps& pf)
 	ss << "PlayerState: " << pf.GetPlayerState() << "\n";
 	ss << "WeaponState: " << pf.GetWeaponState() << "\n";
 	ss << "CurrentAnimation: " << pf.GetCurrentAniName() << "\n";
+	ss << "FireCounter: " << pf.GetFireCounter() << "\n";
+	ss << "AniDuration: " << std::fixed << std::setprecision(2) << pf.GetCurrentAniDuration() << "s\n";
+	ss << "AniProgress: " << std::fixed << std::setprecision(2) << pf.GetCurrentAniProgress() * 100.0f << "%\n";
 
 	g_DebugText->SetText(ss.str().c_str());
 	g_DebugText->Draw();

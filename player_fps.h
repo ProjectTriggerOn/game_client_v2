@@ -30,6 +30,10 @@ public:
 	std::string GetPlayerState() const;
 	std::string GetWeaponState() const;
 	std::string GetCurrentAniName() const;
+	float GetCurrentAniDuration() const;
+	float GetCurrentAniProgress() const;
+
+	int GetFireCounter() const { return m_FireCounter; }
 
 private:
 	DirectX::XMFLOAT3 m_Position;
@@ -39,6 +43,8 @@ private:
 	DirectX::XMFLOAT3 m_CamRelativePos;
 	float m_Height;
 	bool m_isJump;
+	double m_WeaponRPM;
+	int m_FireCounter;
 	MODEL_ANI* m_Model;
 	Animator* m_Animator;
 	PlayerStateMachine* m_StateMachine;

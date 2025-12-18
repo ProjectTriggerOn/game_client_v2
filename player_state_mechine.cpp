@@ -72,6 +72,9 @@ void PlayerStateMachine::Update(double elapsed_time,Animator* animator)
 	case WeaponState::HIP:
 		// No change to animationIndex
 		break;
+	case WeaponState::HIP_FIRING:
+		animationIndex = 3;
+		break;
 	case WeaponState::ADS_IN:
 		animationIndex = 4;
 		break;
@@ -80,6 +83,9 @@ void PlayerStateMachine::Update(double elapsed_time,Animator* animator)
 		break;
 	case WeaponState::ADS:
 		animationIndex = 6;
+		break;
+	case WeaponState::ADS_FIRING:
+		animationIndex = 7;
 		break;
 	case WeaponState::RELOADING:
 		animationIndex = 9;
@@ -102,7 +108,8 @@ void PlayerStateMachine::Update(double elapsed_time,Animator* animator)
 	case 0: // IDLE
 	case 1: // WALKING
 	case 2: // RUNNING
-	case 3: // FIRING
+	case 3: // HIP_FIRING
+	case 7: // ADS_FIRING
 	case 6: // ADS
 		isLoopAnimation = true;
 			break;

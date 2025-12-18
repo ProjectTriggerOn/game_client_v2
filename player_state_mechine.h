@@ -13,6 +13,8 @@ enum class PlayerState
 enum class WeaponState
 {
 	HIP,
+	HIP_FIRING,
+	ADS_FIRING,
 	ADS_IN,
 	ADS_OUT,
 	ADS,
