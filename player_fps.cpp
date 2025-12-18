@@ -4,6 +4,7 @@
 #include "key_logger.h"
 #include "cube.h"
 #include "direct3d.h"
+#include "mouse.h"
 #include "shader_3d_ani.h"
 
 using namespace DirectX;
@@ -61,7 +62,7 @@ void Player_Fps::Finalize()
 	}
 }
 
-void Player_Fps::Update(double elapsed_time)
+void Player_Fps::Update(double elapsed_time , const Mouse_State& ms)
 {
 	XMVECTOR position = XMLoadFloat3(&m_Position);
 	XMVECTOR velocity = XMLoadFloat3(&m_Velocity);
@@ -125,16 +126,36 @@ void Player_Fps::Update(double elapsed_time)
 	if (KeyLogger_IsPressed(KK_A)) moveDir -= right;
 	bool tryRunning = KeyLogger_IsPressed(KK_LEFTSHIFT);
 
+
+	//Mouse_State ms;
+	//Mouse_GetState(&ms);
+
+	bool isPressingLeft = ms.leftButton;
+	bool isPressingRight = ms.rightButton;
+
+	if (isPressingRight && m_StateMachine->GetWeaponState()!=WeaponState::ADS)
+	{
+		m_StateMachine->SetWeaponState(WeaponState::ADS_IN);
+	}
+
+	if (!isPressingRight && 
+		(m_StateMachine->GetWeaponState() == WeaponState::ADS || m_StateMachine->GetWeaponState() == WeaponState::ADS_IN))
+	{
+		m_StateMachine->SetWeaponState(WeaponState::ADS_OUT);
+	}
+
 	if (XMVectorGetX(XMVector3LengthSq(moveDir)) > 0.0f) {
 
 		moveDir = XMVector3Normalize(moveDir);
 
-		if (tryRunning && 
-			m_StateMachine->GetAimState() == AimState::HIP && 
-			m_StateMachine->GetActionState() == ActionState::NONE) {
+
+
+		if (tryRunning) {
+
 			m_StateMachine->SetPlayerState(PlayerState::RUNNING);
 			float running = static_cast<float>(2000.0 / 50.0 * elapsed_time);
 			velocity += moveDir * running;
+
 		}
 		else {
 			m_StateMachine->SetPlayerState(PlayerState::WALKING);
@@ -147,6 +168,7 @@ void Player_Fps::Update(double elapsed_time)
 	else {
 		m_StateMachine->SetPlayerState(PlayerState::IDLE);
 	}
+
 
 	// Friction / Damping
 	velocity += -velocity * static_cast<float>(4.0f * elapsed_time);
@@ -168,26 +190,7 @@ void Player_Fps::Update(double elapsed_time)
 	// Update Model Animation
 	if (m_Model && m_Animator)
 	{
-		int animIndex = 0;
-		switch (m_StateMachine->GetPlayerState())
-		{
-			case PlayerState::IDLE:
-				m_StateMachine->SetAimState(AimState::HIP);
-				m_StateMachine->SetActionState(ActionState::NONE);
-				animIndex = 0;
-				break;
-			case PlayerState::WALKING:
-				animIndex = 1;
-				break;
-			case PlayerState::RUNNING:
-				animIndex = 2;
-			break;
-		}
-		if (m_Animator->GetCurrentAnimationIndex() != animIndex)
-		{
-			m_Animator->PlayCrossFade(animIndex, true, 0.2); // Enable cross fade
-		}
-		m_Animator->Update(elapsed_time);
+		m_StateMachine->Update(elapsed_time, m_Animator);
 	}
 
 }
@@ -283,4 +286,49 @@ DirectX::XMFLOAT3 Player_Fps::GetEyePosition() const
 	// I'll stick to 0.85f to match the previous ~1.7f approximation (2.0 * 0.85 = 1.7).
 	eyePos.y = m_Position.y + (m_Height * 0.85f);
 	return eyePos;
+}
+
+std::string Player_Fps::GetPlayerState() const
+{
+	switch (m_StateMachine->GetPlayerState())
+	{
+	case PlayerState::IDLE:
+		return "IDLE";
+	case PlayerState::WALKING:
+		return "WALKING";
+	case PlayerState::RUNNING:
+		return "RUNNING";
+	default:
+		return "UNKNOWN";
+	}
+}
+
+std::string Player_Fps::GetWeaponState() const
+{
+	switch (m_StateMachine->GetWeaponState())
+	{
+	case WeaponState::HIP:
+		return "HIP";
+	case WeaponState::ADS_IN:
+		return "ADS_IN";
+	case WeaponState::ADS:
+		return "ADS";
+	case WeaponState::ADS_OUT:
+		return "ADS_OUT";
+	default:
+		return "UNKNOWN";
+	}
+}
+
+std::string Player_Fps::GetCurrentAniName() const
+{
+	if (m_Model && m_Animator)
+	{
+		int aniIndex = m_Animator->GetCurrentAnimationIndex();
+		if (aniIndex >= 0 && aniIndex < static_cast<int>(m_Model->Animations.size()))
+		{
+			return m_Model->Animations[aniIndex].name;
+		}
+	}
+	return "No Animation";
 }

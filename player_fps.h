@@ -2,6 +2,7 @@
 #include <DirectXMath.h>
 #include "collision.h"
 #include "model_ani.h"
+#include "mouse.h"
 #include "player_state_mechine.h"
 
 class Player_Fps
@@ -12,7 +13,7 @@ public:
 
 	void Initialize(const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3& front);
 	void Finalize();
-	void Update(double elapsed_time);
+	void Update(double elapsed_time , const Mouse_State& ms);
 	void Draw();
 
 	const DirectX::XMFLOAT3& GetPosition() const;
@@ -26,18 +27,19 @@ public:
 	
 	DirectX::XMFLOAT3 GetEyePosition() const;
 
+	std::string GetPlayerState() const;
+	std::string GetWeaponState() const;
+	std::string GetCurrentAniName() const;
+
 private:
 	DirectX::XMFLOAT3 m_Position;
 	DirectX::XMFLOAT3 m_Velocity;
 	DirectX::XMFLOAT3 m_ModelFront;
 	DirectX::XMFLOAT3 m_MoveDir;
 	DirectX::XMFLOAT3 m_CamRelativePos;
-	
 	float m_Height;
 	bool m_isJump;
-
 	MODEL_ANI* m_Model;
 	Animator* m_Animator;
-
 	PlayerStateMachine* m_StateMachine;
 };

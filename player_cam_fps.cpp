@@ -8,6 +8,9 @@
 #include "mouse.h"
 #include "shader_3d_ani.h"
 #include <algorithm>
+#include <iomanip>
+#include <ostream>
+#include <sstream>
 
 using namespace DirectX;
 
@@ -22,6 +25,7 @@ namespace
 
 	XMFLOAT4X4 g_ViewMatrix{};
 	XMFLOAT4X4 g_ProjectionMatrix{};
+	hal::DebugText* g_DebugText = nullptr;
 
 	// Mouse sensitivity
 	constexpr float SENSITIVITY = 0.002f;
@@ -32,6 +36,17 @@ void PlayerCamFps_Initialize()
 	g_cameraYaw = 0.0f;
 	g_cameraPitch = 0.0f;
 	g_CameraFront = { 0.0f, 0.0f, 1.0f };
+#if defined(_DEBUG) || defined(DEBUG)
+
+	g_DebugText = new hal::DebugText(Direct3D_GetDevice(), Direct3D_GetDeviceContext(),
+		L"resource/texture/consolab_ascii_512.png",
+		Direct3D_GetBackBufferWidth(), Direct3D_GetBackBufferHeight(),
+		0.0f, 900,
+		0, 0,
+		0.0f, 16.0f
+	);
+
+#endif // _DEBUG || DEBUG
 }
 
 void PlayerCamFps_Finalize()
@@ -121,11 +136,8 @@ void PlayerCamFps_Update(double elapsed_time)
 	XMStoreFloat4x4(&g_ProjectionMatrix, projection);
 }
 
-void PlayerCamFps_Update(double elapsed_time, const DirectX::XMFLOAT3& position)
+void PlayerCamFps_Update(double elapsed_time, const DirectX::XMFLOAT3& position,const Mouse_State& ms)
 {
-	// 1. Update Rotation from Mouse
-	Mouse_State ms;
-	Mouse_GetState(&ms);
 
 	Mouse_SetMode(MOUSE_POSITION_MODE_RELATIVE);
 
@@ -241,4 +253,20 @@ const DirectX::XMFLOAT4X4& PlayerCamFps_GetViewMatrix()
 const DirectX::XMFLOAT4X4& PlayerCamFps_GetProjectMatrix()
 {
 	return g_ProjectionMatrix;
+}
+
+void PlayerCamFps_Debug(const Player_Fps& pf)
+{
+#if defined(_DEBUG) || defined(DEBUG)
+
+	std::stringstream ss;
+	ss << "PlayerState: " << pf.GetPlayerState() << "\n";
+	ss << "WeaponState: " << pf.GetWeaponState() << "\n";
+	ss << "CurrentAnimation: " << pf.GetCurrentAniName() << "\n";
+
+	g_DebugText->SetText(ss.str().c_str());
+	g_DebugText->Draw();
+	g_DebugText->Clear();
+
+#endif
 }

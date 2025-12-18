@@ -53,22 +53,25 @@ void Game_Initialize()
 void Game_Update(double elapsed_time)
 {
 	//ModelAni_Update(g_pModel0, elapsed_time);
-	
+		// 1. Update Rotation from Mouse
+	Mouse_State ms;
+	Mouse_GetState(&ms);
+
 
 	if (KeyLogger_IsTrigger(KK_C)) {
 		isDebugCam = !isDebugCam;
 	}
 
-	g_PlayerFps->Update(elapsed_time);
+	g_PlayerFps->Update(elapsed_time,ms);
 
 	if (isDebugCam)
 	{
 		PlayerCamTps_Update_Maya(elapsed_time);
 	}
 	else {
-		PlayerCamFps_Update(elapsed_time,g_PlayerFps->GetEyePosition());
+		PlayerCamFps_Update(elapsed_time,g_PlayerFps->GetEyePosition(),ms);
+		
 	}
-
 	
 
 }
@@ -86,6 +89,8 @@ void Game_Draw()
 	XMFLOAT3 cam_pos = isDebugCam ? PlayerCamTps_GetPosition() : PlayerCamFps_GetPosition();
 
 	Camera_SetMatrixToShader(view, proj);
+
+	
 
 	XMMATRIX mtxW = XMMatrixIdentity();
 
@@ -139,7 +144,7 @@ void Game_Draw()
 
 	//Cube_Draw(mtxW);
 
-
+	PlayerCamFps_Debug(*g_PlayerFps);
 
 }
 

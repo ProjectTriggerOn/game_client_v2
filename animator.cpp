@@ -147,6 +147,24 @@ void Animator::PlayCrossFade(int index, bool loop, double blendTime)
 	}
 }
 
+bool Animator::IsCurrAniFinished() const
+{
+	if (!m_Model || m_CurrentAnimationIndex == -1) return true;
+	if (m_Model->Animations.empty()) return true;
+	const Animation& animCurrent = m_Model->Animations[m_CurrentAnimationIndex];
+	if (m_Loop) return false; // 循环播放永远不算完成
+	return m_CurrentTime >= animCurrent.duration;
+}
+
+float Animator::GetCurrAniProgress() const
+{
+	if (!m_Model || m_CurrentAnimationIndex == -1) return 0.0f;
+	if (m_Model->Animations.empty()) return 0.0f;
+	const Animation& animCurrent = m_Model->Animations[m_CurrentAnimationIndex];
+	if (animCurrent.duration <= 0.0) return 0.0f;
+	return static_cast<float>(m_CurrentTime / animCurrent.duration);
+}
+
 void Animator::Update(double elapsedTime)
 {
 	if (!m_Model || m_CurrentAnimationIndex == -1) return;

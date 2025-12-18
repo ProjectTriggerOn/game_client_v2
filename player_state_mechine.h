@@ -1,6 +1,8 @@
 #pragma once
 #include <string>
 
+#include "animator.h"
+
 enum class PlayerState
 {
 	IDLE,
@@ -8,19 +10,14 @@ enum class PlayerState
 	RUNNING,
 };
 
-enum class AimState
+enum class WeaponState
 {
 	HIP,
 	ADS_IN,
 	ADS_OUT,
-	ADS_IDLE
-};
-
-enum class ActionState
-{
-	NONE,
-	FIRING,
+	ADS,
 	RELOADING,
+	RELOADING_OUT_OF_AMMO,
 	INSPECTING,
 	TAKING_OUT,
 };
@@ -30,8 +27,7 @@ class PlayerStateMachine
 
 private:
 	PlayerState m_PlayerState;
-	AimState m_AimState;
-	ActionState m_ActionState;
+	WeaponState m_WeaponState;
 	float m_AccumulatedTime;
 	float m_AnimationDuration;
 	std::string m_CurrentAnimation;
@@ -40,10 +36,8 @@ public:
 	~PlayerStateMachine() = default;
 	void SetPlayerState(PlayerState state);
 	PlayerState GetPlayerState() const;
-	void SetAimState(AimState state);
-	AimState GetAimState() const;
-	void SetActionState(ActionState state);
-	ActionState GetActionState() const;
+	void SetWeaponState(WeaponState state);
+	WeaponState GetWeaponState() const;
 
-	void Update(double elapsed_time);
+	void Update(double elapsed_time, Animator* animator);
 };

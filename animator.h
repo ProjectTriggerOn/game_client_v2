@@ -18,6 +18,8 @@ public:
 	void Play(int index, bool loop = true);
 	void PlayCrossFade(const std::string& name, bool loop = true, double blendTime = 0.2);
 	void PlayCrossFade(int index, bool loop = true, double blendTime = 0.2);
+	bool IsCurrAniFinished() const;
+	float GetCurrAniProgress() const;
 
 	// Returns the matrices to be sent to the shader
 	const std::vector<DirectX::XMFLOAT4X4>& GetFinalBoneMatrices() const;
