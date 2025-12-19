@@ -3,6 +3,7 @@
 #include <DirectXMath.h>
 #include <vector>
 #include <string>
+#include <functional>
 
 struct MODEL_ANI;
 
@@ -29,9 +30,12 @@ public:
 
 	int GetCurrentAnimationIndex() const { return m_CurrentAnimationIndex; }
 
+	using AnimationCallBack = std::function<void(const std::string&)>;
+	void SetOnAnimationCallBack(AnimationCallBack callback) { m_OnAnimationStart = callback; }
+
 private:
 	void UpdateGlobalTransforms(int boneIndex, const DirectX::XMMATRIX& parentTransform, const struct Animation& anim);
-	void GetBoneSRT(int boneIndex, const struct Animation& anim, double time, DirectX::XMVECTOR& outS, DirectX::XMVECTOR& outR, DirectX::XMVECTOR& outT) const;
+	void GetBoneSRT(int boneIndex, const Animation& anim, double time, DirectX::XMVECTOR& outS, DirectX::XMVECTOR& outR, DirectX::XMVECTOR& outT) const;
 
 private:
 	MODEL_ANI* m_Model;
@@ -50,6 +54,8 @@ private:
 	double m_BlendFactor; // 0.0 to 1.0 (0.0 = Prev, 1.0 = Curr) -- actually tracking time is better
 	double m_TransitionTime;
 	double m_TransitionDuration;
+
+	AnimationCallBack m_OnAnimationStart;
 
 	// Parallel to m_Model->Bones
 	std::vector<DirectX::XMFLOAT4X4> m_GlobalMatrices;

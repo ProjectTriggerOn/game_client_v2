@@ -183,6 +183,16 @@ void Player_Fps::Update(double elapsed_time , const Mouse_State& ms)
 		}
 	}
 
+	if (KeyLogger_IsTrigger(KK_R))
+	{
+		m_StateMachine->SetWeaponState(WeaponState::RELOADING);
+	}
+
+	if (KeyLogger_IsTrigger(KK_E))
+	{
+		m_StateMachine->SetWeaponState(WeaponState::INSPECTING);
+	}
+
 	if (XMVectorGetX(XMVector3LengthSq(moveDir)) > 0.0f) {
 
 		moveDir = XMVector3Normalize(moveDir);
@@ -354,6 +364,18 @@ std::string Player_Fps::GetWeaponState() const
 		return "ADS";
 	case WeaponState::ADS_OUT:
 		return "ADS_OUT";
+	case WeaponState::HIP_FIRING:
+		return "HIP_FIRING";
+	case WeaponState::ADS_FIRING:
+		return "ADS_FIRING";
+	case WeaponState::RELOADING:
+		return "RELOADING";
+	case WeaponState::RELOADING_OUT_OF_AMMO:
+		return "RELOADING_OUT_OF_AMMO";
+	case WeaponState::INSPECTING:
+		return "INSPECTING";
+	case WeaponState::TAKING_OUT:
+		return "TAKING_OUT";
 	default:
 		return "UNKNOWN";
 	}

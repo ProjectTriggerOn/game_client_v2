@@ -3,7 +3,7 @@
 PlayerStateMachine::PlayerStateMachine()
 {
 	m_PlayerState = PlayerState::IDLE;
-	m_WeaponState = WeaponState::HIP;
+	m_WeaponState = WeaponState::TAKING_OUT;
 	m_AccumulatedTime = 0.0f;
 	m_AnimationDuration = 0.0f;
 }
@@ -48,7 +48,16 @@ void PlayerStateMachine::Update(double elapsed_time,Animator* animator)
 		m_WeaponState = WeaponState::HIP;
 	}
 
-	if (m_WeaponState == WeaponState::RELOADING && animator->GetCurrentAnimationIndex() == 9 && animator->IsCurrAniFinished())
+	if (m_WeaponState == WeaponState::RELOADING && 
+		animator->GetCurrentAnimationIndex() == 9 && 
+		animator->GetCurrAniProgress() > 0.9f)
+	{
+		m_WeaponState = WeaponState::HIP;
+	}
+
+	if (m_WeaponState == WeaponState::TAKING_OUT &&
+		animator->GetCurrentAnimationIndex() == 12 &&
+		animator->GetCurrAniProgress() > 0.8f)
 	{
 		m_WeaponState = WeaponState::HIP;
 	}
@@ -110,6 +119,7 @@ void PlayerStateMachine::Update(double elapsed_time,Animator* animator)
 	case 2: // RUNNING
 	case 3: // HIP_FIRING
 	case 7: // ADS_FIRING
+	case 11: // INSPECTING
 	case 6: // ADS
 		isLoopAnimation = true;
 			break;
@@ -117,7 +127,6 @@ void PlayerStateMachine::Update(double elapsed_time,Animator* animator)
 	case 5: // ADS_OUT
 	case 9: // RELOADING
 	case 10: // RELOADING_OUT_OF_AMMO
-	case 11: // INSPECTING
 	case 12: // TAKING_OUT
 		isLoopAnimation = false;
 			break;
