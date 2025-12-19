@@ -1,4 +1,6 @@
 #include "game.h"
+
+#include "ball.h"
 #include "cube.h"
 #include "shader.h"
 #include "camera.h"
@@ -15,6 +17,7 @@
 #include "player_cam_tps.h"
 #include "player_cam_fps.h"
 #include "player_fps.h"
+#include "sprite.h"
 using namespace DirectX;
 
 namespace{
@@ -22,8 +25,10 @@ namespace{
 	double g_AccumulatedTime = 0.0;
 	MODEL* g_pModel = nullptr;
 	MODEL_ANI* g_pModel0 = nullptr;
+	int g_CrossHairTexId = -1;
 	bool isDebugCam = false;
 	Player_Fps* g_PlayerFps;
+	bool g_CurrentMouseLeftButton = false;
 }
 
 void Game_Initialize()
@@ -39,15 +44,18 @@ void Game_Initialize()
 	
 	//g_pModel = ModelLoad("resource/model/test.fbx", 0.1f,false);
 	g_pModel0 = ModelAni_Load("resource/model/arms002.fbx");
+	g_pModel = ModelLoad("resource/model/ball.fbx", 0.005f, false);
+	g_CrossHairTexId = Texture_LoadFromFile(L"resource/texture/arr.png");
 	//ModelAni_SetAnimation(g_pModel0, 0);
 	//g_pModel0 = ModelLoad("resource/model/(Legacy)arms_assault_rifle_01.fbx", 10.0f);
 	//Player_Initialize({ 0.0f,0.0f,0.0f }, { 0.0f,0.0f,1.0f });
 	g_PlayerFps = new Player_Fps();
-	g_PlayerFps->Initialize({ 0.0f,3.0f,0.0f }, { 0.0f,0.0f,1.0f });
+	g_PlayerFps->Initialize({ 0.0f,3.0f,-20.0f }, { 0.0f,0.0f,1.0f });
 	Camera_Initialize();
 	PlayerCamTps_Initialize();
 	PlayerCamFps_Initialize();
 	PlayerCamFps_SetInvertY(true);
+	Ball_Initialize();
 }
 
 void Game_Update(double elapsed_time)
@@ -71,6 +79,27 @@ void Game_Update(double elapsed_time)
 	else {
 		PlayerCamFps_Update(elapsed_time,g_PlayerFps->GetEyePosition(),ms);
 		
+	}
+
+	Ball_UpdateAll(elapsed_time);
+
+	if (isMouseLeftTrigger(ms)) {
+		float distance = 0.0f;
+		int hit_ball_index = -1;
+		for (int i = 0; i < 6; i++) {
+			Sphere ball_sphere = Ball_GetSphere(i);
+			Ray player_ray = { g_PlayerFps->GetEyePosition(), g_PlayerFps->GetFront() };
+			float last_distance = distance;
+			if (Collision_isHitRayOnSphere(player_ray, ball_sphere, &distance)) {
+				if (last_distance == 0.0f || distance < last_distance) {
+					hit_ball_index = i;
+				}
+			}
+		}
+		if (hit_ball_index != -1) {
+			Ball_GetBall(hit_ball_index)->Damage(1);
+			
+		}
 	}
 	
 
@@ -140,9 +169,26 @@ void Game_Draw()
 
 	MeshField_Draw(mtxW);
 
+	ModelDraw(g_pModel, mtxW * XMMatrixTranslation(0.0f, 1.0f, 0.0f));
+
 	//InfiniteGrid_Draw();
 
 	//Cube_Draw(mtxW);
+
+	Ball_DrawAll();
+
+	
+	// 获取屏幕宽高
+	float sw = (float)Direct3D_GetBackBufferWidth();
+	float sh = (float)Direct3D_GetBackBufferHeight();
+
+	// 计算居中坐标 (屏幕中心 - 图片中心)
+	float x = (sw - 120.0f) / 2.0f;
+	float y = (sh - 120.0f) / 2.0f;
+
+	// 绘制 Sprite
+	// 参数：纹理ID, x, y, width, height
+	Sprite_Draw(g_CrossHairTexId, x, y, 120.0f, 120.0f);
 
 	PlayerCamFps_Debug(*g_PlayerFps);
 
@@ -158,6 +204,18 @@ void Game_Finalize()
 	PlayerCamFps_Finalize();
 	g_PlayerFps->Finalize();
 	ModelAni_Release(g_pModel0);
+}
+
+bool isMouseLeftTrigger(const Mouse_State& ms)
+{
+	if (ms.leftButton && !g_CurrentMouseLeftButton) {
+		g_CurrentMouseLeftButton = true;
+		return true;
+	}
+	else if (!ms.leftButton) {
+		g_CurrentMouseLeftButton = false;
+	}
+	return false;
 }
 
 

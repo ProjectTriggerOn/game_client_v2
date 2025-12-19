@@ -104,6 +104,35 @@ bool Collision_OverlapSphere(const Sphere& sphere, const DirectX::XMFLOAT3& poin
 	return sphere.radius * sphere.radius > XMVectorGetX(lsq);
 }
 
+bool Collision_isHitRayOnSphere(const Ray& ray, const Sphere& sphere, float* outDistance)
+{
+	XMVECTOR rayOrigin = XMLoadFloat3(&ray.origin);
+	XMVECTOR rayDirection = XMLoadFloat3(&ray.direction);
+	XMVECTOR sphereCenter = XMLoadFloat3(&sphere.center);
+	XMVECTOR m = rayOrigin - sphereCenter;
+	float b = XMVectorGetX(XMVector3Dot(m, rayDirection));
+	float c = XMVectorGetX(XMVector3Dot(m, m)) - sphere.radius * sphere.radius;
+	// 光線起点在球外且光线远离球心
+	if (c > 0.0f && b > 0.0f) {
+		return false;
+	}
+	float discriminant = b * b - c;
+	// 判定なし
+	if (discriminant < 0.0f) {
+		return false;
+	}
+	// 衝突距离を計算
+	float t = -b - sqrtf(discriminant);
+	// 光線起点が球内部にある場合
+	if (t < 0.0f) {
+		t = 0.0f;
+	}
+	if (outDistance) {
+		*outDistance = t;
+	}
+	return true;
+}
+
 bool Collision_OverlapSphere(const Sphere& sphereA, const Sphere& sphereB)
 {
 	XMVECTOR centerA = XMLoadFloat3(&sphereA.center);

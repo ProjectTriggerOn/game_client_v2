@@ -133,19 +133,20 @@ void Cube_Finalize(void)
 	SAFE_RELEASE(g_pVertexBuffer);
 }
 
-void Cube_Draw(XMMATRIX mtxW)
+void Cube_Draw(int texID, const XMMATRIX& mtxW)
 {
+
 	// シェーダーを描画パイプラインに設定
 	Shader_3D_Begin();
 
 	Shader_3D_SetColor({ 1.0f,1.0f,1.0f,1.0f });
 
+	Texture_Set(texID);
 	// 頂点バッファを描画パイプラインに設定
 	UINT stride = sizeof(Vertex3D);
 	UINT offset = 0;
 	g_pContext->IASetVertexBuffers(0, 1, &g_pVertexBuffer, &stride, &offset);
 	g_pContext->IASetIndexBuffer(g_pIndexBuffer, DXGI_FORMAT_R16_UINT, 0);
-	Texture_Set(g_CubeTexId);
 
 	Shader_3D_SetWorldMatrix(mtxW);
 
@@ -153,7 +154,7 @@ void Cube_Draw(XMMATRIX mtxW)
 	g_pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	// ポリゴン描画命令発行
-	g_pContext->DrawIndexed(36, 0,0);
+	g_pContext->DrawIndexed(36, 0, 0);
 }
 
 

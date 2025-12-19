@@ -44,6 +44,12 @@ struct Hit
 	DirectX::XMFLOAT3 normal;
 };
 
+struct Ray
+{
+	DirectX::XMFLOAT3 origin;    // 光线起点
+	DirectX::XMFLOAT3 direction; // 光线方向（应为单位向量）
+};
+
 //2D
 bool Collision_OverlapCircleCircle(const Circle& a, const Circle& b);
 bool Collision_OverlapCircleBox(const Box& a, const Box& b);
@@ -52,6 +58,8 @@ bool Collision_OverlapCircleBox(const Box& a, const Box& b);
 bool Collision_IsOverLapAABB(const AABB& a, const AABB& b);
 Hit Collision_IsHitAABB(const AABB& a, const AABB& b);
 bool Collision_OverlapSphere(const Sphere& sphere, const DirectX::XMFLOAT3& point);
+
+bool Collision_isHitRayOnSphere(const Ray& ray, const Sphere& sphere, float* outDistance = nullptr);
 
 bool Collision_OverlapSphere(const Sphere& sphereA, const Sphere& sphereB);
 
