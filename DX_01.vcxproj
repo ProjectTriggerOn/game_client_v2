@@ -155,7 +155,6 @@
   <ItemGroup>
     <ClCompile Include="animator.cpp" />
     <ClCompile Include="Audio.cpp" />
-    <ClCompile Include="ball.cpp" />
     <ClCompile Include="camera.cpp" />
     <ClCompile Include="circle.cpp" />
     <ClCompile Include="collision.cpp" />
@@ -164,8 +163,6 @@
     <ClCompile Include="debug_text.cpp" />
     <ClCompile Include="direct3d.cpp" />
     <ClCompile Include="effect.cpp" />
-    <ClCompile Include="enemy.cpp" />
-    <ClCompile Include="enemy_normal.cpp" />
     <ClCompile Include="fade.cpp" />
     <ClCompile Include="game.cpp" />
     <ClCompile Include="game_window.cpp" />
@@ -197,6 +194,7 @@
     <ClCompile Include="sprite.cpp" />
     <ClCompile Include="sprite_anime.cpp" />
     <ClCompile Include="system_timer.cpp" />
+    <ClCompile Include="target_point.cpp" />
     <ClCompile Include="texture.cpp" />
     <ClCompile Include="title.cpp" />
     <ClCompile Include="WICTextureLoader11.cpp" />
@@ -204,7 +202,6 @@
   <ItemGroup>
     <ClInclude Include="animator.h" />
     <ClInclude Include="Audio.h" />
-    <ClInclude Include="ball.h" />
     <ClInclude Include="camera.h" />
     <ClInclude Include="circle.h" />
     <ClInclude Include="collision.h" />
@@ -213,8 +210,6 @@
     <ClInclude Include="debug_text.h" />
     <ClInclude Include="direct3d.h" />
     <ClInclude Include="effect.h" />
-    <ClInclude Include="enemy.h" />
-    <ClInclude Include="enemy_normal.h" />
     <ClInclude Include="fade.h" />
     <ClInclude Include="game.h" />
     <ClInclude Include="game_window.h" />
@@ -245,6 +240,7 @@
     <ClInclude Include="sprite.h" />
     <ClInclude Include="sprite_anime.h" />
     <ClInclude Include="system_timer.h" />
+    <ClInclude Include="target_point.h" />
     <ClInclude Include="texture.h" />
     <ClInclude Include="title.h" />
     <ClInclude Include="WICTextureLoader11.h" />

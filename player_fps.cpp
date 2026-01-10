@@ -152,13 +152,13 @@ void Player_Fps::Update(double elapsed_time , const Mouse_State& ms)
 	{
 		if (m_StateMachine->GetWeaponState() == WeaponState::ADS)
 		{
-			m_Animator->SetSpeed(5.0);
+			m_Animator->SetSpeed(1.0);
 			m_StateMachine->SetWeaponState(WeaponState::ADS_FIRING);
 
 		}
 		else if (m_StateMachine->GetWeaponState() == WeaponState::HIP)
 		{
-			m_Animator->SetSpeed(5.0);
+			m_Animator->SetSpeed(1.0);
 			m_StateMachine->SetWeaponState(WeaponState::HIP_FIRING);
 		}
 	}
@@ -286,7 +286,7 @@ void Player_Fps::Draw()
 	world.r[3] = XMVectorSetW(modelPos, 1.0f);
 
 	world = XMMatrixRotationY(XMConvertToRadians(180.0f))  * world; // Rotate 180 degrees around Y to face camera
-	world = XMMatrixTranslation(0.0f, -1.0825f, 0.0f) * world; // Adjust vertical position if needed
+	world = XMMatrixTranslation(0.0f, -1.085f, 0.0f) * world; // Adjust vertical position if needed
 
 	ModelAni_Draw(m_Model, world, m_Animator, true); // isBlender=false as we constructed the matrix manually
 }

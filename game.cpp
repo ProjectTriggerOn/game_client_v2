@@ -1,6 +1,6 @@
 #include "game.h"
 
-#include "ball.h"
+
 #include "cube.h"
 #include "shader.h"
 #include "camera.h"
@@ -18,6 +18,8 @@
 #include "player_cam_fps.h"
 #include "player_fps.h"
 #include "sprite.h"
+#include "target_point.h"
+#include "texture.h"
 using namespace DirectX;
 
 namespace{
@@ -29,6 +31,7 @@ namespace{
 	bool isDebugCam = false;
 	Player_Fps* g_PlayerFps;
 	bool g_CurrentMouseLeftButton = false;
+	PointSystem* g_pointSystem;
 }
 
 void Game_Initialize()
@@ -55,7 +58,10 @@ void Game_Initialize()
 	PlayerCamTps_Initialize();
 	PlayerCamFps_Initialize();
 	PlayerCamFps_SetInvertY(true);
-	Ball_Initialize();
+	//Ball_Initialize();
+	g_pointSystem = new PointSystem(-5,5,2,7);
+	g_pointSystem->GenerateInitialPoints(3);
+	g_pointSystem->SetModel(g_pModel);
 }
 
 void Game_Update(double elapsed_time)
@@ -81,24 +87,16 @@ void Game_Update(double elapsed_time)
 		
 	}
 
-	Ball_UpdateAll(elapsed_time);
+	//Ball_UpdateAll(elapsed_time);
 
 	if (isMouseLeftTrigger(ms)) {
-		float distance = 0.0f;
-		int hit_ball_index = -1;
-		for (int i = 0; i < 6; i++) {
-			Sphere ball_sphere = Ball_GetSphere(i);
-			Ray player_ray = { g_PlayerFps->GetEyePosition(), g_PlayerFps->GetFront() };
-			float last_distance = distance;
-			if (Collision_isHitRayOnSphere(player_ray, ball_sphere, &distance)) {
-				if (last_distance == 0.0f || distance < last_distance) {
-					hit_ball_index = i;
-				}
-			}
-		}
-		if (hit_ball_index != -1) {
-			Ball_GetBall(hit_ball_index)->Damage(1);
-			
+
+		Ray player_ray = { g_PlayerFps->GetEyePosition(), g_PlayerFps->GetFront() };
+
+		CollisionResult result = g_pointSystem->CheckCollision(player_ray);
+
+		if (result.isHit) {
+			g_pointSystem->EliminateSpecificPoint(result.hitPoint);
 		}
 	}
 	
@@ -175,7 +173,10 @@ void Game_Draw()
 
 	//Cube_Draw(mtxW);
 
-	Ball_DrawAll();
+	//Ball_DrawAll();
+
+	g_pointSystem->DrawPoints();
+
 
 	
 	// 获取屏幕宽高

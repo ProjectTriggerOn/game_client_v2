@@ -151,6 +151,9 @@
     <ClCompile Include="animator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="target_point.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="game_window.h">
@@ -280,6 +283,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="animator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="target_point.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
