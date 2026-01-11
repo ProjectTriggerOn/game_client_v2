@@ -1,5 +1,7 @@
 #pragma once
 #include <DirectXMath.h>
+
+#include "mouse.h"
 #ifndef PLAYER_CAM_TPS_H
 #define PLAYER_CAM_TPS_H
 

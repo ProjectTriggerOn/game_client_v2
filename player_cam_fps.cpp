@@ -12,6 +12,8 @@
 #include <ostream>
 #include <sstream>
 
+#include "ms_logger.h"
+
 using namespace DirectX;
 
 namespace
@@ -67,26 +69,26 @@ void PlayerCamFps_Update(double elapsed_time)
 
 	if (ms.positionMode == MOUSE_POSITION_MODE_RELATIVE)
 	{
-		dx = ms.x;
-		dy = ms.y;
+		dx = MSLogger_GetX();
+		dy = MSLogger_GetY();
 	}
 	else
 	{
-		static int lastMouseX = ms.x;
-		static int lastMouseY = ms.y;
+		static int lastMouseX = MSLogger_GetX();
+		static int lastMouseY = MSLogger_GetY();
 		static bool firstMouse = true;
 
 		if (firstMouse)
 		{
-			lastMouseX = ms.x;
-			lastMouseY = ms.y;
+			lastMouseX = MSLogger_GetX();
+			lastMouseY = MSLogger_GetY();
 			firstMouse = false;
 		}
 
-		dx = ms.x - lastMouseX;
-		dy = ms.y - lastMouseY;
-		lastMouseX = ms.x;
-		lastMouseY = ms.y;
+		dx = MSLogger_GetX() - lastMouseX;
+		dy = MSLogger_GetY() - lastMouseY;
+		lastMouseX = MSLogger_GetX();
+		lastMouseY = MSLogger_GetY();
 	}
 
 	// Apply rotation
@@ -136,7 +138,7 @@ void PlayerCamFps_Update(double elapsed_time)
 	XMStoreFloat4x4(&g_ProjectionMatrix, projection);
 }
 
-void PlayerCamFps_Update(double elapsed_time, const DirectX::XMFLOAT3& position,const Mouse_State& ms)
+void PlayerCamFps_Update(double elapsed_time, const DirectX::XMFLOAT3& position)
 {
 
 	Mouse_SetMode(MOUSE_POSITION_MODE_RELATIVE);
@@ -145,28 +147,28 @@ void PlayerCamFps_Update(double elapsed_time, const DirectX::XMFLOAT3& position,
 	int dx = 0;
 	int dy = 0;
 
-	if (ms.positionMode == MOUSE_POSITION_MODE_RELATIVE)
+	if (MSLogger_GetPositionMode() == MOUSE_POSITION_MODE_RELATIVE)
 	{
-		dx = ms.x;
-		dy = ms.y;
+		dx = MSLogger_GetX();
+		dy = MSLogger_GetY();
 	}
 	else
 	{
-		static int lastMouseX = ms.x;
-		static int lastMouseY = ms.y;
+		static int lastMouseX = MSLogger_GetX();
+		static int lastMouseY = MSLogger_GetY();
 		static bool firstMouse = true;
 
 		if (firstMouse)
 		{
-			lastMouseX = ms.x;
-			lastMouseY = ms.y;
+			lastMouseX = MSLogger_GetX();
+			lastMouseY = MSLogger_GetY();
 			firstMouse = false;
 		}
 
-		dx = ms.x - lastMouseX;
-		dy = ms.y - lastMouseY;
-		lastMouseX = ms.x;
-		lastMouseY = ms.y;
+		dx = MSLogger_GetX() - lastMouseX;
+		dy = MSLogger_GetY() - lastMouseY;
+		lastMouseX = MSLogger_GetX();
+		lastMouseY = MSLogger_GetY();
 	}
 
 	// Apply rotation

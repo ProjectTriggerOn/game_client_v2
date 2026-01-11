@@ -33,6 +33,8 @@ public:
 	using AnimationCallBack = std::function<void(const std::string&)>;
 	void SetOnAnimationCallBack(AnimationCallBack callback) { m_OnAnimationStart = callback; }
 
+	void SetSameAniOverlapAllow(bool allow) { m_SameAniOverlapAllow = allow; }
+
 private:
 	void UpdateGlobalTransforms(int boneIndex, const DirectX::XMMATRIX& parentTransform, const struct Animation& anim);
 	void GetBoneSRT(int boneIndex, const Animation& anim, double time, DirectX::XMVECTOR& outS, DirectX::XMVECTOR& outR, DirectX::XMVECTOR& outT) const;
@@ -43,7 +45,7 @@ private:
 	int m_CurrentAnimationIndex;
 	double m_CurrentTime;
 	bool m_Loop;
-	double m_Speed;
+	double m_Speed = 1.0;
 
 	// Cross Fade (Blending)
 	int m_PrevAnimationIndex;
@@ -54,6 +56,8 @@ private:
 	double m_BlendFactor; // 0.0 to 1.0 (0.0 = Prev, 1.0 = Curr) -- actually tracking time is better
 	double m_TransitionTime;
 	double m_TransitionDuration;
+
+	bool m_SameAniOverlapAllow = false;
 
 	AnimationCallBack m_OnAnimationStart;
 

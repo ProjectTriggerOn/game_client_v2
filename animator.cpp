@@ -74,7 +74,7 @@ void Animator::PlayCrossFade(int index, bool loop, double blendTime)
 	if (!m_Model) return;
 
 	// 1. 如果目标就是当前正在播的主动画，只更新循环状态，不重置
-	if (index == m_CurrentAnimationIndex)
+	if (index == m_CurrentAnimationIndex && m_SameAniOverlapAllow == false)
 	{
 		m_Loop = loop;
 		return;

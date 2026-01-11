@@ -68,37 +68,34 @@ void Game_Update(double elapsed_time)
 {
 	//ModelAni_Update(g_pModel0, elapsed_time);
 		// 1. Update Rotation from Mouse
-	Mouse_State ms;
-	Mouse_GetState(&ms);
-
 
 	if (KeyLogger_IsTrigger(KK_C)) {
 		isDebugCam = !isDebugCam;
 	}
 
-	g_PlayerFps->Update(elapsed_time,ms);
+	g_PlayerFps->Update(elapsed_time);
 
 	if (isDebugCam)
 	{
 		PlayerCamTps_Update_Maya(elapsed_time);
 	}
 	else {
-		PlayerCamFps_Update(elapsed_time,g_PlayerFps->GetEyePosition(),ms);
+		PlayerCamFps_Update(elapsed_time,g_PlayerFps->GetEyePosition());
 		
 	}
 
 	//Ball_UpdateAll(elapsed_time);
 
-	if (isMouseLeftTrigger(ms)) {
+	//if (isMouseLeftTrigger(ms)) {
 
-		Ray player_ray = { g_PlayerFps->GetEyePosition(), g_PlayerFps->GetFront() };
+	//	Ray player_ray = { g_PlayerFps->GetEyePosition(), g_PlayerFps->GetFront() };
 
-		CollisionResult result = g_pointSystem->CheckCollision(player_ray);
+	//	CollisionResult result = g_pointSystem->CheckCollision(player_ray);
 
-		if (result.isHit) {
-			g_pointSystem->EliminateSpecificPoint(result.hitPoint);
-		}
-	}
+	//	if (result.isHit) {
+	//		g_pointSystem->EliminateSpecificPoint(result.hitPoint);
+	//	}
+	//}
 	
 
 }
@@ -213,7 +210,7 @@ bool isMouseLeftTrigger(const Mouse_State& ms)
 		g_CurrentMouseLeftButton = true;
 		return true;
 	}
-	else if (!ms.leftButton) {
+	if (!ms.leftButton) {
 		g_CurrentMouseLeftButton = false;
 	}
 	return false;

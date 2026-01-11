@@ -13,7 +13,7 @@ public:
 
 	void Initialize(const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3& front);
 	void Finalize();
-	void Update(double elapsed_time , const Mouse_State& ms);
+	void Update(double elapsed_time);
 	void Draw();
 
 	const DirectX::XMFLOAT3& GetPosition() const;

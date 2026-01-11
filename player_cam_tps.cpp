@@ -7,6 +7,7 @@
 #include "shader_field.h"
 #include "shader_infinite.h"
 #include "mouse.h"
+#include "ms_logger.h"
 #include "shader_3d_ani.h"
 using namespace DirectX;
 namespace 
@@ -101,17 +102,17 @@ void PlayerCamTps_Update_Mouse(double elapsed_time)
     Mouse_GetState(&ms);
 
     // 仅按下右键时旋转摄像机
-    if (ms.rightButton) {
+    if (isButtonDown(MBT_RIGHT)) {
         // 只在"按住"时更新
         static bool dragging = false;
         if (!g_lastRightButton) { // 新按下，初始化
             dragging = true;
-            g_lastMouseX = ms.x;
-            g_lastMouseY = ms.y;
+            g_lastMouseX = MSLogger_GetX();
+            g_lastMouseY = MSLogger_GetY();
         }
         if (dragging) {
-            int dx = ms.x - g_lastMouseX;
-            int dy = ms.y - g_lastMouseY;
+            int dx = MSLogger_GetX() - g_lastMouseX;
+            int dy = MSLogger_GetY() - g_lastMouseY;
             g_cameraYaw -= dx * 0.01f; // 鼠标X控制水平角
             g_cameraPitch -= dy * 0.01f; // 鼠标Y控制俯仰角
 
@@ -121,18 +122,18 @@ void PlayerCamTps_Update_Mouse(double elapsed_time)
 			g_cameraPitch = std::min(g_cameraPitch, PITCH_MAX);
 			g_cameraPitch = std::max(g_cameraPitch, PITCH_MIN);
 
-            g_lastMouseX = ms.x;
-            g_lastMouseY = ms.y;
+            g_lastMouseX = MSLogger_GetX();
+            g_lastMouseY = MSLogger_GetY();
         }
     }
     else {
         g_lastRightButton = false;
     }
-    g_lastRightButton = ms.rightButton;
+    g_lastRightButton = isButtonDown(MBT_RIGHT);
 
     // 滚轮控制距离
-    if (ms.scrollWheelValue != 0) {
-        g_cameraDistance -= ms.scrollWheelValue * 0.001f;  // 一格缩放0.12左右
+    if (MSLogger_GetScrollWheelValue() != 0) {
+        g_cameraDistance -= MSLogger_GetScrollWheelValue() * 0.001f;  // 一格缩放0.12左右
         if (g_cameraDistance < 2.0f) g_cameraDistance = 2.0f;
         if (g_cameraDistance > 20.0f) g_cameraDistance = 20.0f;
 
@@ -183,9 +184,6 @@ void PlayerCamTps_Update_Mouse(double elapsed_time)
 // Maya风格摄像机操作
 void PlayerCamTps_Update_Maya(double elapsed_time)
 {
-    Mouse_State ms;
-    Mouse_GetState(&ms);
-
     Mouse_SetMode(MOUSE_POSITION_MODE_ABSOLUTE);
 	Mouse_SetVisible(true);
 
@@ -195,19 +193,19 @@ void PlayerCamTps_Update_Maya(double elapsed_time)
     static bool dragging = false;
     static int dragButton = 0; // 1:左, 2:中, 3:右
 
-    if (altDown && (ms.leftButton || ms.middleButton || ms.rightButton)) {
+    if (altDown && (isButtonDown(MBT_LEFT) || isButtonDown(MBT_MIDDLE) || isButtonDown(MBT_RIGHT))) {
         if (!dragging) {
             dragging = true;
-            lastX = ms.x;
-            lastY = ms.y;
-            if (ms.leftButton) dragButton = 1;
-            else if (ms.middleButton) dragButton = 2;
-            else if (ms.rightButton) dragButton = 3;
+            lastX = MSLogger_GetX();
+            lastY = MSLogger_GetY();
+            if (isButtonDown(MBT_LEFT)) dragButton = 1;
+            else if (isButtonDown(MBT_MIDDLE)) dragButton = 2;
+            else if (isButtonDown(MBT_RIGHT)) dragButton = 3;
         }
-        int dx = ms.x - lastX;
-        int dy = ms.y - lastY;
-        lastX = ms.x;
-        lastY = ms.y;
+        int dx = MSLogger_GetX() - lastX;
+        int dy = MSLogger_GetY() - lastY;
+        lastX = MSLogger_GetX();
+        lastY = MSLogger_GetY();
 
         if (dragButton == 1) {
             // Alt+左键：旋转（轨道）
@@ -247,8 +245,8 @@ void PlayerCamTps_Update_Maya(double elapsed_time)
     }
 
     // 滚轮缩放
-    if (ms.scrollWheelValue != 0) {
-        g_cameraDistance -= ms.scrollWheelValue * 0.001f;
+    if (MSLogger_GetScrollWheelValue() != 0) {
+        g_cameraDistance -= MSLogger_GetScrollWheelValue() * 0.001f;
         g_cameraDistance = std::max(2.0f, g_cameraDistance);
         g_cameraDistance = std::min(20.0f, g_cameraDistance);
         Mouse_ResetScrollWheelValue();

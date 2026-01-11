@@ -5,6 +5,7 @@
 #include "cube.h"
 #include "direct3d.h"
 #include "mouse.h"
+#include "ms_logger.h"
 #include "shader_3d_ani.h"
 
 using namespace DirectX;
@@ -64,7 +65,7 @@ void Player_Fps::Finalize()
 	}
 }
 
-void Player_Fps::Update(double elapsed_time , const Mouse_State& ms)
+void Player_Fps::Update(double elapsed_time)
 {
 	XMVECTOR position = XMLoadFloat3(&m_Position);
 	XMVECTOR velocity = XMLoadFloat3(&m_Velocity);
@@ -132,9 +133,9 @@ void Player_Fps::Update(double elapsed_time , const Mouse_State& ms)
 	//Mouse_State ms;
 	//Mouse_GetState(&ms);
 
-	bool isPressingLeft = ms.leftButton;
-	bool isPressingRight = ms.rightButton;
-
+	bool isPressingLeft = isButtonDown(MBT_LEFT);
+	bool isPressingRight = isButtonDown(MBT_RIGHT);
+	
 	if (isPressingRight && 
 		m_StateMachine->GetWeaponState() != WeaponState::ADS && 
 		m_StateMachine->GetWeaponState() != WeaponState::ADS_FIRING)
@@ -152,19 +153,18 @@ void Player_Fps::Update(double elapsed_time , const Mouse_State& ms)
 	{
 		if (m_StateMachine->GetWeaponState() == WeaponState::ADS)
 		{
-			m_Animator->SetSpeed(1.0);
+
 			m_StateMachine->SetWeaponState(WeaponState::ADS_FIRING);
 
 		}
 		else if (m_StateMachine->GetWeaponState() == WeaponState::HIP)
 		{
-			m_Animator->SetSpeed(1.0);
 			m_StateMachine->SetWeaponState(WeaponState::HIP_FIRING);
 		}
 	}
 	else
 	{
-		m_Animator->SetSpeed(1.0);
+
 		if (m_StateMachine->GetWeaponState() == WeaponState::ADS_FIRING)
 		{
 			m_StateMachine->SetWeaponState(WeaponState::ADS);
@@ -415,3 +415,5 @@ float Player_Fps::GetCurrentAniProgress() const
 	}
 	return 0.0f;
 }
+
+

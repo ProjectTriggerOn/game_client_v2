@@ -34,6 +34,7 @@
 #include "infinite_grid.h"
 #include "light.h"
 #include "mesh_field.h"
+#include "ms_logger.h"
 #include "sampler.h"
 #include "scene.h"
 #include "shader_3d_ani.h"
@@ -58,7 +59,9 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 
 	KeyLogger_Initialize();
 
-	Mouse_Initialize(hWnd);
+	//Mouse_Initialize(hWnd);
+
+	MSLogger_Initialize(hWnd);
 
 	//Mouse_SetMode(MOUSE_POSITION_MODE_ABSOLUTE);
 
@@ -162,6 +165,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 
 				//ゲームループ処理／ゲーム更新
 				KeyLogger_Update();
+				MSLogger_Update();
 
 				//Game_Update(elapsed_time);
 				Scene_Update(elapsed_time);
