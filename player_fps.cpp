@@ -129,10 +129,6 @@ void Player_Fps::Update(double elapsed_time)
 	if (KeyLogger_IsPressed(KK_A)) moveDir -= right;
 	bool tryRunning = KeyLogger_IsPressed(KK_LEFTSHIFT);
 
-
-	//Mouse_State ms;
-	//Mouse_GetState(&ms);
-
 	bool isPressingLeft = isButtonDown(MBT_LEFT);
 	bool isPressingRight = isButtonDown(MBT_RIGHT);
 	
@@ -157,10 +153,6 @@ void Player_Fps::Update(double elapsed_time)
 			m_StateMachine->SetWeaponState(WeaponState::ADS_FIRING);
 
 		}
-		else if (m_StateMachine->GetWeaponState() == WeaponState::HIP)
-		{
-			m_StateMachine->SetWeaponState(WeaponState::HIP_FIRING);
-		}
 	}
 	else
 	{
@@ -169,16 +161,26 @@ void Player_Fps::Update(double elapsed_time)
 		{
 			m_StateMachine->SetWeaponState(WeaponState::ADS);
 		}
-		else if (m_StateMachine->GetWeaponState() == WeaponState::HIP_FIRING)
-		{
-			m_StateMachine->SetWeaponState(WeaponState::HIP);
-		}
 	}
 
 	if (m_StateMachine->GetWeaponState() == WeaponState::ADS_FIRING)
 	{
 		if (m_Animator->OnCurrAniStarted())
 		{
+			m_FireCounter++;
+		}
+	}
+
+	if (MSLogger_IsTrigger(MBT_LEFT) && m_StateMachine->GetWeaponState() == WeaponState::HIP) {
+		m_StateMachine->SetWeaponState(WeaponState::HIP_FIRING);
+		m_FireCounter++;
+	}
+
+	if (m_StateMachine->GetWeaponState() == WeaponState::HIP_FIRING &&
+		m_Animator->GetCurrentAnimationIndex() == 3 &&
+		m_Animator->GetCurrAniProgress() < 0.78f) {
+		if (MSLogger_IsTrigger(MBT_LEFT)) {
+			m_Animator->SetSameAniOverlapAllow(true);
 			m_FireCounter++;
 		}
 	}

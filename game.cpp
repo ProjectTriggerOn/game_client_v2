@@ -13,6 +13,7 @@
 #include "light.h"
 #include "model.h"
 #include "model_ani.h"
+#include "ms_logger.h"
 #include "player.h"
 #include "player_cam_tps.h"
 #include "player_cam_fps.h"
@@ -86,16 +87,16 @@ void Game_Update(double elapsed_time)
 
 	//Ball_UpdateAll(elapsed_time);
 
-	//if (isMouseLeftTrigger(ms)) {
+	if (MSLogger_IsTrigger(MBT_LEFT)) {
 
-	//	Ray player_ray = { g_PlayerFps->GetEyePosition(), g_PlayerFps->GetFront() };
+		Ray player_ray = { g_PlayerFps->GetEyePosition(), g_PlayerFps->GetFront() };
 
-	//	CollisionResult result = g_pointSystem->CheckCollision(player_ray);
+		CollisionResult result = g_pointSystem->CheckCollision(player_ray);
 
-	//	if (result.isHit) {
-	//		g_pointSystem->EliminateSpecificPoint(result.hitPoint);
-	//	}
-	//}
+		if (result.isHit) {
+			g_pointSystem->EliminateSpecificPoint(result.hitPoint);
+		}
+	}
 	
 
 }

@@ -74,8 +74,47 @@ void Animator::PlayCrossFade(int index, bool loop, double blendTime)
 	if (!m_Model) return;
 
 	// 1. 如果目标就是当前正在播的主动画，只更新循环状态，不重置
-	if (index == m_CurrentAnimationIndex && m_SameAniOverlapAllow == false)
+	if (index == m_CurrentAnimationIndex)
 	{
+		// 如果允许同个动画叠加 (Self-Overlap)
+		if (m_SameAniOverlapAllow)
+		{
+			// -------------------------------------------------------------
+			// 【防卡死改进】：如果当前已经在进行 "同动画混合" (A -> A)，且混合未结束，
+			// 则忽略新的重播请求。避免在 Update 中每帧调用导致无限重置在第 0 帧。
+			// -------------------------------------------------------------
+			if (m_IsBlending && m_PrevAnimationIndex == index)
+			{
+				m_Loop = loop;
+				return;
+			}
+
+			if (blendTime > 0.0)
+			{
+				m_PrevAnimationIndex = m_CurrentAnimationIndex;
+				m_PrevTime = m_CurrentTime;
+				m_PrevLoop = m_Loop;
+
+				m_CurrentAnimationIndex = index;
+				m_CurrentTime = 0.0;
+				m_Loop = loop;
+
+				m_IsBlending = true;
+				m_TransitionDuration = blendTime - 0.1;
+				m_TransitionTime = 0.0;
+			}
+			else
+			{
+				m_CurrentTime = 0.0;
+				m_Loop = loop;
+				m_IsBlending = false;
+			}
+			
+			// Auto-consume the flag so we don't keep restarting every frame
+			m_SameAniOverlapAllow = false;
+			return;
+		}
+
 		m_Loop = loop;
 		return;
 	}

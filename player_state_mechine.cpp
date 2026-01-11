@@ -28,28 +28,28 @@ WeaponState PlayerStateMachine::GetWeaponState() const
 	return m_WeaponState;
 }
 
-void PlayerStateMachine::Update(double elapsed_time,Animator* animator)
+void PlayerStateMachine::Update(double elapsed_time, Animator* animator)
 {
 	m_AccumulatedTime += static_cast<float>(elapsed_time);
 
 	int animationIndex = -1;
 
-	if (m_WeaponState == WeaponState::ADS_IN && 
-		animator->GetCurrentAnimationIndex() == 4 && 
+	if (m_WeaponState == WeaponState::ADS_IN &&
+		animator->GetCurrentAnimationIndex() == 4 &&
 		animator->GetCurrAniProgress() > 0.3f)
 	{
 		m_WeaponState = WeaponState::ADS;
 	}
 
-	if (m_WeaponState == WeaponState::ADS_OUT && 
-		animator->GetCurrentAnimationIndex() == 5 && 
+	if (m_WeaponState == WeaponState::ADS_OUT &&
+		animator->GetCurrentAnimationIndex() == 5 &&
 		animator->GetCurrAniProgress() > 0.3f)
 	{
 		m_WeaponState = WeaponState::HIP;
 	}
 
-	if (m_WeaponState == WeaponState::RELOADING && 
-		animator->GetCurrentAnimationIndex() == 9 && 
+	if (m_WeaponState == WeaponState::RELOADING &&
+		animator->GetCurrentAnimationIndex() == 9 &&
 		animator->GetCurrAniProgress() > 0.9f)
 	{
 		m_WeaponState = WeaponState::HIP;
@@ -59,6 +59,15 @@ void PlayerStateMachine::Update(double elapsed_time,Animator* animator)
 		animator->GetCurrentAnimationIndex() == 12 &&
 		animator->GetCurrAniProgress() > 0.8f)
 	{
+		m_WeaponState = WeaponState::HIP;
+	}
+
+	if (m_WeaponState == WeaponState::HIP_FIRING &&
+		animator->GetCurrentAnimationIndex() == 3 &&
+		animator->GetCurrAniProgress() > 0.78f &&
+		animator->IsBlending() == false)
+	{
+		//animator->SetSameAniOverlapAllow(false);
 		m_WeaponState = WeaponState::HIP;
 	}
 
@@ -134,19 +143,10 @@ void PlayerStateMachine::Update(double elapsed_time,Animator* animator)
 		break;
 	}
 
-	if (animator->GetCurrentAnimationIndex() != animationIndex)
-	{
-		//if ((animator->GetCurrentAnimationIndex() == 4 && animationIndex == 6)||
-		//	(animator->GetCurrentAnimationIndex() == 5 && animationIndex == 0))
-		//{
-		//	animator->PlayCrossFade(animationIndex, isLoopAnimation, 0.0f);
-		//}
-		/*else*/
-		{
-			animator->PlayCrossFade(animationIndex, isLoopAnimation, 0.2f);
-		}
-
-	}
+	//if (animator->GetCurrentAnimationIndex() != animationIndex)
+	//{
+		animator->PlayCrossFade(animationIndex, isLoopAnimation, 0.2f);
+	//}else(animationIndex )
 	animator->Update(elapsed_time);
 }
 

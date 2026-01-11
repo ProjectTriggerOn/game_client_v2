@@ -24,6 +24,7 @@ public:
 	float GetCurrAniProgress() const;
 	double GetSpeed() const { return m_Speed; }
 	void SetSpeed(double speed) { m_Speed = speed; }
+	bool IsBlending() const { return m_IsBlending; }
 
 	// Returns the matrices to be sent to the shader
 	const std::vector<DirectX::XMFLOAT4X4>& GetFinalBoneMatrices() const;
