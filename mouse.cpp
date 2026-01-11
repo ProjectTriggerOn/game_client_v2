@@ -284,26 +284,32 @@ void Mouse_ProcessMessage(UINT message, WPARAM wParam, LPARAM lParam)
 
     case WM_LBUTTONDOWN:
         gState.leftButton = true;
+        SetCapture(gWindow);
         break;
 
     case WM_LBUTTONUP:
         gState.leftButton = false;
+        ReleaseCapture();
         break;
 
     case WM_RBUTTONDOWN:
         gState.rightButton = true;
+        SetCapture(gWindow);
         break;
 
     case WM_RBUTTONUP:
         gState.rightButton = false;
+        ReleaseCapture();
         break;
 
     case WM_MBUTTONDOWN:
         gState.middleButton = true;
+        SetCapture(gWindow);
         break;
 
     case WM_MBUTTONUP:
         gState.middleButton = false;
+        ReleaseCapture();
         break;
 
     case WM_MOUSEWHEEL:

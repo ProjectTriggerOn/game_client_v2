@@ -43,7 +43,7 @@ void PlayerCamFps_Initialize()
 	g_DebugText = new hal::DebugText(Direct3D_GetDevice(), Direct3D_GetDeviceContext(),
 		L"resource/texture/consolab_ascii_512.png",
 		Direct3D_GetBackBufferWidth(), Direct3D_GetBackBufferHeight(),
-		0.0f, 900,
+		0.0f, 700,
 		0, 0,
 		0.0f, 16.0f
 	);
@@ -141,7 +141,7 @@ void PlayerCamFps_Update(double elapsed_time)
 void PlayerCamFps_Update(double elapsed_time, const DirectX::XMFLOAT3& position)
 {
 
-	Mouse_SetMode(MOUSE_POSITION_MODE_RELATIVE);
+	//Mouse_SetMode(MOUSE_POSITION_MODE_RELATIVE);
 
 	// Calculate delta mouse movement
 	int dx = 0;
@@ -268,6 +268,7 @@ void PlayerCamFps_Debug(const Player_Fps& pf)
 	ss << "FireCounter: " << pf.GetFireCounter() << "\n";
 	ss << "AniDuration: " << std::fixed << std::setprecision(2) << pf.GetCurrentAniDuration() << "s\n";
 	ss << "AniProgress: " << std::fixed << std::setprecision(2) << pf.GetCurrentAniProgress() * 100.0f << "%\n";
+	ss << "CursorXY: " << MSLogger_GetXUI() << ", " << MSLogger_GetYUI() << "\n";
 
 	g_DebugText->SetText(ss.str().c_str());
 	g_DebugText->Draw();

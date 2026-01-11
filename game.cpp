@@ -29,6 +29,7 @@ namespace{
 	MODEL* g_pModel = nullptr;
 	MODEL_ANI* g_pModel0 = nullptr;
 	int g_CrossHairTexId = -1;
+	int g_CursorTexId = -1;
 	bool isDebugCam = false;
 	Player_Fps* g_PlayerFps;
 	bool g_CurrentMouseLeftButton = false;
@@ -50,6 +51,7 @@ void Game_Initialize()
 	g_pModel0 = ModelAni_Load("resource/model/arms002.fbx");
 	g_pModel = ModelLoad("resource/model/ball.fbx", 0.005f, false);
 	g_CrossHairTexId = Texture_LoadFromFile(L"resource/texture/arr.png");
+	g_CursorTexId = Texture_LoadFromFile(L"resource/texture/cursor.png");
 	//ModelAni_SetAnimation(g_pModel0, 0);
 	//g_pModel0 = ModelLoad("resource/model/(Legacy)arms_assault_rifle_01.fbx", 10.0f);
 	//Player_Initialize({ 0.0f,0.0f,0.0f }, { 0.0f,0.0f,1.0f });
@@ -63,12 +65,15 @@ void Game_Initialize()
 	g_pointSystem = new PointSystem(-5,5,2,7);
 	g_pointSystem->GenerateInitialPoints(3);
 	g_pointSystem->SetModel(g_pModel);
+
+	Mouse_SetMode(MOUSE_POSITION_MODE_RELATIVE);
 }
 
 void Game_Update(double elapsed_time)
 {
 	//ModelAni_Update(g_pModel0, elapsed_time);
 		// 1. Update Rotation from Mouse
+	Mouse_SetVisible(false);
 
 	if (KeyLogger_IsTrigger(KK_C)) {
 		isDebugCam = !isDebugCam;
@@ -96,6 +101,10 @@ void Game_Update(double elapsed_time)
 		if (result.isHit) {
 			g_pointSystem->EliminateSpecificPoint(result.hitPoint);
 		}
+	}
+
+	if (KeyLogger_IsTrigger(KK_U)) {
+		MSLogger_SetUIMode(!MSLogger_IsUIMode());
 	}
 	
 
@@ -187,9 +196,17 @@ void Game_Draw()
 
 	// 绘制 Sprite
 	// 参数：纹理ID, x, y, width, height
-	Sprite_Draw(g_CrossHairTexId, x, y, 120.0f, 120.0f);
+	
 
 	PlayerCamFps_Debug(*g_PlayerFps);
+
+	if (MSLogger_IsUIMode()) {
+		int mouse_x = MSLogger_GetXUI();
+		int mouse_y = MSLogger_GetYUI();
+		Sprite_Draw(g_CursorTexId, (float)mouse_x, (float)mouse_y, 32.0f, 32.0f);
+	}
+
+	Sprite_Draw(g_CrossHairTexId, x, y, 120.0f, 120.0f);
 
 }
 
@@ -205,17 +222,6 @@ void Game_Finalize()
 	ModelAni_Release(g_pModel0);
 }
 
-bool isMouseLeftTrigger(const Mouse_State& ms)
-{
-	if (ms.leftButton && !g_CurrentMouseLeftButton) {
-		g_CurrentMouseLeftButton = true;
-		return true;
-	}
-	if (!ms.leftButton) {
-		g_CurrentMouseLeftButton = false;
-	}
-	return false;
-}
 
 
 

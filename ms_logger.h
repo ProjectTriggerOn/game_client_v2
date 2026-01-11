@@ -24,7 +24,11 @@ bool MSLogger_IsReleased(MSLogger_Buttons btn);
 
 int MSLogger_GetX();
 
+int MSLogger_GetXUI();
+
 int MSLogger_GetY();
+
+int MSLogger_GetYUI();
 
 int MSLogger_GetScrollWheelValue();
 
@@ -33,6 +37,10 @@ Mouse_PositionMode MSLogger_GetPositionMode();
 bool isButtonDown(MSLogger_Buttons btn, const Mouse_State* pState);
 
 bool isButtonDown(MSLogger_Buttons btn);
+
+void MSLogger_SetUIMode(bool isUIMode);
+
+bool MSLogger_IsUIMode();
 
 
 

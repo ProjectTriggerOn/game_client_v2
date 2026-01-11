@@ -99,6 +99,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
 	case WM_CLOSE:
 		Mouse_SetMode(MOUSE_POSITION_MODE_ABSOLUTE);
+		Mouse_SetVisible(true);
 		if (MessageBox(hWnd, "exit?", "Over", MB_OKCANCEL | MB_ICONQUESTION | MB_DEFBUTTON1) == IDOK) {
 			DestroyWindow(hWnd);
 		}
