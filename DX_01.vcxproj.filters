@@ -379,9 +379,6 @@
     <Image Include="resource\texture\consolab_ascii_512.png">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="resource\texture\image.png">
-      <Filter>Resource Files</Filter>
-    </Image>
     <Image Include="resource\texture\knight.png">
       <Filter>Resource Files</Filter>
     </Image>
@@ -389,33 +386,6 @@
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="resource\texture\black.png">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="resource\texture\p1.png">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="resource\texture\bg.png">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="resource\texture\laser.png">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="resource\texture\Enemy01.png">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="resource\texture\Enemy02.png">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="resource\texture\Explosion.png">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="resource\texture\player_sprite.png">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="resource\texture\engine_flame.png">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="resource\texture\game_num_font.png">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>
