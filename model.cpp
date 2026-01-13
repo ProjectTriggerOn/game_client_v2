@@ -5,6 +5,7 @@
 #include <DirectXMath.h>
 
 #include "shader_3d.h"
+#include "shader_3d_unlit.h"
 using namespace DirectX;
 #include "WICTextureLoader11.h"
 
@@ -17,7 +18,7 @@ struct Vertex3D
 	XMFLOAT2 uv; // uv座標
 };
 
-namespace 
+namespace
 {
 	int g_TextureWhite = -1;
 	XMFLOAT3 ConvertPosition(const aiVector3D& src, bool isBlender)
@@ -37,7 +38,7 @@ namespace
 
 
 
-MODEL* ModelLoad(const char* FileName,float scale,bool isBlender)
+MODEL* ModelLoad(const char* FileName, float scale, bool isBlender)
 {
 	MODEL* model = new MODEL;
 
@@ -144,7 +145,7 @@ MODEL* ModelLoad(const char* FileName,float scale,bool isBlender)
 		CreateWICTextureFromMemory(
 			Direct3D_GetDevice(),
 			Direct3D_GetDeviceContext(),
-			(const uint8_t*) aitexture->pcData,
+			(const uint8_t*)aitexture->pcData,
 			(size_t)aitexture->mWidth,
 			&resource,
 			&texture);
@@ -185,7 +186,7 @@ MODEL* ModelLoad(const char* FileName,float scale,bool isBlender)
 		{
 			continue;
 		}
-		if (model ->Texture.count(filename.C_Str()))
+		if (model->Texture.count(filename.C_Str()))
 		{
 			continue;
 		}
@@ -258,18 +259,19 @@ void ModelDraw(MODEL* model, const DirectX::XMMATRIX& mtxW)
 	Shader_3D_SetWorldMatrix(mtxW);
 	// プリミティブトポロジ設定
 	Direct3D_GetDeviceContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	for (unsigned int m = 0;m <model->AiScene->mNumMeshes;m++)
+	for (unsigned int m = 0; m < model->AiScene->mNumMeshes; m++)
 	{
 		aiString texture;
 		aiMaterial* aiMaterial = model->AiScene->mMaterials[model->AiScene->mMeshes[m]->mMaterialIndex];
 		aiMaterial->GetTexture(aiTextureType_DIFFUSE, 0, &texture);
 
 		if (texture.length != 0)
-		//if (texture != aiString(""))
+			//if (texture != aiString(""))
 		{
 			Direct3D_GetDeviceContext()->PSSetShaderResources(0, 1, &model->Texture[texture.data]);
 			Shader_3D_SetColor({ 1.0f,1.0f,1.0f,1.0f });
-		}else
+		}
+		else
 		{
 			Texture_Set(g_TextureWhite);
 			aiColor3D diffuse;
@@ -289,8 +291,77 @@ void ModelDraw(MODEL* model, const DirectX::XMMATRIX& mtxW)
 		Direct3D_GetDeviceContext()->IASetIndexBuffer(model->IndexBuffer[m], DXGI_FORMAT_R32_UINT, 0);
 
 		Direct3D_GetDeviceContext()->DrawIndexed(
-			model->AiScene->mMeshes[m]->mNumFaces*3, 0, 0);
+			model->AiScene->mMeshes[m]->mNumFaces * 3, 0, 0);
 	}
 }
 
 
+
+
+void ModelDrawUnlit(MODEL* model, const DirectX::XMMATRIX& mtxW)
+{
+	// シェーダーを描画パイプラインに設定
+	Shader_3DUnlit_Begin();
+	// ワールド行列設定
+	Shader_3DUnlit_SetWorldMatrix(mtxW);
+	// プリミティブトポロジ設定
+	Direct3D_GetDeviceContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	for (unsigned int m = 0; m < model->AiScene->mNumMeshes; m++)
+	{
+		aiString texture;
+		aiMaterial* aiMaterial = model->AiScene->mMaterials[model->AiScene->mMeshes[m]->mMaterialIndex];
+		aiMaterial->GetTexture(aiTextureType_DIFFUSE, 0, &texture);
+
+		if (texture.length != 0)
+			//if (texture != aiString(""))
+		{
+			Direct3D_GetDeviceContext()->PSSetShaderResources(0, 1, &model->Texture[texture.data]);
+			Shader_3DUnlit_SetColor({ 1.0f,1.0f,1.0f,1.0f });
+		}
+		else
+		{
+			Texture_Set(g_TextureWhite);
+			aiColor3D diffuse;
+			aiMaterial->Get(AI_MATKEY_COLOR_DIFFUSE, diffuse);
+			Shader_3DUnlit_SetColor(XMFLOAT4(diffuse.r, diffuse.g, diffuse.b, 1.0f));
+		}
+
+		//aiMaterial* aiMaterial = model->AiScene->mMaterials[model->AiScene->mMeshes[m]->mMaterialIndex];
+		aiColor3D diffuse;
+		aiMaterial->Get(AI_MATKEY_COLOR_DIFFUSE, diffuse);
+		Shader_3DUnlit_SetColor(XMFLOAT4(diffuse.r, diffuse.g, diffuse.b, 1.0f));
+
+		// 頂点バッファを描画パイプラインに設定
+		UINT stride = sizeof(Vertex3D);
+		UINT offset = 0;
+		Direct3D_GetDeviceContext()->IASetVertexBuffers(0, 1, &model->VertexBuffer[m], &stride, &offset);
+		Direct3D_GetDeviceContext()->IASetIndexBuffer(model->IndexBuffer[m], DXGI_FORMAT_R32_UINT, 0);
+
+		Direct3D_GetDeviceContext()->DrawIndexed(
+			model->AiScene->mMeshes[m]->mNumFaces * 3, 0, 0);
+	}
+}
+
+AABB ModelGetAABB(MODEL* model, const DirectX::XMFLOAT3& position)
+{
+	AABB aabb;
+	aiVector3D min = model->AiScene->mMeshes[0]->mAABB.mMin;
+	aiVector3D max = model->AiScene->mMeshes[0]->mAABB.mMax;
+	for (unsigned int m = 1; m < model->AiScene->mNumMeshes; m++)
+	{
+		aiMesh* mesh = model->AiScene->mMeshes[m];
+		if (min.x > mesh->mAABB.mMin.x) min.x = mesh->mAABB.mMin.x;
+		if (min.y > mesh->mAABB.mMin.y) min.y = mesh->mAABB.mMin.y;
+		if (min.z > mesh->mAABB.mMin.z) min.z = mesh->mAABB.mMin.z;
+		if (max.x < mesh->mAABB.mMax.x) max.x = mesh->mAABB.mMax.x;
+		if (max.y < mesh->mAABB.mMax.y) max.y = mesh->mAABB.mMax.y;
+		if (max.z < mesh->mAABB.mMax.z) max.z = mesh->mAABB.mMax.z;
+	}
+	aabb.min.x = min.x + position.x;
+	aabb.min.y = min.y + position.y;
+	aabb.min.z = min.z + position.z;
+	aabb.max.x = max.x + position.x;
+	aabb.max.y = max.y + position.y;
+	aabb.max.z = max.z + position.z;
+	return aabb;
+}

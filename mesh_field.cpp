@@ -19,8 +19,8 @@ struct Vertex3D
 namespace 
 {
 	constexpr float FIELD_MESH_SIZE = 1.0f; // メッシュの1マスの大きさ
-	constexpr int FIELD_MESH_H_COUNT = 50; // 横方向の分割数
-	constexpr int FIELD_MESH_V_COUNT = 50; // 縦方向の分割数
+	constexpr int FIELD_MESH_H_COUNT = 256; // 横方向の分割数
+	constexpr int FIELD_MESH_V_COUNT = 256; // 縦方向の分割数
 	constexpr int FIELD_MESH_H_VERTEX_COUNT = FIELD_MESH_H_COUNT + 1;// 横方向の頂点数
 	constexpr int FIELD_MESH_V_VERTEX_COUNT = FIELD_MESH_V_COUNT + 1;// 縦方向の頂点数
 

@@ -5,6 +5,7 @@
 #include "shader.h"
 #include "camera.h"
 #include "direct3d.h"
+#include "font.h"
 #include "infinite_grid.h"
 #include "keyboard.h"
 #include "key_logger.h"
@@ -18,9 +19,12 @@
 #include "player_cam_tps.h"
 #include "player_cam_fps.h"
 #include "player_fps.h"
+#include "sky_dome.h"
 #include "sprite.h"
+#include "stage_UI.h"
 #include "target_point.h"
 #include "texture.h"
+#include "title_UI.h"
 using namespace DirectX;
 
 namespace{
@@ -32,6 +36,8 @@ namespace{
 	int g_CursorTexId = -1;
 	bool isDebugCam = false;
 	Player_Fps* g_PlayerFps;
+	StageUI* g_StageUI;
+	TitleUI* g_TitleUI;
 	bool g_CurrentMouseLeftButton = false;
 	PointSystem* g_pointSystem;
 }
@@ -55,8 +61,19 @@ void Game_Initialize()
 	//ModelAni_SetAnimation(g_pModel0, 0);
 	//g_pModel0 = ModelLoad("resource/model/(Legacy)arms_assault_rifle_01.fbx", 10.0f);
 	//Player_Initialize({ 0.0f,0.0f,0.0f }, { 0.0f,0.0f,1.0f });
+	Font_Initialize();
+	SkyDome_Initialize();
 	g_PlayerFps = new Player_Fps();
 	g_PlayerFps->Initialize({ 0.0f,3.0f,-20.0f }, { 0.0f,0.0f,1.0f });
+
+	g_StageUI = new StageUI();
+	g_TitleUI = new TitleUI();
+
+	g_StageUI->Initialize();
+	g_StageUI->StartTimer();
+
+	g_TitleUI->Initialize();
+
 	Camera_Initialize();
 	PlayerCamTps_Initialize();
 	PlayerCamFps_Initialize();
@@ -80,6 +97,7 @@ void Game_Update(double elapsed_time)
 	}
 
 	g_PlayerFps->Update(elapsed_time);
+	SkyDome_SetPosition(g_PlayerFps->GetPosition());
 
 	if (isDebugCam)
 	{
@@ -106,7 +124,9 @@ void Game_Update(double elapsed_time)
 	if (KeyLogger_IsTrigger(KK_U)) {
 		MSLogger_SetUIMode(!MSLogger_IsUIMode());
 	}
-	
+
+	g_StageUI->UpdateAccuracy(g_PlayerFps->GetFireCounter(), g_pointSystem->GetHitCount());
+	g_StageUI->Update(elapsed_time);
 
 }
 
@@ -164,41 +184,32 @@ void Game_Draw()
 	XMFLOAT3(0,0,0)
 	};
 
-	g_PlayerFps->Draw();
-
-	//Light_SetPointLightByList(whiteList);
-
 	Light_SetSpecularWorld(cam_pos, 4.0f, { 0.3f,0.3f,0.3f,1.0f });
 
-	//ModelDraw(g_pModel, mtxW);
+	SkyDome_Draw();
+
+	g_PlayerFps->Draw();
 
 	MeshField_Draw(mtxW);
 
-	ModelDraw(g_pModel, mtxW * XMMatrixTranslation(0.0f, 1.0f, 0.0f));
-
-	//InfiniteGrid_Draw();
-
-	//Cube_Draw(mtxW);
-
-	//Ball_DrawAll();
 
 	g_pointSystem->DrawPoints();
 
-
-	
-	// 获取屏幕宽高
 	float sw = (float)Direct3D_GetBackBufferWidth();
 	float sh = (float)Direct3D_GetBackBufferHeight();
 
-	// 计算居中坐标 (屏幕中心 - 图片中心)
 	float x = (sw - 120.0f) / 2.0f;
 	float y = (sh - 120.0f) / 2.0f;
 
-	// 绘制 Sprite
-	// 参数：纹理ID, x, y, width, height
-	
-
 	PlayerCamFps_Debug(*g_PlayerFps);
+
+	Direct3D_SetDepthEnable(false);
+
+	Sprite_Draw(g_CrossHairTexId, x, y, 120.0f, 120.0f);
+
+	g_StageUI->Draw();
+
+	g_TitleUI->Draw();
 
 	if (MSLogger_IsUIMode()) {
 		int mouse_x = MSLogger_GetXUI();
@@ -206,8 +217,7 @@ void Game_Draw()
 		Sprite_Draw(g_CursorTexId, (float)mouse_x, (float)mouse_y, 32.0f, 32.0f);
 	}
 
-	Sprite_Draw(g_CrossHairTexId, x, y, 120.0f, 120.0f);
-
+	Direct3D_SetDepthEnable(true);
 }
 
 void Game_Finalize()

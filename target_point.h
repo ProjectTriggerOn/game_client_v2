@@ -30,6 +30,7 @@ private:
     std::vector<Point> activePoints;
     std::mt19937 rng;
     MODEL* m_pModel = nullptr;
+	int m_HitCount = 0;
 
 public:
     PointSystem(int xMin, int xMax, int yMin, int yMax)
@@ -55,6 +56,7 @@ public:
 
 	void SetModel(MODEL* pModel) { m_pModel = pModel; }
     void DrawPoints() const;
+	int GetHitCount() const { return m_HitCount; }
  
     // 获取当前的某个点用于测试
     Point GetAnyActivePoint() const {

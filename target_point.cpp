@@ -46,6 +46,7 @@ bool PointSystem::EliminateSpecificPointByCoord(int targetX, int targetY)
         }
     }
 
+	m_HitCount++;
     return true;
 }
 

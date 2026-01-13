@@ -38,6 +38,7 @@
 #include "sampler.h"
 #include "scene.h"
 #include "shader_3d_ani.h"
+#include "shader_3d_unlit.h"
 #include "shader_field.h"
 #include "shader_infinite.h"
 
@@ -74,6 +75,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 	Shader_InfiniteGrid_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
 
 	Shader_3D_Ani_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
+
+	Shader_3DUnlit_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
 
 	Light_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
 
@@ -226,6 +229,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 	Shader_3D_Finalize();
 
 	Shader_InfiniteGrid_Finalize();
+
+	Shader_3DUnlit_Finalize();
 
 	Light_Finalize();
 

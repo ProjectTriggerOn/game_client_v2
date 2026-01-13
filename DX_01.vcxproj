@@ -164,6 +164,7 @@
     <ClCompile Include="direct3d.cpp" />
     <ClCompile Include="effect.cpp" />
     <ClCompile Include="fade.cpp" />
+    <ClCompile Include="font.cpp" />
     <ClCompile Include="game.cpp" />
     <ClCompile Include="game_window.cpp" />
     <ClCompile Include="grid.cpp" />
@@ -190,14 +191,18 @@
     <ClCompile Include="shader.cpp" />
     <ClCompile Include="shader_3d.cpp" />
     <ClCompile Include="shader_3d_ani.cpp" />
+    <ClCompile Include="shader_3d_unlit.cpp" />
     <ClCompile Include="shader_field.cpp" />
     <ClCompile Include="shader_infinite.cpp" />
+    <ClCompile Include="sky_dome.cpp" />
     <ClCompile Include="sprite.cpp" />
     <ClCompile Include="sprite_anime.cpp" />
+    <ClCompile Include="stage_UI.cpp" />
     <ClCompile Include="system_timer.cpp" />
     <ClCompile Include="target_point.cpp" />
     <ClCompile Include="texture.cpp" />
     <ClCompile Include="title.cpp" />
+    <ClCompile Include="title_UI.cpp" />
     <ClCompile Include="WICTextureLoader11.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -212,6 +217,7 @@
     <ClInclude Include="direct3d.h" />
     <ClInclude Include="effect.h" />
     <ClInclude Include="fade.h" />
+    <ClInclude Include="font.h" />
     <ClInclude Include="game.h" />
     <ClInclude Include="game_window.h" />
     <ClInclude Include="grid.h" />
@@ -237,14 +243,18 @@
     <ClInclude Include="shader.h" />
     <ClInclude Include="shader_3d.h" />
     <ClInclude Include="shader_3d_ani.h" />
+    <ClInclude Include="shader_3d_unlit.h" />
     <ClInclude Include="shader_field.h" />
     <ClInclude Include="shader_infinite.h" />
+    <ClInclude Include="sky_dome.h" />
     <ClInclude Include="sprite.h" />
     <ClInclude Include="sprite_anime.h" />
+    <ClInclude Include="stage_UI.h" />
     <ClInclude Include="system_timer.h" />
     <ClInclude Include="target_point.h" />
     <ClInclude Include="texture.h" />
     <ClInclude Include="title.h" />
+    <ClInclude Include="title_UI.h" />
     <ClInclude Include="WICTextureLoader11.h" />
   </ItemGroup>
   <ItemGroup>
@@ -278,6 +288,7 @@
       <DisableOptimizations Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</DisableOptimizations>
       <EnableDebuggingInformation Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</EnableDebuggingInformation>
     </FxCompile>
+    <FxCompile Include="shader_pixel_3dunlit.hlsl" />
     <FxCompile Include="shader_pixel_field.hlsl" />
     <FxCompile Include="shader_vertex_2d.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
@@ -288,6 +299,9 @@
     <FxCompile Include="shader_vertex_3d.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+    </FxCompile>
+    <FxCompile Include="shader_vertex_3dunlit.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
     </FxCompile>
     <FxCompile Include="shader_vertex_3d_ani.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
@@ -310,6 +324,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="ascii_texture_generator.py" />
+    <None Include="resource\model\sky.fbx" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="resource\texture\bg.png" />
