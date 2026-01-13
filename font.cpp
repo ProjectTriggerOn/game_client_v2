@@ -127,6 +127,39 @@ void Font_Draw(const wchar_t* text, float dx, float dy, const DirectX::XMFLOAT4&
 	}
 }
 
+void Font_Draw(const wchar_t* text, float dx, float dy, const DirectX::XMFLOAT4& color, float scale)
+{
+	if (g_FontTextureID < 0 || g_CharMap.empty()) return;
+
+	float cursorX = dx;
+	float cursorY = dy;
+
+	for (int i = 0; text[i] != L'\0'; ++i)
+	{
+		wchar_t c = text[i];
+		if (c == L'\n') {
+			cursorX = dx;
+			cursorY += 48.0f;
+			continue;
+		}
+
+		auto it = g_CharMap.find(c);
+		if (it == g_CharMap.end()) {
+			cursorX += 16;
+			continue;
+		}
+
+		const CharInfo& info = it->second;
+		float finalX = cursorX + info.xoffset;
+		float finalY = cursorY + info.yoffset;
+
+		Sprite_Draw(g_FontTextureID, finalX, finalY, (float)info.srcW * scale, (float)info.srcH * scale,
+			info.srcX, info.srcY, info.srcW, info.srcH, color);
+
+		cursorX += info.xadvance;
+	}
+}
+
 void Font_DrawWrapped(const wchar_t* text, float dx, float dy, float maxWidth, const DirectX::XMFLOAT4& color)
 {
 	if (g_FontTextureID < 0 || g_CharMap.empty()) return;

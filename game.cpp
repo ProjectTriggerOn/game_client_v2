@@ -98,7 +98,7 @@ void Game_Update(double elapsed_time)
 		// 1. Update Rotation from Mouse
 	Mouse_SetVisible(false);
 
-	if (g_GameState == READY && g_PlayerFps->GetFireCounter() == 2) {
+	if (g_GameState == READY && MSLogger_IsPressed(MBT_LEFT)) {
 		Game_SetState(COUNTDOWN);
 	}
 
@@ -131,7 +131,7 @@ void Game_Update(double elapsed_time)
 
 	//Ball_UpdateAll(elapsed_time);
 
-	if (MSLogger_IsTrigger(MBT_LEFT)) {
+	if (MSLogger_IsTrigger(MBT_LEFT) && g_GameState == PLAY) {
 
 		Ray player_ray = { g_PlayerFps->GetEyePosition(), g_PlayerFps->GetFront() };
 

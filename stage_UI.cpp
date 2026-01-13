@@ -63,7 +63,7 @@ void StageUI::Draw()
 	Font_Draw(accuracyText.c_str(), 1140, 50, { 1.0f,1.0f,1.0f,1.0f });
 
 	if (m_isCountdownActive) {
-		Font_Draw(countdownText.c_str(), 960, 400, { 1.0f, 0.0f, 0.0f, 1.0f });
+		Font_Draw(countdownText.c_str(), 960, 400, { 1.0f, 0.0f, 0.0f, 1.0f },3.0);
 	}
 
 }

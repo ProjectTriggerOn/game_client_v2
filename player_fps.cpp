@@ -4,6 +4,7 @@
 #include "key_logger.h"
 #include "cube.h"
 #include "direct3d.h"
+#include "game.h"
 #include "mouse.h"
 #include "ms_logger.h"
 #include "shader_3d_ani.h"
@@ -167,13 +168,17 @@ void Player_Fps::Update(double elapsed_time)
 	{
 		if (m_Animator->OnCurrAniStarted())
 		{
-			m_FireCounter++;
+			if (Game_GetState() == PLAY) {
+				m_FireCounter++;
+			}
 		}
 	}
 
 	if (MSLogger_IsTrigger(MBT_LEFT) && m_StateMachine->GetWeaponState() == WeaponState::HIP) {
 		m_StateMachine->SetWeaponState(WeaponState::HIP_FIRING);
-		m_FireCounter++;
+		if (Game_GetState() == PLAY) {
+			m_FireCounter++;
+		}
 	}
 
 	if (m_StateMachine->GetWeaponState() == WeaponState::HIP_FIRING &&

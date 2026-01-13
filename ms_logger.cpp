@@ -1,5 +1,6 @@
 #include "ms_logger.h"
 
+#include "direct3d.h"
 #include "mouse.h"
 
 
@@ -180,5 +181,6 @@ bool MSLogger_IsUIMode()
 {
 	return g_isUIMode;	
 }
+
 
 

@@ -6,6 +6,7 @@
 void Font_Initialize();
 void Font_Finalize();
 void Font_Draw(const wchar_t* text, float dx, float dy, const DirectX::XMFLOAT4& color);
+void Font_Draw(const wchar_t* text, float dx, float dy, const DirectX::XMFLOAT4& color,float scale);
 
 // --- 【新增】支持自动换行的文本绘制函数 ---
 // text: 要绘制的文本

@@ -13,12 +13,12 @@ void ResultUI::Initialize()
 	m_ExitButton.height = 50;
 	m_ExitButton.width = 200;
 	m_ExitButton.x = 1500;
-	m_ExitButton.y = 450;
+	m_ExitButton.y = 550;
 	m_ExitButton.text = L"Exit";
 	m_BackToTitle.height = 50;
 	m_BackToTitle.width = 200;
 	m_BackToTitle.x = 1500;
-	m_BackToTitle.y = 300;
+	m_BackToTitle.y = 400;
 	m_BackToTitle.text = L"Title";
 
 }
@@ -89,5 +89,11 @@ void ResultUI::Draw()
 		m_ExitButton.y + 10,
 		m_ExitButton.isActive ? activeColor : color
 	);
+
+	std::wstring pointText = L"FINAL SCORE: \n" + std::to_wstring(m_Points);
+	std::wstring accuText = L"Accuracy: \n" + std::to_wstring(static_cast<int>(m_Accuracy * 100.0f)) + L"%";
+
+	Font_Draw(pointText.c_str(), 300.0f, 300.0f, { 1.0f,1.0f,1.0f,1.0f });
+	Font_Draw(accuText.c_str(), 300.0f, 500.0f, { 1.0f,1.0f,1.0f,1.0f });
 
 }
