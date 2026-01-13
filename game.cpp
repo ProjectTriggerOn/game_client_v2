@@ -19,6 +19,7 @@
 #include "player_cam_tps.h"
 #include "player_cam_fps.h"
 #include "player_fps.h"
+#include "result.h"
 #include "sky_dome.h"
 #include "sprite.h"
 #include "stage_UI.h"
@@ -38,8 +39,9 @@ namespace{
 	Player_Fps* g_PlayerFps;
 	StageUI* g_StageUI;
 	TitleUI* g_TitleUI;
-	bool g_CurrentMouseLeftButton = false;
+	ResultUI* g_ResultUI;
 	PointSystem* g_pointSystem;
+	GameState g_GameState;
 }
 
 void Game_Initialize()
@@ -54,6 +56,8 @@ void Game_Initialize()
 	//Camera_Initialize();
 	
 	//g_pModel = ModelLoad("resource/model/test.fbx", 0.1f,false);
+	g_GameState = TITLE;
+
 	g_pModel0 = ModelAni_Load("resource/model/arms002.fbx");
 	g_pModel = ModelLoad("resource/model/ball.fbx", 0.005f, false);
 	g_CrossHairTexId = Texture_LoadFromFile(L"resource/texture/arr.png");
@@ -68,11 +72,13 @@ void Game_Initialize()
 
 	g_StageUI = new StageUI();
 	g_TitleUI = new TitleUI();
+	g_ResultUI = new ResultUI();
 
 	g_StageUI->Initialize();
-	g_StageUI->StartTimer();
+	//g_StageUI->StartTimer();
 
 	g_TitleUI->Initialize();
+	g_ResultUI->Initialize();
 
 	Camera_Initialize();
 	PlayerCamTps_Initialize();
@@ -92,6 +98,21 @@ void Game_Update(double elapsed_time)
 		// 1. Update Rotation from Mouse
 	Mouse_SetVisible(false);
 
+	if (g_GameState == READY && g_PlayerFps->GetFireCounter() == 2) {
+		Game_SetState(COUNTDOWN);
+	}
+
+	if (g_GameState == TITLE ||
+		g_GameState == PAUSE ||
+		g_GameState == SETTING ||
+		g_GameState == RESULT) {
+		MSLogger_SetUIMode(true);
+	}
+	else {
+		MSLogger_SetUIMode(false);
+	}
+
+
 	if (KeyLogger_IsTrigger(KK_C)) {
 		isDebugCam = !isDebugCam;
 	}
@@ -104,8 +125,8 @@ void Game_Update(double elapsed_time)
 		PlayerCamTps_Update_Maya(elapsed_time);
 	}
 	else {
-		PlayerCamFps_Update(elapsed_time,g_PlayerFps->GetEyePosition());
-		
+		PlayerCamFps_Update(elapsed_time, g_PlayerFps->GetEyePosition());
+
 	}
 
 	//Ball_UpdateAll(elapsed_time);
@@ -125,8 +146,19 @@ void Game_Update(double elapsed_time)
 		MSLogger_SetUIMode(!MSLogger_IsUIMode());
 	}
 
-	g_StageUI->UpdateAccuracy(g_PlayerFps->GetFireCounter(), g_pointSystem->GetHitCount());
-	g_StageUI->Update(elapsed_time);
+	if (g_GameState == TITLE) {
+
+		g_TitleUI->Update(elapsed_time);
+	}
+	if (g_GameState == PLAY || g_GameState == COUNTDOWN) {
+		g_StageUI->UpdateAccuracy(g_PlayerFps->GetFireCounter(), g_pointSystem->GetHitCount());
+		g_StageUI->Update(elapsed_time);
+	}
+
+	if (g_GameState == RESULT){
+		g_ResultUI->UpdateData(g_PlayerFps->GetFireCounter(), g_pointSystem->GetHitCount());
+	g_ResultUI->Update(elapsed_time);
+	}
 
 }
 
@@ -201,15 +233,25 @@ void Game_Draw()
 	float x = (sw - 120.0f) / 2.0f;
 	float y = (sh - 120.0f) / 2.0f;
 
+	Sprite_Draw(g_CrossHairTexId, x, y, 120.0f, 120.0f);
+
 	PlayerCamFps_Debug(*g_PlayerFps);
 
 	Direct3D_SetDepthEnable(false);
 
-	Sprite_Draw(g_CrossHairTexId, x, y, 120.0f, 120.0f);
+	
+	if (g_GameState == PLAY || g_GameState == COUNTDOWN) {
+		g_StageUI->Draw();
+	}
 
-	g_StageUI->Draw();
 
-	g_TitleUI->Draw();
+	if (g_GameState == TITLE) {
+		g_TitleUI->Draw();
+	}
+
+	if (g_GameState == RESULT) {
+		g_ResultUI->Draw();
+	}
 
 	if (MSLogger_IsUIMode()) {
 		int mouse_x = MSLogger_GetXUI();
@@ -223,13 +265,27 @@ void Game_Draw()
 void Game_Finalize()
 {
 	Camera_Finalize();
-	Light_Finalize();
-	InfiniteGrid_Finalize();
 	//Player_Finalize();
 	PlayerCamTps_Finalize();
 	PlayerCamFps_Finalize();
 	g_PlayerFps->Finalize();
 	ModelAni_Release(g_pModel0);
+}
+
+void Game_SetState(GameState state)
+{
+	g_GameState = state;
+	if (state == PLAY) {
+		g_StageUI->StartTimer();
+	}
+	if (state == COUNTDOWN) {
+		g_StageUI->StartCountdownTimer();
+	}
+}
+
+GameState Game_GetState()
+{
+	return g_GameState;
 }
 
 

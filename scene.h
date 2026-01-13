@@ -21,6 +21,8 @@ enum scene : std::uint8_t
 
 void Scene_Change(scene scene);
 
+void Restart_Game();
+
 
 
 #endif

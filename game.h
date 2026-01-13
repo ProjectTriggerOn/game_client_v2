@@ -4,6 +4,18 @@
 #define GAME_H
 #include "mouse.h"
 
+
+enum GameState
+{
+	TITLE,
+	READY,
+	COUNTDOWN,
+	PLAY,
+	PAUSE,
+	SETTING,
+	RESULT,
+};
+
 void Game_Initialize();
 
 void Game_Update(double elapsed_time);
@@ -12,7 +24,10 @@ void Game_Draw();
 
 void Game_Finalize();
 
-bool isMouseLeftTrigger(const Mouse_State& ms );
+void Game_SetState(GameState state);	
+
+GameState Game_GetState();
+
 
 
 

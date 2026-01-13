@@ -88,6 +88,21 @@ bool MSLogger_IsReleased(MSLogger_Buttons btn)
 	return isButtonDown(btn, &g_ReleaseState);
 }
 
+bool MSLogger_IsPressedUI(MSLogger_Buttons btn)
+{
+	return isButtonDown(btn, &g_UICurrentState);
+}
+
+bool MSLogger_IsTriggerUI(MSLogger_Buttons btn)
+{
+	return isButtonDown(btn, &g_UITriggerState);
+}
+
+bool MSLogger_IsReleasedUI(MSLogger_Buttons btn)
+{
+	return isButtonDown(btn, &g_UIReleaseState);
+}
+
 int MSLogger_GetX()
 {
 	return g_CurrentState.x;

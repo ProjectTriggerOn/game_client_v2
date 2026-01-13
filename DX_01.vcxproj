@@ -185,6 +185,7 @@
     <ClCompile Include="player_fps.cpp" />
     <ClCompile Include="player_state_mechine.cpp" />
     <ClCompile Include="polygon.cpp" />
+    <ClCompile Include="result.cpp" />
     <ClCompile Include="sampler.cpp" />
     <ClCompile Include="scene.cpp" />
     <ClCompile Include="score.cpp" />
@@ -237,6 +238,7 @@
     <ClInclude Include="player_fps.h" />
     <ClInclude Include="player_state_mechine.h" />
     <ClInclude Include="polygon.h" />
+    <ClInclude Include="result.h" />
     <ClInclude Include="sampler.h" />
     <ClInclude Include="scene.h" />
     <ClInclude Include="score.h" />

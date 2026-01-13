@@ -22,6 +22,12 @@ bool MSLogger_IsTrigger(MSLogger_Buttons btn);
 
 bool MSLogger_IsReleased(MSLogger_Buttons btn);
 
+bool MSLogger_IsPressedUI(MSLogger_Buttons btn);
+
+bool MSLogger_IsTriggerUI(MSLogger_Buttons btn);
+
+bool MSLogger_IsReleasedUI(MSLogger_Buttons btn);
+
 int MSLogger_GetX();
 
 int MSLogger_GetXUI();

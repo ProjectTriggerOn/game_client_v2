@@ -64,7 +64,7 @@ void PlayerStateMachine::Update(double elapsed_time, Animator* animator)
 
 	if (m_WeaponState == WeaponState::HIP_FIRING &&
 		animator->GetCurrentAnimationIndex() == 3 &&
-		animator->GetCurrAniProgress() > 0.78f &&
+		animator->GetCurrAniProgress() > 0.70f &&
 		animator->IsBlending() == false)
 	{
 		//animator->SetSameAniOverlapAllow(false);
@@ -125,14 +125,16 @@ void PlayerStateMachine::Update(double elapsed_time, Animator* animator)
 	{
 	case 0: // IDLE
 	case 1: // WALKING
+
 	case 2: // RUNNING
-	case 3: // HIP_FIRING
 	case 7: // ADS_FIRING
 	case 11: // INSPECTING
 	case 6: // ADS
 		isLoopAnimation = true;
 			break;
+
 	case 4: // ADS_IN
+	case 3: // HIP_FIRING
 	case 5: // ADS_OUT
 	case 9: // RELOADING
 	case 10: // RELOADING_OUT_OF_AMMO
@@ -145,7 +147,7 @@ void PlayerStateMachine::Update(double elapsed_time, Animator* animator)
 
 	//if (animator->GetCurrentAnimationIndex() != animationIndex)
 	//{
-		animator->PlayCrossFade(animationIndex, isLoopAnimation, 0.2f);
+		animator->PlayCrossFade(animationIndex, isLoopAnimation, 0.1f);
 	//}else(animationIndex )
 	animator->Update(elapsed_time);
 }

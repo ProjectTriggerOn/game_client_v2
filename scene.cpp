@@ -95,3 +95,9 @@ void Scene_Change(scene scene)
 {
 	g_NextScene = scene; // 現在のシーンを更新
 }
+
+void Restart_Game()
+{
+	Game_Finalize();
+	Game_Initialize();
+}

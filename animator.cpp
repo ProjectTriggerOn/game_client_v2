@@ -83,11 +83,7 @@ void Animator::PlayCrossFade(int index, bool loop, double blendTime)
 			// 【防卡死改进】：如果当前已经在进行 "同动画混合" (A -> A)，且混合未结束，
 			// 则忽略新的重播请求。避免在 Update 中每帧调用导致无限重置在第 0 帧。
 			// -------------------------------------------------------------
-			if (m_IsBlending && m_PrevAnimationIndex == index)
-			{
-				m_Loop = loop;
-				return;
-			}
+			// if (m_IsBlending && m_PrevAnimationIndex == index) ... REMOVED
 
 			if (blendTime > 0.0)
 			{
@@ -100,7 +96,7 @@ void Animator::PlayCrossFade(int index, bool loop, double blendTime)
 				m_Loop = loop;
 
 				m_IsBlending = true;
-				m_TransitionDuration = blendTime - 0.1;
+				m_TransitionDuration = blendTime;
 				m_TransitionTime = 0.0;
 			}
 			else
@@ -124,7 +120,7 @@ void Animator::PlayCrossFade(int index, bool loop, double blendTime)
 		// ---------------------------------------------------------
 		// 【核心修复】：检测是否切回了正在淡出的动画 (A -> B -> A)
 		// ---------------------------------------------------------
-		if (m_IsBlending && index == m_PrevAnimationIndex)
+		if (m_IsBlending && index == m_PrevAnimationIndex && m_PrevLoop)
 		{
 			// 此时：Prev 是 A, Curr 是 B, 进度走了 30%
 			// 目标：切回 A

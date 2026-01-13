@@ -21,6 +21,7 @@ private:
 	int m_Points;
 	int m_HitCounter;
 	bool m_isTimerActive;
+	bool m_isCountdownActive;
 	int m_frameTexId;
 };
 
