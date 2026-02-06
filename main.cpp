@@ -28,7 +28,6 @@
 #include "game.h"
 
 #include "Audio.h"
-#include "circle.h"
 #include "cube.h"
 #include "fade.h"
 #include "infinite_grid.h"
@@ -93,8 +92,6 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 	Fade_Initialize();
 
 	Scene_Initialize();
-
-	Circle_DebugInitialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
 
 	Cube_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
 
