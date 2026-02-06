@@ -177,6 +177,8 @@
     <ClCompile Include="model_ani.cpp" />
     <ClCompile Include="mouse.cpp" />
     <ClCompile Include="ms_logger.cpp" />
+    <ClCompile Include="mock_network.cpp" />
+    <ClCompile Include="mock_server.cpp" />
     <ClCompile Include="player.cpp" />
     <ClCompile Include="player_cam_fps.cpp" />
     <ClCompile Include="player_cam_tps.cpp" />
@@ -224,6 +226,9 @@
     <ClInclude Include="model_ani.h" />
     <ClInclude Include="mouse.h" />
     <ClInclude Include="ms_logger.h" />
+    <ClInclude Include="mock_network.h" />
+    <ClInclude Include="mock_server.h" />
+    <ClInclude Include="net_common.h" />
     <ClInclude Include="player.h" />
     <ClInclude Include="player_cam_fps.h" />
     <ClInclude Include="player_cam_tps.h" />

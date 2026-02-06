@@ -13,6 +13,7 @@
 #include <sstream>
 
 #include "ms_logger.h"
+#include "mock_server.h"
 
 using namespace DirectX;
 
@@ -261,7 +262,27 @@ void PlayerCamFps_Debug(const Player_Fps& pf)
 {
 #if defined(_DEBUG) || defined(DEBUG)
 
+	// Access global MockServer pointer for debug info
+	extern MockServer* g_pMockServer;
+
 	std::stringstream ss;
+	
+	// Server Info Section
+	ss << "=== Server (32Hz) ===\n";
+	if (g_pMockServer)
+	{
+		ss << "ServerTick: " << g_pMockServer->GetCurrentTick() << "\n";
+		ss << "Accumulator: " << std::fixed << std::setprecision(2) 
+		   << (g_pMockServer->GetAccumulator() * 1000.0) << "ms\n";
+		ss << "ServerTime: " << std::fixed << std::setprecision(1) 
+		   << g_pMockServer->GetServerTime() << "s\n";
+	}
+	else
+	{
+		ss << "Server: NOT INITIALIZED\n";
+	}
+	
+	ss << "\n=== Player ===\n";
 	ss << "PlayerState: " << pf.GetPlayerState() << "\n";
 	ss << "WeaponState: " << pf.GetWeaponState() << "\n";
 	ss << "CurrentAnimation: " << pf.GetCurrentAniName() << "\n";
@@ -276,3 +297,4 @@ void PlayerCamFps_Debug(const Player_Fps& pf)
 
 #endif
 }
+

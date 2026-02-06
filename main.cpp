@@ -41,9 +41,15 @@
 #include "shader_field.h"
 #include "shader_infinite.h"
 
+#include "mock_server.h"
+#include "mock_network.h"
+
 
 //Window procedure prototype claim
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+
+// Global accessor for MockServer (for debug visualization)
+MockServer* g_pMockServer = nullptr;
 
 int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _In_ int nCmdShow)
 {
@@ -92,6 +98,18 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 	Fade_Initialize();
 
 	Scene_Initialize();
+
+	// ========================================================================
+	// Initialize Mock Network Layer (Server-Authoritative Architecture)
+	// ========================================================================
+	static MockNetwork g_Network;
+	static MockServer g_Server;
+	g_Network.Initialize();
+	g_Server.Initialize(&g_Network);
+
+	// Global accessor for debug visualization
+	extern MockServer* g_pMockServer;
+	g_pMockServer = &g_Server;
 
 	Cube_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
 
@@ -169,6 +187,13 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 
 				//Game_Update(elapsed_time);
 				Scene_Update(elapsed_time);
+
+				// ====================================================================
+				// Server Tick Update (32Hz Fixed Rate via Accumulator)
+				// This runs independently of render frame rate
+				// ====================================================================
+				g_Server.Update(elapsed_time);
+
 				Fade_Update(elapsed_time);
 
 				SpriteAnime_Update(elapsed_time);
