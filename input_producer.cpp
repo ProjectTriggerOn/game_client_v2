@@ -8,6 +8,7 @@
 
 #include "input_producer.h"
 #include "mock_network.h"
+#include "mock_server.h"
 #include "key_logger.h"
 #include "ms_logger.h"
 #include "player_cam_fps.h"
@@ -23,6 +24,7 @@ InputProducer::InputProducer()
     , m_Yaw(0.0f)
     , m_Pitch(0.0f)
     , m_Buttons(InputButtons::NONE)
+    , m_JumpPending(false)
     , m_LastCmd{}
 {
 }
@@ -36,6 +38,7 @@ void InputProducer::Initialize(MockNetwork* pNetwork)
     m_Yaw = 0.0f;
     m_Pitch = 0.0f;
     m_Buttons = InputButtons::NONE;
+    m_JumpPending = false;
     m_LastCmd = {};
 }
 
@@ -63,6 +66,20 @@ void InputProducer::Update()
 
     // 3. Send to server
     m_pNetwork->SendInputCmd(m_LastCmd);
+
+    // 4. Clear sticky jump only when server confirms we're airborne
+    //    This ensures jump isn't lost due to frame/tick timing
+    extern MockServer* g_pMockServer;
+    if (m_JumpPending && g_pMockServer)
+    {
+        const NetPlayerState& state = g_pMockServer->GetPlayerState();
+        // Clear pending if server shows we're jumping (not grounded)
+        if ((state.stateFlags & NetStateFlags::IS_JUMPING) ||
+            !(state.stateFlags & NetStateFlags::IS_GROUNDED))
+        {
+            m_JumpPending = false;
+        }
+    }
 
     // Increment target tick for next frame
     // (Server will process commands in order)
@@ -104,8 +121,15 @@ void InputProducer::SampleInput()
     // ========================================================================
     m_Buttons = InputButtons::NONE;
 
+    // JUMP: Sticky - capture trigger and keep pending until consumed
     if (KeyLogger_IsTrigger(KK_SPACE))
+    {
+        m_JumpPending = true;
+    }
+    if (m_JumpPending)
+    {
         m_Buttons |= InputButtons::JUMP;
+    }
     
     if (isButtonDown(MBT_LEFT))
         m_Buttons |= InputButtons::FIRE;

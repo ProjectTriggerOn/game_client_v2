@@ -19,6 +19,7 @@ public:
 	const DirectX::XMFLOAT3& GetPosition() const;
 	const DirectX::XMFLOAT3& GetFront() const;
 	void SetPosition(const DirectX::XMFLOAT3& position);
+	void SetVelocity(const DirectX::XMFLOAT3& velocity);
 
 	AABB GetAABB() const;
 	

@@ -313,6 +313,11 @@ void Player_Fps::SetPosition(const DirectX::XMFLOAT3& position)
 	m_Position = position;
 }
 
+void Player_Fps::SetVelocity(const DirectX::XMFLOAT3& velocity)
+{
+	m_Velocity = velocity;
+}
+
 AABB Player_Fps::GetAABB() const
 {
 	return {

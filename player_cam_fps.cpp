@@ -277,6 +277,13 @@ void PlayerCamFps_Debug(const Player_Fps& pf)
 		   << (g_pMockServer->GetAccumulator() * 1000.0) << "ms\n";
 		ss << "ServerTime: " << std::fixed << std::setprecision(1) 
 		   << g_pMockServer->GetServerTime() << "s\n";
+		
+		// Server authoritative position
+		const NetPlayerState& srvState = g_pMockServer->GetPlayerState();
+		ss << "ServerPos: " << std::fixed << std::setprecision(1)
+		   << srvState.position.x << ", " 
+		   << srvState.position.y << ", " 
+		   << srvState.position.z << "\n";
 	}
 	else
 	{

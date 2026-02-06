@@ -18,6 +18,7 @@
 #include "player_cam_tps.h"
 #include "player_cam_fps.h"
 #include "player_fps.h"
+#include "mock_server.h"
 #include "sky_dome.h"
 #include "sprite.h"
 #include "texture.h"
@@ -76,6 +77,19 @@ void Game_Update(double elapsed_time)
 	}
 
 	g_PlayerFps->Update(elapsed_time);
+	
+	// ========================================================================
+	// Apply Server Authoritative Position (Phase 4)
+	// Client position now follows server - this is the core of server authority
+	// ========================================================================
+	extern MockServer* g_pMockServer;
+	if (g_pMockServer)
+	{
+		const NetPlayerState& serverState = g_pMockServer->GetPlayerState();
+		g_PlayerFps->SetPosition(serverState.position);
+		g_PlayerFps->SetVelocity(serverState.velocity);
+	}
+
 	SkyDome_SetPosition(g_PlayerFps->GetPosition());
 
 	if (isDebugCam)

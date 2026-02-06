@@ -31,9 +31,9 @@ void MockServer::Initialize(MockNetwork* pNetwork)
     m_ServerTime = 0.0;
     m_CurrentTick = 0;
 
-    // Initialize player state
+    // Initialize player state (match Player_Fps spawn in Game_Initialize)
     m_PlayerState.tickId = 0;
-    m_PlayerState.position = { 0.0f, 0.0f, 0.0f };
+    m_PlayerState.position = { 0.0f, 3.0f, -20.0f };  // Same as game.cpp
     m_PlayerState.velocity = { 0.0f, 0.0f, 0.0f };
     m_PlayerState.yaw = 0.0f;
     m_PlayerState.pitch = 0.0f;
@@ -140,36 +140,86 @@ void MockServer::ProcessInputCmd(const InputCmd& cmd)
 }
 
 //-----------------------------------------------------------------------------
-// SimulatePhysics - Server-side physics simulation
+// SimulatePhysics - Server-side authoritative physics simulation
 // 
-// This is a placeholder for Phase 3.
-// Currently just demonstrates the tick running.
-// Will be filled with actual physics from Player_Fps::Update.
+// This is the SERVER's version of Player_Fps::Update physics.
+// All movement authority is here - client only predicts.
 //-----------------------------------------------------------------------------
 void MockServer::SimulatePhysics()
 {
-    // TODO Phase 3: Move physics simulation from Player_Fps here
-    // For now, just update position based on simple input
-    // This is placeholder logic to demonstrate the tick is running
-
-    const float moveSpeed = 5.0f * static_cast<float>(TICK_DURATION);
+    const float dt = static_cast<float>(TICK_DURATION);
     
-    // Calculate movement direction from input
+    // ========================================================================
+    // JUMP - Only trigger if grounded and JUMP button pressed
+    // ========================================================================
+    bool isGrounded = (m_PlayerState.stateFlags & NetStateFlags::IS_GROUNDED) != 0;
+    
+    if ((m_LastInputCmd.buttons & InputButtons::JUMP) && isGrounded)
+    {
+        m_PlayerState.velocity.y = 15.0f;  // Jump impulse
+        m_PlayerState.stateFlags &= ~NetStateFlags::IS_GROUNDED;
+        m_PlayerState.stateFlags |= NetStateFlags::IS_JUMPING;
+    }
+    
+    // ========================================================================
+    // GRAVITY
+    // ========================================================================
+    const float gravity = 9.8f * 1.5f;  // Match Player_Fps gravity
+    m_PlayerState.velocity.y -= gravity * dt;
+    
+    // Apply vertical velocity
+    m_PlayerState.position.y += m_PlayerState.velocity.y * dt;
+    
+    // ========================================================================
+    // FLOOR COLLISION (y = 0)
+    // ========================================================================
+    if (m_PlayerState.position.y <= 0.0f)
+    {
+        m_PlayerState.position.y = 0.0f;
+        m_PlayerState.velocity.y = 0.0f;
+        m_PlayerState.stateFlags |= NetStateFlags::IS_GROUNDED;
+        m_PlayerState.stateFlags &= ~NetStateFlags::IS_JUMPING;
+    }
+    
+    // ========================================================================
+    // HORIZONTAL MOVEMENT (from InputCmd)
+    // ========================================================================
     float yaw = m_LastInputCmd.yaw;
+    
+    // Calculate forward/right vectors from yaw (flattened, no pitch)
     float frontX = sinf(yaw);
     float frontZ = cosf(yaw);
-    float rightX = frontZ;
-    float rightZ = -frontX;
-
-    // Apply movement from input axis
-    float dx = m_LastInputCmd.moveAxisX * rightX + m_LastInputCmd.moveAxisY * frontX;
-    float dz = m_LastInputCmd.moveAxisX * rightZ + m_LastInputCmd.moveAxisY * frontZ;
-
-    m_PlayerState.position.x += dx * moveSpeed;
-    m_PlayerState.position.z += dz * moveSpeed;
-
-    // Simple gravity placeholder
-    // TODO: Proper physics in Phase 3
+    float rightX = frontZ;   // cos(yaw) = perpendicular
+    float rightZ = -frontX;  // -sin(yaw) = perpendicular
+    
+    // Movement direction from input axis
+    float moveX = m_LastInputCmd.moveAxisX * rightX + m_LastInputCmd.moveAxisY * frontX;
+    float moveZ = m_LastInputCmd.moveAxisX * rightZ + m_LastInputCmd.moveAxisY * frontZ;
+    
+    // Normalize diagonal movement
+    float moveMag = sqrtf(moveX * moveX + moveZ * moveZ);
+    if (moveMag > 0.01f)
+    {
+        moveX /= moveMag;
+        moveZ /= moveMag;
+        
+        // Speed: walking = 30, running = 40 (per second)
+        float speed = (m_LastInputCmd.buttons & InputButtons::SPRINT) ? 40.0f : 30.0f;
+        
+        m_PlayerState.velocity.x += moveX * speed * dt;
+        m_PlayerState.velocity.z += moveZ * speed * dt;
+    }
+    
+    // ========================================================================
+    // FRICTION / DAMPING (horizontal only)
+    // ========================================================================
+    const float friction = 4.0f;
+    m_PlayerState.velocity.x -= m_PlayerState.velocity.x * friction * dt;
+    m_PlayerState.velocity.z -= m_PlayerState.velocity.z * friction * dt;
+    
+    // Apply horizontal velocity
+    m_PlayerState.position.x += m_PlayerState.velocity.x * dt;
+    m_PlayerState.position.z += m_PlayerState.velocity.z * dt;
 }
 
 //-----------------------------------------------------------------------------
@@ -186,3 +236,4 @@ void MockServer::BroadcastSnapshot()
 
     m_pNetwork->SendSnapshot(snapshot);
 }
+
