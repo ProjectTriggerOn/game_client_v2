@@ -28,6 +28,10 @@ void Game_SetState(GameState state);
 
 GameState Game_GetState();
 
+// Correction debug info
+const char* Game_GetCorrectionMode();
+float Game_GetCorrectionError();
+
 
 
 

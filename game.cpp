@@ -34,6 +34,10 @@ namespace{
 	bool isDebugCam = false;
 	Player_Fps* g_PlayerFps;
 	GameState g_GameState;
+	
+	// Correction state for debug display
+	const char* g_CorrectionMode = "NONE";
+	float g_CorrectionError = 0.0f;
 }
 
 void Game_Initialize()
@@ -79,15 +83,73 @@ void Game_Update(double elapsed_time)
 	g_PlayerFps->Update(elapsed_time);
 	
 	// ========================================================================
-	// Apply Server Authoritative Position (Phase 4)
-	// Client position now follows server - this is the core of server authority
+	// Position Correction Strategies (Interpolation / Extrapolation / Snap)
+	// 
+	// Three thresholds determine which correction method is used:
+	//   - SNAP_THRESHOLD: Large error -> instant teleport
+	//   - EXTRAPOLATION_THRESHOLD: Medium error -> predict ahead
+	//   - Otherwise: Small error -> smooth interpolation
 	// ========================================================================
 	extern MockServer* g_pMockServer;
 	if (g_pMockServer)
 	{
+		// Correction Parameters (可調整)
+		constexpr float SNAP_THRESHOLD = 3.0f;           // 距離 > 3.0 -> 直接傳送
+		constexpr float EXTRAPOLATION_THRESHOLD = 1.0f;  // 距離 > 1.0 -> 外插
+		constexpr float INTERPOLATION_SPEED = 15.0f;     // 內插速度 (越大越快)
+		constexpr float EXTRAPOLATION_FACTOR = 1.2f;     // 外插係數 (預測1.2倍)
+		
 		const NetPlayerState& serverState = g_pMockServer->GetPlayerState();
-		g_PlayerFps->SetPosition(serverState.position);
-		g_PlayerFps->SetVelocity(serverState.velocity);
+		DirectX::XMFLOAT3 clientPos = g_PlayerFps->GetPosition();
+		
+		// Calculate error (distance between client and server)
+		float dx = serverState.position.x - clientPos.x;
+		float dy = serverState.position.y - clientPos.y;
+		float dz = serverState.position.z - clientPos.z;
+		float errorDistance = sqrtf(dx * dx + dy * dy + dz * dz);
+		
+		// Update debug info
+		g_CorrectionError = errorDistance;
+		
+		DirectX::XMFLOAT3 correctedPos;
+		DirectX::XMFLOAT3 correctedVel = serverState.velocity;
+		
+		if (errorDistance > SNAP_THRESHOLD)
+		{
+			// ================================================================
+			// SNAP: Error too large, teleport instantly
+			// ================================================================
+			g_CorrectionMode = "SNAP";
+			correctedPos = serverState.position;
+		}
+		else if (errorDistance > EXTRAPOLATION_THRESHOLD)
+		{
+			// ================================================================
+			// EXTRAPOLATION: Predict server position ahead
+			// ================================================================
+			g_CorrectionMode = "EXTRAP";
+			float dt = static_cast<float>(elapsed_time);
+			correctedPos.x = serverState.position.x + serverState.velocity.x * EXTRAPOLATION_FACTOR * dt;
+			correctedPos.y = serverState.position.y + serverState.velocity.y * EXTRAPOLATION_FACTOR * dt;
+			correctedPos.z = serverState.position.z + serverState.velocity.z * EXTRAPOLATION_FACTOR * dt;
+		}
+		else
+		{
+			// ================================================================
+			// INTERPOLATION: Smoothly blend toward server position
+			// ================================================================
+			g_CorrectionMode = "INTERP";
+			float dt = static_cast<float>(elapsed_time);
+			float t = INTERPOLATION_SPEED * dt;
+			if (t > 1.0f) t = 1.0f;
+			
+			correctedPos.x = clientPos.x + dx * t;
+			correctedPos.y = clientPos.y + dy * t;
+			correctedPos.z = clientPos.z + dz * t;
+		}
+		
+		g_PlayerFps->SetPosition(correctedPos);
+		g_PlayerFps->SetVelocity(correctedVel);
 	}
 
 	SkyDome_SetPosition(g_PlayerFps->GetPosition());
@@ -210,7 +272,13 @@ GameState Game_GetState()
 	return g_GameState;
 }
 
+const char* Game_GetCorrectionMode()
+{
+	return g_CorrectionMode;
+}
 
-
-
+float Game_GetCorrectionError()
+{
+	return g_CorrectionError;
+}
 

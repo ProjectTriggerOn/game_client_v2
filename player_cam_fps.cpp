@@ -15,6 +15,7 @@
 #include "ms_logger.h"
 #include "mock_server.h"
 #include "input_producer.h"
+#include "game.h"
 
 using namespace DirectX;
 
@@ -289,6 +290,11 @@ void PlayerCamFps_Debug(const Player_Fps& pf)
 	{
 		ss << "Server: NOT INITIALIZED\n";
 	}
+	
+	// Correction Info
+	ss << "\n=== Correction ===\n";
+	ss << "Mode: " << Game_GetCorrectionMode() << "\n";
+	ss << "Error: " << std::fixed << std::setprecision(3) << Game_GetCorrectionError() << "m\n";
 	
 	ss << "\n=== Input (C->S) ===\n";
 	extern InputProducer* g_pInputProducer;
