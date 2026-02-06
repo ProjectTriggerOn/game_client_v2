@@ -14,6 +14,7 @@
 
 #include "ms_logger.h"
 #include "mock_server.h"
+#include "input_producer.h"
 
 using namespace DirectX;
 
@@ -282,6 +283,22 @@ void PlayerCamFps_Debug(const Player_Fps& pf)
 		ss << "Server: NOT INITIALIZED\n";
 	}
 	
+	ss << "\n=== Input (C->S) ===\n";
+	extern InputProducer* g_pInputProducer;
+	if (g_pInputProducer)
+	{
+		const InputCmd& cmd = g_pInputProducer->GetLastInputCmd();
+		ss << "MoveAxis: " << std::fixed << std::setprecision(1) 
+		   << cmd.moveAxisX << ", " << cmd.moveAxisY << "\n";
+		ss << "Buttons: ";
+		if (cmd.buttons & InputButtons::FIRE) ss << "FIRE ";
+		if (cmd.buttons & InputButtons::ADS) ss << "ADS ";
+		if (cmd.buttons & InputButtons::JUMP) ss << "JUMP ";
+		if (cmd.buttons & InputButtons::SPRINT) ss << "SPRINT ";
+		if (cmd.buttons == InputButtons::NONE) ss << "NONE";
+		ss << "\n";
+	}
+	
 	ss << "\n=== Player ===\n";
 	ss << "PlayerState: " << pf.GetPlayerState() << "\n";
 	ss << "WeaponState: " << pf.GetWeaponState() << "\n";
@@ -289,7 +306,6 @@ void PlayerCamFps_Debug(const Player_Fps& pf)
 	ss << "FireCounter: " << pf.GetFireCounter() << "\n";
 	ss << "AniDuration: " << std::fixed << std::setprecision(2) << pf.GetCurrentAniDuration() << "s\n";
 	ss << "AniProgress: " << std::fixed << std::setprecision(2) << pf.GetCurrentAniProgress() * 100.0f << "%\n";
-	ss << "CursorXY: " << MSLogger_GetXUI() << ", " << MSLogger_GetYUI() << "\n";
 
 	g_DebugText->SetText(ss.str().c_str());
 	g_DebugText->Draw();

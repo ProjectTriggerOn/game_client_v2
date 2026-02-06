@@ -43,6 +43,7 @@
 
 #include "mock_server.h"
 #include "mock_network.h"
+#include "input_producer.h"
 
 
 //Window procedure prototype claim
@@ -110,6 +111,12 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 	// Global accessor for debug visualization
 	extern MockServer* g_pMockServer;
 	g_pMockServer = &g_Server;
+
+	// Initialize Input Producer (Client-side input sampling)
+	static InputProducer g_InputProducer;
+	g_InputProducer.Initialize(&g_Network);
+	extern InputProducer* g_pInputProducer;
+	g_pInputProducer = &g_InputProducer;
 
 	Cube_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
 
@@ -187,6 +194,11 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 
 				//Game_Update(elapsed_time);
 				Scene_Update(elapsed_time);
+
+				// ====================================================================
+				// Input Producer: Sample input and send InputCmd to server
+				// ====================================================================
+				g_InputProducer.Update();
 
 				// ====================================================================
 				// Server Tick Update (32Hz Fixed Rate via Accumulator)

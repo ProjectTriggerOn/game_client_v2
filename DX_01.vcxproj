@@ -167,6 +167,7 @@
     <ClCompile Include="game_window.cpp" />
     <ClCompile Include="grid.cpp" />
     <ClCompile Include="infinite_grid.cpp" />
+    <ClCompile Include="input_producer.cpp" />
     <ClCompile Include="keyboard.cpp" />
     <ClCompile Include="key_logger.cpp" />
     <ClCompile Include="light.cpp" />
@@ -217,6 +218,7 @@
     <ClInclude Include="game_window.h" />
     <ClInclude Include="grid.h" />
     <ClInclude Include="infinite_grid.h" />
+    <ClInclude Include="input_producer.h" />
     <ClInclude Include="keyboard.h" />
     <ClInclude Include="key_logger.h" />
     <ClInclude Include="light.h" />
