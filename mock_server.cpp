@@ -142,36 +142,139 @@ void MockServer::ProcessInputCmd(const InputCmd& cmd)
 //-----------------------------------------------------------------------------
 // SimulatePhysics - Server-side authoritative physics simulation
 // 
-// This is the SERVER's version of Player_Fps::Update physics.
-// All movement authority is here - client only predicts.
+// CS:GO / Valorant Style Movement:
+//   - Ground: Snappy, instant response, no sliding
+//   - Air: Momentum preservation, limited air control
+//   - Target velocity approach instead of force accumulation
 //-----------------------------------------------------------------------------
 void MockServer::SimulatePhysics()
 {
     const float dt = static_cast<float>(TICK_DURATION);
     
     // ========================================================================
-    // JUMP - Only trigger if grounded and JUMP button pressed
+    // MOVEMENT PARAMETERS (CS:GO / Valorant style)
     // ========================================================================
+    constexpr float MAX_WALK_SPEED = 5.0f;    // Walking speed
+    constexpr float MAX_RUN_SPEED  = 8.0f;    // Sprinting speed
+    constexpr float GROUND_ACCEL   = 50.0f;   // High = snappy ground control
+    constexpr float AIR_ACCEL      = 2.0f;    // Low = limited air control
+    constexpr float GRAVITY        = 20.0f;   // Heavy, quick jumps
+    constexpr float JUMP_VELOCITY  = 8.0f;    // Jump impulse
+    
     bool isGrounded = (m_PlayerState.stateFlags & NetStateFlags::IS_GROUNDED) != 0;
     
-    if ((m_LastInputCmd.buttons & InputButtons::JUMP) && isGrounded)
+    // ========================================================================
+    // STEP 1: Calculate Target Velocity from Input
+    // ========================================================================
+    float yaw = m_LastInputCmd.yaw;
+    
+    // Forward/Right vectors from yaw (flattened)
+    float frontX = sinf(yaw);
+    float frontZ = cosf(yaw);
+    float rightX = frontZ;
+    float rightZ = -frontX;
+    
+    // Calculate move direction from input
+    float moveX = m_LastInputCmd.moveAxisX * rightX + m_LastInputCmd.moveAxisY * frontX;
+    float moveZ = m_LastInputCmd.moveAxisX * rightZ + m_LastInputCmd.moveAxisY * frontZ;
+    
+    // Normalize diagonal movement
+    float moveMag = sqrtf(moveX * moveX + moveZ * moveZ);
+    if (moveMag > 1.0f)
     {
-        m_PlayerState.velocity.y = 15.0f;  // Jump impulse
-        m_PlayerState.stateFlags &= ~NetStateFlags::IS_GROUNDED;
-        m_PlayerState.stateFlags |= NetStateFlags::IS_JUMPING;
+        moveX /= moveMag;
+        moveZ /= moveMag;
+        moveMag = 1.0f;
+    }
+    
+    // Target speed based on sprint
+    float maxSpeed = (m_LastInputCmd.buttons & InputButtons::SPRINT) ? MAX_RUN_SPEED : MAX_WALK_SPEED;
+    
+    // Target velocity = normalized direction * max speed
+    float targetVelX = moveX * maxSpeed;
+    float targetVelZ = moveZ * maxSpeed;
+    
+    // ========================================================================
+    // STEP 2: Ground vs Air Movement
+    // ========================================================================
+    if (isGrounded)
+    {
+        // ---------------------------------------------------------------------
+        // GROUND: Snappy, high acceleration, instant stop
+        // MoveTowards formula: vel = vel + clamp(target - vel, -accel*dt, accel*dt)
+        // ---------------------------------------------------------------------
+        float accelStep = GROUND_ACCEL * dt;
+        
+        // X axis
+        float diffX = targetVelX - m_PlayerState.velocity.x;
+        if (fabsf(diffX) <= accelStep)
+            m_PlayerState.velocity.x = targetVelX;
+        else
+            m_PlayerState.velocity.x += (diffX > 0 ? accelStep : -accelStep);
+        
+        // Z axis
+        float diffZ = targetVelZ - m_PlayerState.velocity.z;
+        if (fabsf(diffZ) <= accelStep)
+            m_PlayerState.velocity.z = targetVelZ;
+        else
+            m_PlayerState.velocity.z += (diffZ > 0 ? accelStep : -accelStep);
+        
+        // ---------------------------------------------------------------------
+        // JUMP - Only on ground
+        // ---------------------------------------------------------------------
+        if (m_LastInputCmd.buttons & InputButtons::JUMP)
+        {
+            m_PlayerState.velocity.y = JUMP_VELOCITY;
+            m_PlayerState.stateFlags &= ~NetStateFlags::IS_GROUNDED;
+            m_PlayerState.stateFlags |= NetStateFlags::IS_JUMPING;
+            isGrounded = false;
+        }
+    }
+    else
+    {
+        // ---------------------------------------------------------------------
+        // AIR: Preserve momentum, limited air control (air strafing)
+        // No friction applied - only slight influence from input
+        // ---------------------------------------------------------------------
+        float airStep = AIR_ACCEL * dt;
+        
+        // Only apply air control if there's input
+        if (moveMag > 0.01f)
+        {
+            // Air strafe: add small acceleration in input direction
+            m_PlayerState.velocity.x += moveX * airStep;
+            m_PlayerState.velocity.z += moveZ * airStep;
+            
+            // Cap horizontal speed to prevent infinite acceleration
+            float horizSpeed = sqrtf(m_PlayerState.velocity.x * m_PlayerState.velocity.x + 
+                                     m_PlayerState.velocity.z * m_PlayerState.velocity.z);
+            if (horizSpeed > maxSpeed * 1.2f)  // Allow slight overspeed from bunny hop
+            {
+                float scale = (maxSpeed * 1.2f) / horizSpeed;
+                m_PlayerState.velocity.x *= scale;
+                m_PlayerState.velocity.z *= scale;
+            }
+        }
+        // NO friction in air - momentum preserved
     }
     
     // ========================================================================
-    // GRAVITY
+    // STEP 3: Gravity (always applies, even briefly on ground for stability)
     // ========================================================================
-    const float gravity = 9.8f * 1.5f;  // Match Player_Fps gravity
-    m_PlayerState.velocity.y -= gravity * dt;
+    if (!isGrounded)
+    {
+        m_PlayerState.velocity.y -= GRAVITY * dt;
+    }
     
-    // Apply vertical velocity
+    // ========================================================================
+    // STEP 4: Apply velocity to position
+    // ========================================================================
+    m_PlayerState.position.x += m_PlayerState.velocity.x * dt;
+    m_PlayerState.position.z += m_PlayerState.velocity.z * dt;
     m_PlayerState.position.y += m_PlayerState.velocity.y * dt;
     
     // ========================================================================
-    // FLOOR COLLISION (y = 0)
+    // STEP 5: Floor Collision (y = 0)
     // ========================================================================
     if (m_PlayerState.position.y <= 0.0f)
     {
@@ -180,46 +283,6 @@ void MockServer::SimulatePhysics()
         m_PlayerState.stateFlags |= NetStateFlags::IS_GROUNDED;
         m_PlayerState.stateFlags &= ~NetStateFlags::IS_JUMPING;
     }
-    
-    // ========================================================================
-    // HORIZONTAL MOVEMENT (from InputCmd)
-    // ========================================================================
-    float yaw = m_LastInputCmd.yaw;
-    
-    // Calculate forward/right vectors from yaw (flattened, no pitch)
-    float frontX = sinf(yaw);
-    float frontZ = cosf(yaw);
-    float rightX = frontZ;   // cos(yaw) = perpendicular
-    float rightZ = -frontX;  // -sin(yaw) = perpendicular
-    
-    // Movement direction from input axis
-    float moveX = m_LastInputCmd.moveAxisX * rightX + m_LastInputCmd.moveAxisY * frontX;
-    float moveZ = m_LastInputCmd.moveAxisX * rightZ + m_LastInputCmd.moveAxisY * frontZ;
-    
-    // Normalize diagonal movement
-    float moveMag = sqrtf(moveX * moveX + moveZ * moveZ);
-    if (moveMag > 0.01f)
-    {
-        moveX /= moveMag;
-        moveZ /= moveMag;
-        
-        // Speed: walking = 30, running = 40 (per second)
-        float speed = (m_LastInputCmd.buttons & InputButtons::SPRINT) ? 40.0f : 30.0f;
-        
-        m_PlayerState.velocity.x += moveX * speed * dt;
-        m_PlayerState.velocity.z += moveZ * speed * dt;
-    }
-    
-    // ========================================================================
-    // FRICTION / DAMPING (horizontal only)
-    // ========================================================================
-    const float friction = 4.0f;
-    m_PlayerState.velocity.x -= m_PlayerState.velocity.x * friction * dt;
-    m_PlayerState.velocity.z -= m_PlayerState.velocity.z * friction * dt;
-    
-    // Apply horizontal velocity
-    m_PlayerState.position.x += m_PlayerState.velocity.x * dt;
-    m_PlayerState.position.z += m_PlayerState.velocity.z * dt;
 }
 
 //-----------------------------------------------------------------------------

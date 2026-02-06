@@ -68,68 +68,134 @@ void Player_Fps::Finalize()
 
 void Player_Fps::Update(double elapsed_time)
 {
-	XMVECTOR position = XMLoadFloat3(&m_Position);
-	XMVECTOR velocity = XMLoadFloat3(&m_Velocity);
-	XMVECTOR gravityVelocity = XMVectorZero();
-
-	// Jump
-	if (KeyLogger_IsTrigger(KK_SPACE) && !m_isJump)
+	const float dt = static_cast<float>(elapsed_time);
+	
+	// ========================================================================
+	// CS:GO / Valorant Style Movement Parameters (match mock_server.cpp)
+	// ========================================================================
+	constexpr float MAX_WALK_SPEED = 5.0f;
+	constexpr float MAX_RUN_SPEED  = 8.0f;
+	constexpr float GROUND_ACCEL   = 50.0f;
+	constexpr float AIR_ACCEL      = 2.0f;
+	constexpr float GRAVITY        = 20.0f;
+	constexpr float JUMP_VELOCITY  = 8.0f;
+	
+	// ========================================================================
+	// Calculate Target Velocity from Input
+	// ========================================================================
+	XMFLOAT3 camFront = PlayerCamFps_GetFront();
+	m_ModelFront = camFront;  // FPS Arms look where camera looks
+	
+	// Flatten camera front for movement
+	float frontX = camFront.x;
+	float frontZ = camFront.z;
+	float frontMag = sqrtf(frontX * frontX + frontZ * frontZ);
+	if (frontMag > 0.001f) { frontX /= frontMag; frontZ /= frontMag; }
+	
+	float rightX = frontZ;
+	float rightZ = -frontX;
+	
+	// Input direction
+	float inputX = 0.0f, inputZ = 0.0f;
+	if (KeyLogger_IsPressed(KK_W)) { inputX += frontX; inputZ += frontZ; }
+	if (KeyLogger_IsPressed(KK_S)) { inputX -= frontX; inputZ -= frontZ; }
+	if (KeyLogger_IsPressed(KK_D)) { inputX += rightX; inputZ += rightZ; }
+	if (KeyLogger_IsPressed(KK_A)) { inputX -= rightX; inputZ -= rightZ; }
+	
+	// Normalize diagonal
+	float inputMag = sqrtf(inputX * inputX + inputZ * inputZ);
+	if (inputMag > 1.0f) { inputX /= inputMag; inputZ /= inputMag; inputMag = 1.0f; }
+	
+	bool tryRunning = KeyLogger_IsPressed(KK_LEFTSHIFT);
+	float maxSpeed = tryRunning ? MAX_RUN_SPEED : MAX_WALK_SPEED;
+	
+	float targetVelX = inputX * maxSpeed;
+	float targetVelZ = inputZ * maxSpeed;
+	
+	// ========================================================================
+	// Ground vs Air Movement
+	// ========================================================================
+	if (!m_isJump)  // Grounded
 	{
-		velocity += {0.0f, 15.0f, 0.0f};
-		m_isJump = true;
-	}
-
-	// Gravity
-	XMVECTOR gravityDir = { 0.0f, -1.0f };
-	velocity += gravityDir * 9.8f * 1.5f * static_cast<float>(elapsed_time);
-
-	gravityVelocity = velocity * static_cast<float>(elapsed_time);
-	position += gravityVelocity;
-
-	XMStoreFloat3(&m_Position, position);
-
-	// Collision with Cube (Test environment)
-	AABB player = GetAABB();
-	AABB cube = Cube_GetAABB({ 3.0f, 0.5f, 2.0f });
-
-	Hit hit = Collision_IsHitAABB(cube, player);
-	if (hit.isHit)
-	{
-		if (hit.normal.y > 0.0f)
+		// GROUND: Snappy, high acceleration, instant stop
+		float accelStep = GROUND_ACCEL * dt;
+		
+		float diffX = targetVelX - m_Velocity.x;
+		if (fabsf(diffX) <= accelStep)
+			m_Velocity.x = targetVelX;
+		else
+			m_Velocity.x += (diffX > 0 ? accelStep : -accelStep);
+		
+		float diffZ = targetVelZ - m_Velocity.z;
+		if (fabsf(diffZ) <= accelStep)
+			m_Velocity.z = targetVelZ;
+		else
+			m_Velocity.z += (diffZ > 0 ? accelStep : -accelStep);
+		
+		// Jump
+		if (KeyLogger_IsTrigger(KK_SPACE))
 		{
-			position = XMVectorSetY(position, cube.max.y);
-			gravityVelocity = XMVectorZero();
-			velocity = XMVectorSetY(velocity, 0.0f);
-			m_isJump = false;
+			m_Velocity.y = JUMP_VELOCITY;
+			m_isJump = true;
 		}
 	}
-
-	// Floor collision
-	if (XMVectorGetY(position) <= 0.0f)
+	else  // Airborne
 	{
-		position = XMVectorSetY(position, 0.0f);
-		gravityVelocity = XMVectorZero();
-		velocity = XMVectorSetY(velocity, 0.0f);
+		// AIR: Limited control, momentum preserved
+		float airStep = AIR_ACCEL * dt;
+		
+		if (inputMag > 0.01f)
+		{
+			m_Velocity.x += inputX * airStep;
+			m_Velocity.z += inputZ * airStep;
+			
+			// Cap speed
+			float horizSpeed = sqrtf(m_Velocity.x * m_Velocity.x + m_Velocity.z * m_Velocity.z);
+			if (horizSpeed > maxSpeed * 1.2f)
+			{
+				float scale = (maxSpeed * 1.2f) / horizSpeed;
+				m_Velocity.x *= scale;
+				m_Velocity.z *= scale;
+			}
+		}
+		
+		// Gravity
+		m_Velocity.y -= GRAVITY * dt;
+	}
+	
+	// ========================================================================
+	// Apply Velocity to Position
+	// ========================================================================
+	m_Position.x += m_Velocity.x * dt;
+	m_Position.z += m_Velocity.z * dt;
+	m_Position.y += m_Velocity.y * dt;
+	
+	// ========================================================================
+	// Floor Collision
+	// ========================================================================
+	if (m_Position.y <= 0.0f)
+	{
+		m_Position.y = 0.0f;
+		m_Velocity.y = 0.0f;
 		m_isJump = false;
 	}
-
-	// Movement
-	XMVECTOR moveDir = XMVectorZero();
-	XMFLOAT3 camFront = PlayerCamFps_GetFront();
-
-	// Update Model Front to match Camera Front (FPS Arms look where camera looks)
-	m_ModelFront = camFront;
-
-	// Flatten camera front for movement
-	XMVECTOR front = XMVector3Normalize(XMVectorSet(camFront.x, 0.0f, camFront.z, 0.0f));
-	XMVECTOR right = XMVector3Normalize(XMVector3Cross(XMVectorSet(0, 1, 0, 0), front));
-
-	if (KeyLogger_IsPressed(KK_W)) moveDir += front;
-	if (KeyLogger_IsPressed(KK_S)) moveDir -= front;
-	if (KeyLogger_IsPressed(KK_D)) moveDir += right;
-	if (KeyLogger_IsPressed(KK_A)) moveDir -= right;
-	bool tryRunning = KeyLogger_IsPressed(KK_LEFTSHIFT);
-
+	
+	// ========================================================================
+	// Update Player State for Animations
+	// ========================================================================
+	if (inputMag > 0.01f)
+	{
+		m_StateMachine->SetPlayerState(tryRunning ? PlayerState::RUNNING : PlayerState::WALKING);
+		XMStoreFloat3(&m_MoveDir, XMVectorSet(inputX, 0, inputZ, 0));
+	}
+	else
+	{
+		m_StateMachine->SetPlayerState(PlayerState::IDLE);
+	}
+	
+	// ========================================================================
+	// Weapon State Machine (unchanged)
+	// ========================================================================
 	bool isPressingLeft = isButtonDown(MBT_LEFT);
 	bool isPressingRight = isButtonDown(MBT_RIGHT);
 	
@@ -150,14 +216,11 @@ void Player_Fps::Update(double elapsed_time)
 	{
 		if (m_StateMachine->GetWeaponState() == WeaponState::ADS)
 		{
-
 			m_StateMachine->SetWeaponState(WeaponState::ADS_FIRING);
-
 		}
 	}
 	else
 	{
-
 		if (m_StateMachine->GetWeaponState() == WeaponState::ADS_FIRING)
 		{
 			m_StateMachine->SetWeaponState(WeaponState::ADS);
@@ -199,49 +262,6 @@ void Player_Fps::Update(double elapsed_time)
 	{
 		m_StateMachine->SetWeaponState(WeaponState::INSPECTING);
 	}
-
-	if (XMVectorGetX(XMVector3LengthSq(moveDir)) > 0.0f) {
-
-		moveDir = XMVector3Normalize(moveDir);
-
-
-
-		if (tryRunning) {
-
-			m_StateMachine->SetPlayerState(PlayerState::RUNNING);
-			float running = static_cast<float>(2000.0 / 50.0 * elapsed_time);
-			velocity += moveDir * running;
-
-		}
-		else {
-			m_StateMachine->SetPlayerState(PlayerState::WALKING);
-			float walking = static_cast<float>(1500.0 / 50.0 * elapsed_time);
-			velocity += moveDir * walking;
-		}
-
-		XMStoreFloat3(&m_MoveDir, moveDir);
-	}
-	else {
-		m_StateMachine->SetPlayerState(PlayerState::IDLE);
-	}
-
-
-	// Friction / Damping
-	velocity += -velocity * static_cast<float>(4.0f * elapsed_time);
-	position += velocity * static_cast<float>(elapsed_time);
-
-	// Re-check horizontal collision
-	if (hit.isHit)
-	{
-		if (hit.normal.x > 0.0f) position = XMVectorSetX(position, cube.max.x + 1.0f);
-		else if (hit.normal.x < 0.0f) position = XMVectorSetX(position, cube.min.x - 1.0f);
-		else if (hit.normal.y < 0.0f) position = XMVectorSetY(position, cube.min.y - m_Height);
-		else if (hit.normal.z > 0.0f) position = XMVectorSetZ(position, cube.max.z + 1.0f);
-		else if (hit.normal.z < 0.0f) position = XMVectorSetZ(position, cube.min.z - 1.0f);
-	}
-
-	XMStoreFloat3(&m_Position, position);
-	XMStoreFloat3(&m_Velocity, velocity);
 
 	// Update Model Animation
 	if (m_Model && m_Animator)
