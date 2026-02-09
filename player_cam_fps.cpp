@@ -15,6 +15,7 @@
 #include "ms_logger.h"
 #include "mock_server.h"
 #include "input_producer.h"
+#include "remote_player.h"
 #include "game.h"
 
 using namespace DirectX;
@@ -46,7 +47,7 @@ void PlayerCamFps_Initialize()
 	g_DebugText = new hal::DebugText(Direct3D_GetDevice(), Direct3D_GetDeviceContext(),
 		L"resource/texture/consolab_ascii_512.png",
 		Direct3D_GetBackBufferWidth(), Direct3D_GetBackBufferHeight(),
-		0.0f, 700,
+		0.0f, 20.0f,
 		0, 0,
 		0.0f, 16.0f
 	);
@@ -319,6 +320,23 @@ void PlayerCamFps_Debug(const Player_Fps& pf)
 	ss << "FireCounter: " << pf.GetFireCounter() << "\n";
 	ss << "AniDuration: " << std::fixed << std::setprecision(2) << pf.GetCurrentAniDuration() << "s\n";
 	ss << "AniProgress: " << std::fixed << std::setprecision(2) << pf.GetCurrentAniProgress() * 100.0f << "%\n";
+	
+	// RemotePlayer Debug
+	extern RemotePlayer* g_pRemotePlayer;
+	if (g_pRemotePlayer && g_pRemotePlayer->IsActive())
+	{
+		ss << "\n=== RemotePlayer ===\n";
+		ss << "SyncMode: " << g_pRemotePlayer->GetSyncMode();
+		if (g_pRemotePlayer->IsStuck()) ss << " [STUCK!]";
+		ss << "\n";
+		ss << "Buffer: " << g_pRemotePlayer->GetBufferSize() << " snapshots\n";
+		ss << "LerpT: " << std::fixed << std::setprecision(3) << g_pRemotePlayer->GetLerpFactor() << "\n";
+		ss << "InterpDelay: " << std::fixed << std::setprecision(1) << (g_pRemotePlayer->GetInterpolationDelay() * 1000.0) << "ms\n";
+		ss << "RenderTime: " << std::fixed << std::setprecision(2) << g_pRemotePlayer->GetLastRenderTime() << "s\n";
+		ss << "SnapTimes: " << std::fixed << std::setprecision(2) 
+		   << g_pRemotePlayer->GetOldestSnapshotTime() << " - " 
+		   << g_pRemotePlayer->GetNewestSnapshotTime() << "\n";
+	}
 
 	g_DebugText->SetText(ss.str().c_str());
 	g_DebugText->Draw();

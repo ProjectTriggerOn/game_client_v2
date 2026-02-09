@@ -33,7 +33,7 @@ void MockServer::Initialize(MockNetwork* pNetwork)
 
     // Initialize player state (match Player_Fps spawn in Game_Initialize)
     m_PlayerState.tickId = 0;
-    m_PlayerState.position = { 0.0f, 3.0f, -20.0f };  // Same as game.cpp
+    m_PlayerState.position = { 0.0f, 0.0f, -20.0f };  // Same as game.cpp
     m_PlayerState.velocity = { 0.0f, 0.0f, 0.0f };
     m_PlayerState.yaw = 0.0f;
     m_PlayerState.pitch = 0.0f;

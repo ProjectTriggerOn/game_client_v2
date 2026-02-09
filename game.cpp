@@ -19,6 +19,7 @@
 #include "player_cam_fps.h"
 #include "player_fps.h"
 #include "mock_server.h"
+#include "remote_player.h"
 #include "sky_dome.h"
 #include "sprite.h"
 #include "texture.h"
@@ -61,7 +62,7 @@ void Game_Initialize()
 	//Player_Initialize({ 0.0f,0.0f,0.0f }, { 0.0f,0.0f,1.0f });
 	SkyDome_Initialize();
 	g_PlayerFps = new Player_Fps();
-	g_PlayerFps->Initialize({ 0.0f,3.0f,-20.0f }, { 0.0f,0.0f,1.0f });
+	g_PlayerFps->Initialize({ 0.0f,0.0f,-20.0f }, { 0.0f,0.0f,1.0f });
 
 	Camera_Initialize();
 	PlayerCamTps_Initialize();
@@ -83,73 +84,20 @@ void Game_Update(double elapsed_time)
 	g_PlayerFps->Update(elapsed_time);
 	
 	// ========================================================================
-	// Position Correction Strategies (Interpolation / Extrapolation / Snap)
+	// Server Reconciliation (Prediction + Correction)
 	// 
-	// Three thresholds determine which correction method is used:
-	//   - SNAP_THRESHOLD: Large error -> instant teleport
-	//   - EXTRAPOLATION_THRESHOLD: Medium error -> predict ahead
-	//   - Otherwise: Small error -> smooth interpolation
+	// Local player uses client-side prediction - NO interpolation (causes lag).
+	// Correction is handled via render offset inside Player_Fps.
 	// ========================================================================
 	extern MockServer* g_pMockServer;
 	if (g_pMockServer)
 	{
-		// Correction Parameters (可調整)
-		constexpr float SNAP_THRESHOLD = 3.0f;           // 距離 > 3.0 -> 直接傳送
-		constexpr float EXTRAPOLATION_THRESHOLD = 1.0f;  // 距離 > 1.0 -> 外插
-		constexpr float INTERPOLATION_SPEED = 15.0f;     // 內插速度 (越大越快)
-		constexpr float EXTRAPOLATION_FACTOR = 1.2f;     // 外插係數 (預測1.2倍)
-		
 		const NetPlayerState& serverState = g_pMockServer->GetPlayerState();
-		DirectX::XMFLOAT3 clientPos = g_PlayerFps->GetPosition();
+		g_PlayerFps->ApplyServerCorrection(serverState);
 		
-		// Calculate error (distance between client and server)
-		float dx = serverState.position.x - clientPos.x;
-		float dy = serverState.position.y - clientPos.y;
-		float dz = serverState.position.z - clientPos.z;
-		float errorDistance = sqrtf(dx * dx + dy * dy + dz * dz);
-		
-		// Update debug info
-		g_CorrectionError = errorDistance;
-		
-		DirectX::XMFLOAT3 correctedPos;
-		DirectX::XMFLOAT3 correctedVel = serverState.velocity;
-		
-		if (errorDistance > SNAP_THRESHOLD)
-		{
-			// ================================================================
-			// SNAP: Error too large, teleport instantly
-			// ================================================================
-			g_CorrectionMode = "SNAP";
-			correctedPos = serverState.position;
-		}
-		else if (errorDistance > EXTRAPOLATION_THRESHOLD)
-		{
-			// ================================================================
-			// EXTRAPOLATION: Predict server position ahead
-			// ================================================================
-			g_CorrectionMode = "EXTRAP";
-			float dt = static_cast<float>(elapsed_time);
-			correctedPos.x = serverState.position.x + serverState.velocity.x * EXTRAPOLATION_FACTOR * dt;
-			correctedPos.y = serverState.position.y + serverState.velocity.y * EXTRAPOLATION_FACTOR * dt;
-			correctedPos.z = serverState.position.z + serverState.velocity.z * EXTRAPOLATION_FACTOR * dt;
-		}
-		else
-		{
-			// ================================================================
-			// INTERPOLATION: Smoothly blend toward server position
-			// ================================================================
-			g_CorrectionMode = "INTERP";
-			float dt = static_cast<float>(elapsed_time);
-			float t = INTERPOLATION_SPEED * dt;
-			if (t > 1.0f) t = 1.0f;
-			
-			correctedPos.x = clientPos.x + dx * t;
-			correctedPos.y = clientPos.y + dy * t;
-			correctedPos.z = clientPos.z + dz * t;
-		}
-		
-		g_PlayerFps->SetPosition(correctedPos);
-		g_PlayerFps->SetVelocity(correctedVel);
+		// Update debug info from player
+		g_CorrectionMode = g_PlayerFps->GetCorrectionMode();
+		g_CorrectionError = g_PlayerFps->GetCorrectionError();
 	}
 
 	SkyDome_SetPosition(g_PlayerFps->GetPosition());
@@ -165,6 +113,35 @@ void Game_Update(double elapsed_time)
 
 	if (KeyLogger_IsTrigger(KK_U)) {
 		MSLogger_SetUIMode(!MSLogger_IsUIMode());
+	}
+
+	// Update RemotePlayer (Interpolation + Extrapolation with snapshot buffer)
+	extern RemotePlayer* g_pRemotePlayer;
+	static uint32_t lastRemotePlayerTick = 0;  // Track last pushed tick
+	static double clientClock = 0.0;  // Continuous client-side clock for interpolation
+	if (g_pRemotePlayer && g_pMockServer)
+	{
+		// Increment client clock EVERY FRAME (this is the key fix!)
+		// Server time only updates at 32Hz, but we need smooth per-frame interpolation
+		clientClock += elapsed_time;
+		
+		// For demo: RemotePlayer mirrors local player's server state offset by 5 units
+		NetPlayerState remoteState = g_pMockServer->GetPlayerState();
+		remoteState.position.x += 5.0f;  // Offset so we can see both
+		
+		// Only push snapshot when server tick changes (avoid flooding buffer)
+		// Use serverTime for snapshot timestamp (when the data was valid)
+		if (remoteState.tickId != lastRemotePlayerTick)
+		{
+			lastRemotePlayerTick = remoteState.tickId;
+			// Snapshot timestamp = when this data was generated (server tick time)
+			double snapshotTime = g_pMockServer->GetServerTime();
+			g_pRemotePlayer->PushSnapshot(remoteState, snapshotTime);
+		}
+		
+		// Update with interpolation using CONTINUOUS client clock (every frame)
+		// renderTime = clientClock - interpolationDelay
+		g_pRemotePlayer->Update(elapsed_time, clientClock);
 	}
 
 }
@@ -228,6 +205,13 @@ void Game_Draw()
 	SkyDome_Draw();
 
 	g_PlayerFps->Draw();
+
+	// Draw Remote Player
+	extern RemotePlayer* g_pRemotePlayer;
+	if (g_pRemotePlayer)
+	{
+		g_pRemotePlayer->Draw();
+	}
 
 	MeshField_Draw(mtxW);
 

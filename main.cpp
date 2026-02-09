@@ -44,6 +44,7 @@
 #include "mock_server.h"
 #include "mock_network.h"
 #include "input_producer.h"
+#include "remote_player.h"
 
 
 //Window procedure prototype claim
@@ -117,6 +118,12 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 	g_InputProducer.Initialize(&g_Network);
 	extern InputProducer* g_pInputProducer;
 	g_pInputProducer = &g_InputProducer;
+
+	// Initialize Remote Player (for displaying server-controlled entities)
+	static RemotePlayer g_RemotePlayer;
+	g_RemotePlayer.Initialize({ 5.0f, 0.0f, -15.0f });  // Spawn offset from local player
+	extern RemotePlayer* g_pRemotePlayer;
+	g_pRemotePlayer = &g_RemotePlayer;
 
 	Cube_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
 

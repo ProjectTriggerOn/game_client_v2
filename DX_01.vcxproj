@@ -185,6 +185,8 @@
     <ClCompile Include="player_cam_tps.cpp" />
     <ClCompile Include="player_fps.cpp" />
     <ClCompile Include="player_state_mechine.cpp" />
+    <ClCompile Include="remote_player.cpp" />
+    <ClCompile Include="remote_player_state_machine.cpp" />
     <ClCompile Include="polygon.cpp" />
     <ClCompile Include="sampler.cpp" />
     <ClCompile Include="scene.cpp" />
@@ -236,6 +238,8 @@
     <ClInclude Include="player_cam_tps.h" />
     <ClInclude Include="player_fps.h" />
     <ClInclude Include="player_state_mechine.h" />
+    <ClInclude Include="remote_player.h" />
+    <ClInclude Include="remote_player_state_machine.h" />
     <ClInclude Include="polygon.h" />
     <ClInclude Include="sampler.h" />
     <ClInclude Include="scene.h" />

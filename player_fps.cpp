@@ -14,6 +14,10 @@ using namespace DirectX;
 Player_Fps::Player_Fps()
 	: m_Position({ 0,0,0 })
 	, m_Velocity({ 0,0,0 })
+	, m_RenderOffset({ 0,0,0 })
+	, m_CorrectionMode("NONE")
+	, m_CorrectionError(0.0f)
+	, m_LastServerTick(0)
 	, m_ModelFront({ 0,0,1 })
 	, m_MoveDir({ 0,0,1 })
 	, m_CamRelativePos({ 0.0f, 0.0f,0.3f })
@@ -37,6 +41,10 @@ void Player_Fps::Initialize(const DirectX::XMFLOAT3& position, const DirectX::XM
 {
 	m_Position = position;
 	m_Velocity = { 0.0f, 0.0f, 0.0f };
+	m_RenderOffset = { 0.0f, 0.0f, 0.0f };
+	m_CorrectionMode = "NONE";
+	m_CorrectionError = 0.0f;
+	m_LastServerTick = 0;
 
 	XMStoreFloat3(&m_MoveDir, XMVector3Normalize(XMLoadFloat3(&front)));
 	XMStoreFloat3(&m_ModelFront, XMVector3Normalize(XMLoadFloat3(&front)));
@@ -69,6 +77,17 @@ void Player_Fps::Finalize()
 void Player_Fps::Update(double elapsed_time)
 {
 	const float dt = static_cast<float>(elapsed_time);
+	
+	// ========================================================================
+	// Render Offset Decay (for smooth server correction)
+	// Decays visual offset toward zero over ~100ms
+	// ========================================================================
+	constexpr float OFFSET_DECAY_RATE = 10.0f;  // Higher = faster decay
+	float decayFactor = 1.0f - OFFSET_DECAY_RATE * dt;
+	if (decayFactor < 0.0f) decayFactor = 0.0f;
+	m_RenderOffset.x *= decayFactor;
+	m_RenderOffset.y *= decayFactor;
+	m_RenderOffset.z *= decayFactor;
 	
 	// ========================================================================
 	// CS:GO / Valorant Style Movement Parameters (match mock_server.cpp)
@@ -336,6 +355,77 @@ void Player_Fps::SetPosition(const DirectX::XMFLOAT3& position)
 void Player_Fps::SetVelocity(const DirectX::XMFLOAT3& velocity)
 {
 	m_Velocity = velocity;
+}
+
+//-----------------------------------------------------------------------------
+// GetRenderPosition - Logic position + visual offset (for smooth correction)
+//-----------------------------------------------------------------------------
+DirectX::XMFLOAT3 Player_Fps::GetRenderPosition() const
+{
+	return {
+		m_Position.x + m_RenderOffset.x,
+		m_Position.y + m_RenderOffset.y,
+		m_Position.z + m_RenderOffset.z
+	};
+}
+
+//-----------------------------------------------------------------------------
+// ApplyServerCorrection - Prediction + Correction (Server Reconciliation)
+//
+// Called when server snapshot is received.
+// Soft Correction: Small error -> apply visual offset, decay over time
+// Hard Snap: Large error -> teleport immediately
+//-----------------------------------------------------------------------------
+void Player_Fps::ApplyServerCorrection(const NetPlayerState& serverState)
+{
+	// Skip if same tick already processed
+	if (serverState.tickId <= m_LastServerTick && m_LastServerTick != 0)
+		return;
+	m_LastServerTick = serverState.tickId;
+	
+	// Correction thresholds
+	constexpr float SOFT_CORRECTION_THRESHOLD = 0.5f;  // < 0.5m -> soft correction
+	constexpr float HARD_SNAP_THRESHOLD = 3.0f;         // > 3.0m -> hard snap
+	
+	// Calculate error between predicted and server position
+	float dx = m_Position.x - serverState.position.x;
+	float dy = m_Position.y - serverState.position.y;
+	float dz = m_Position.z - serverState.position.z;
+	float error = sqrtf(dx * dx + dy * dy + dz * dz);
+	
+	m_CorrectionError = error;
+	
+	if (error > HARD_SNAP_THRESHOLD)
+	{
+		// ===== HARD SNAP =====
+		// Error too large, teleport immediately
+		m_CorrectionMode = "SNAP";
+		m_Position = serverState.position;
+		m_Velocity = serverState.velocity;
+		m_RenderOffset = { 0.0f, 0.0f, 0.0f };
+	}
+	else if (error > SOFT_CORRECTION_THRESHOLD)
+	{
+		// ===== SOFT CORRECTION =====
+		// Medium error: snap logic position, add visual offset
+		m_CorrectionMode = "SOFT";
+		
+		// Calculate visual offset = where we WERE - where we SHOULD BE
+		m_RenderOffset.x += m_Position.x - serverState.position.x;
+		m_RenderOffset.y += m_Position.y - serverState.position.y;
+		m_RenderOffset.z += m_Position.z - serverState.position.z;
+		
+		// Snap logic position to server
+		m_Position = serverState.position;
+		m_Velocity = serverState.velocity;
+	}
+	else
+	{
+		// ===== NO CORRECTION =====
+		// Error small enough, prediction is accurate
+		m_CorrectionMode = "OK";
+		// Keep m_Position as-is (client prediction is good)
+	}
 }
 
 AABB Player_Fps::GetAABB() const
