@@ -152,5 +152,18 @@ void PlayerStateMachine::Update(double elapsed_time, Animator* animator)
 	// 3. Play & update
 	// ----------------------------------------------------------------
 	animator->PlayCrossFade(animIndex, loop, blend);
+
+	// ADS breathing: overlay IDLE animation as additive
+	if (m_WeaponState == WeaponState::ADS)
+	{
+		if (!animator->IsAdditiveActive())
+			animator->PlayAdditive(0, true, 0.5f); // IDLE loop, half weight
+	}
+	else
+	{
+		if (animator->IsAdditiveActive())
+			animator->StopAdditive(0.15);
+	}
+
 	animator->Update(elapsed_time);
 }

@@ -183,6 +183,43 @@ void Animator::Update(double elapsedTime)
 		}
 	}
 
+	// Update Additive Layer
+	if (m_AdditiveAnimIndex != -1)
+	{
+		const Animation& addAnim = m_Model->Animations[m_AdditiveAnimIndex];
+		m_AdditiveTime += scaledTime * addAnim.ticksPerSecond;
+
+		if (m_AdditiveLoop)
+		{
+			m_AdditiveTime = fmod(m_AdditiveTime, addAnim.duration);
+		}
+		else if (m_AdditiveTime >= addAnim.duration)
+		{
+			m_AdditiveTime = addAnim.duration;
+			// One-shot additive finished — auto stop
+			if (!m_AdditiveFadingOut)
+				StopAdditive(0.1);
+		}
+
+		// Fade-out processing
+		if (m_AdditiveFadingOut)
+		{
+			m_AdditiveFadeTimer += scaledTime;
+			if (m_AdditiveFadeTimer >= m_AdditiveFadeDuration)
+			{
+				// Fade complete
+				m_AdditiveAnimIndex = -1;
+				m_AdditiveWeight = 0.0f;
+				m_AdditiveFadingOut = false;
+			}
+			else
+			{
+				float fadeProgress = (float)(m_AdditiveFadeTimer / m_AdditiveFadeDuration);
+				m_AdditiveWeight = m_AdditiveTargetWeight * (1.0f - fadeProgress);
+			}
+		}
+	}
+
 	// Calculate transformations
 	for (int i = 0; i < (int)m_Model->Bones.size(); ++i)
 	{
@@ -322,6 +359,12 @@ void Animator::UpdateGlobalTransforms(int boneIndex, const DirectX::XMMATRIX& pa
 		r = XMQuaternionSlerp(prevR, r, factor);
 		t = XMVectorLerp(prevT, t, factor);
 	}
+
+	// Apply Additive Layer
+	if (m_AdditiveAnimIndex != -1 && m_AdditiveWeight > 0.0f)
+	{
+		ApplyAdditive(boneIndex, s, r, t);
+	}
 	
 	XMMATRIX localTransform = XMMatrixScalingFromVector(s) * XMMatrixRotationQuaternion(r) * XMMatrixTranslationFromVector(t);
 	XMMATRIX globalTransform = localTransform * parentTransform;
@@ -374,4 +417,76 @@ void Animator::TakeSnapshot()
 		XMStoreFloat4(&m_SnapshotPose[i].rotation, r);
 		XMStoreFloat4(&m_SnapshotPose[i].translation, t);
 	}
+}
+
+//=============================================================================
+// Additive Layer
+//=============================================================================
+void Animator::PlayAdditive(const std::string& name, bool loop, float weight)
+{
+	if (!m_Model) return;
+	for (int i = 0; i < (int)m_Model->Animations.size(); ++i)
+	{
+		if (m_Model->Animations[i].name == name)
+		{
+			PlayAdditive(i, loop, weight);
+			return;
+		}
+	}
+}
+
+void Animator::PlayAdditive(int index, bool loop, float weight)
+{
+	if (!m_Model) return;
+	if (index < 0 || index >= (int)m_Model->Animations.size()) return;
+
+	m_AdditiveAnimIndex = index;
+	m_AdditiveTime = 0.0;
+	m_AdditiveLoop = loop;
+	m_AdditiveWeight = weight;
+	m_AdditiveTargetWeight = weight;
+	m_AdditiveFadingOut = false;
+}
+
+void Animator::StopAdditive(double fadeOutTime)
+{
+	if (m_AdditiveAnimIndex == -1) return;
+
+	if (fadeOutTime <= 0.0)
+	{
+		m_AdditiveAnimIndex = -1;
+		m_AdditiveWeight = 0.0f;
+		m_AdditiveFadingOut = false;
+	}
+	else
+	{
+		m_AdditiveFadingOut = true;
+		m_AdditiveFadeTimer = 0.0;
+		m_AdditiveFadeDuration = fadeOutTime;
+		m_AdditiveTargetWeight = m_AdditiveWeight; // fade from current weight
+	}
+}
+
+void Animator::ApplyAdditive(int boneIndex, XMVECTOR& s, XMVECTOR& r, XMVECTOR& t)
+{
+	const Animation& addAnim = m_Model->Animations[m_AdditiveAnimIndex];
+
+	// Sample current frame of additive animation
+	XMVECTOR addS, addR, addT;
+	GetBoneSRT(boneIndex, addAnim, m_AdditiveTime, addS, addR, addT);
+
+	// Sample reference pose (frame 0) of additive animation
+	XMVECTOR refS, refR, refT;
+	GetBoneSRT(boneIndex, addAnim, 0.0, refS, refR, refT);
+
+	// Compute additive delta
+	XMVECTOR deltaT = XMVectorSubtract(addT, refT);
+	XMVECTOR deltaR = XMQuaternionMultiply(addR, XMQuaternionInverse(refR));
+
+	// Apply with weight
+	float w = m_AdditiveWeight;
+	t = XMVectorAdd(t, XMVectorScale(deltaT, w));
+	XMVECTOR weightedR = XMQuaternionSlerp(XMQuaternionIdentity(), deltaR, w);
+	r = XMQuaternionMultiply(weightedR, r);
+	// Scale: keep base scale unchanged
 }

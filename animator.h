@@ -36,10 +36,18 @@ public:
 
 	void SetSameAniOverlapAllow(bool allow) { m_SameAniOverlapAllow = allow; }
 
+	// Additive Layer
+	void PlayAdditive(const std::string& name, bool loop = false, float weight = 1.0f);
+	void PlayAdditive(int index, bool loop = false, float weight = 1.0f);
+	void StopAdditive(double fadeOutTime = 0.1);
+	void SetAdditiveWeight(float weight) { m_AdditiveTargetWeight = weight; m_AdditiveWeight = weight; }
+	bool IsAdditiveActive() const { return m_AdditiveAnimIndex != -1; }
+
 private:
 	void UpdateGlobalTransforms(int boneIndex, const DirectX::XMMATRIX& parentTransform, const struct Animation& anim);
 	void GetBoneSRT(int boneIndex, const Animation& anim, double time, DirectX::XMVECTOR& outS, DirectX::XMVECTOR& outR, DirectX::XMVECTOR& outT) const;
 	void TakeSnapshot(); // 拍下当前所有骨骼的实际姿态（含混合中间状态）
+	void ApplyAdditive(int boneIndex, DirectX::XMVECTOR& s, DirectX::XMVECTOR& r, DirectX::XMVECTOR& t);
 
 private:
 	MODEL_ANI* m_Model;
@@ -64,6 +72,16 @@ private:
 	bool m_SameAniOverlapAllow = false;
 
 	AnimationCallBack m_OnAnimationStart;
+
+	// Additive Layer
+	int    m_AdditiveAnimIndex = -1;
+	double m_AdditiveTime = 0.0;
+	bool   m_AdditiveLoop = false;
+	float  m_AdditiveWeight = 0.0f;
+	float  m_AdditiveTargetWeight = 0.0f;
+	bool   m_AdditiveFadingOut = false;
+	double m_AdditiveFadeTimer = 0.0;
+	double m_AdditiveFadeDuration = 0.0;
 
 	// Parallel to m_Model->Bones
 	std::vector<DirectX::XMFLOAT4X4> m_GlobalMatrices;
