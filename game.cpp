@@ -127,9 +127,10 @@ void Game_Update(double elapsed_time)
 		
 		// For demo: RemotePlayer mirrors local player's server state offset by 5 units
 		NetPlayerState remoteState = g_pMockServer->GetPlayerState();
+
+		// Offset position so we can see both players
 		remoteState.position.x = -remoteState.position.x;  // Offset so we can see both
 		remoteState.position.z = -remoteState.position.z;  // Offset so we can see both
-		
 		remoteState.yaw = fmodf(remoteState.yaw + XM_PI, XM_2PI); // Face opposite direction
 
 		// Only push snapshot when server tick changes (avoid flooding buffer)

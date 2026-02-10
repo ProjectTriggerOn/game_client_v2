@@ -23,8 +23,7 @@ namespace
 Animator::Animator()
 	: m_Model(nullptr)
 	, m_CurrentAnimationIndex(-1), m_CurrentTime(0.0), m_Loop(true)
-	, m_PrevAnimationIndex(-1), m_PrevTime(0.0), m_PrevLoop(false)
-	, m_IsBlending(false), m_BlendFactor(0.0), m_TransitionTime(0.0), m_TransitionDuration(0.0)
+	, m_IsBlending(false), m_TransitionTime(0.0), m_TransitionDuration(0.0)
 {
 }
 
@@ -40,6 +39,7 @@ void Animator::Init(MODEL_ANI* model)
 		size_t boneCount = m_Model->Bones.size();
 		m_GlobalMatrices.resize(boneCount);
 		m_FinalBoneMatrices.resize(boneCount);
+		m_SnapshotPose.resize(boneCount);
 
 		// Initialize with identity
 		for (size_t i = 0; i < boneCount; ++i)
@@ -79,17 +79,9 @@ void Animator::PlayCrossFade(int index, bool loop, double blendTime)
 		// 如果允许同个动画叠加 (Self-Overlap)
 		if (m_SameAniOverlapAllow)
 		{
-			// -------------------------------------------------------------
-			// 【防卡死改进】：如果当前已经在进行 "同动画混合" (A -> A)，且混合未结束，
-			// 则忽略新的重播请求。避免在 Update 中每帧调用导致无限重置在第 0 帧。
-			// -------------------------------------------------------------
-			// if (m_IsBlending && m_PrevAnimationIndex == index) ... REMOVED
-
 			if (blendTime > 0.0)
 			{
-				m_PrevAnimationIndex = m_CurrentAnimationIndex;
-				m_PrevTime = m_CurrentTime;
-				m_PrevLoop = m_Loop;
+				TakeSnapshot();
 
 				m_CurrentAnimationIndex = index;
 				m_CurrentTime = 0.0;
@@ -117,54 +109,13 @@ void Animator::PlayCrossFade(int index, bool loop, double blendTime)
 
 	if (index >= 0 && index < (int)m_Model->Animations.size())
 	{
-		// ---------------------------------------------------------
-		// 【核心修复】：检测是否切回了正在淡出的动画 (A -> B -> A)
-		// ---------------------------------------------------------
-		if (m_IsBlending && index == m_PrevAnimationIndex && m_PrevLoop)
-		{
-			// 此时：Prev 是 A, Curr 是 B, 进度走了 30%
-			// 目标：切回 A
-
-			// 1. 交换 Current 和 Prev 的身份
-			std::swap(m_CurrentAnimationIndex, m_PrevAnimationIndex);
-			std::swap(m_CurrentTime, m_PrevTime);
-			std::swap(m_Loop, m_PrevLoop);
-
-			// 2. 关键：反转混合进度
-			// 现在的进度是 "从 Prev 到 Curr" (比如走了 0.3s)
-			// 交换后，视觉上我们需要 "从 新Prev 到 新Curr" 走了 0.7s 的位置
-			// 也就是倒着走回去
-
-			// 计算当前的归一化进度 (0.0 ~ 1.0)
-			double currentFactor = 0.0;
-			if (m_TransitionDuration > 0.0) {
-				currentFactor = m_TransitionTime / m_TransitionDuration;
-			}
-
-			// 反转进度 (1.0 - 0.3 = 0.7)
-			double invertedFactor = 1.0 - currentFactor;
-
-			// 重新设置新的过渡参数
-			m_TransitionDuration = blendTime; // 使用新的混合时间
-			m_TransitionTime = invertedFactor * m_TransitionDuration; // 映射回时间
-
-			// 保持混合状态为 true
-			m_IsBlending = true;
-
-			return; // 搞定，直接退出
-		}
-
-		// ---------------------------------------------------------
-		// 正常流程：开启一个新的混合 (A -> C)
-		// ---------------------------------------------------------
 		if (blendTime > 0.0 && m_CurrentAnimationIndex != -1)
 		{
-			m_PrevAnimationIndex = m_CurrentAnimationIndex;
-			m_PrevTime = m_CurrentTime;
-			m_PrevLoop = m_Loop;
+			// 拍下当前视觉姿态的快照（无论是否正在混合中）
+			TakeSnapshot();
 
 			m_CurrentAnimationIndex = index;
-			m_CurrentTime = 0.0; // 新动画从头开始
+			m_CurrentTime = 0.0;
 			m_Loop = loop;
 
 			m_IsBlending = true;
@@ -221,15 +172,9 @@ void Animator::Update(double elapsedTime)
 	if (m_Loop) m_CurrentTime = fmod(m_CurrentTime, animCurrent.duration);
 	else if (m_CurrentTime >= animCurrent.duration) m_CurrentTime = animCurrent.duration;
 
-	// Update Previous Animation Time (if blending)
+	// Update blend transition timer (snapshot doesn't need time advancement)
 	if (m_IsBlending)
 	{
-		const Animation& animPrev = m_Model->Animations[m_PrevAnimationIndex];
-		m_PrevTime += scaledTime * animPrev.ticksPerSecond;
-		
-		if (m_PrevLoop) m_PrevTime = fmod(m_PrevTime, animPrev.duration);
-		else if (m_PrevTime >= animPrev.duration) m_PrevTime = animPrev.duration;
-		
 		m_TransitionTime += scaledTime; // Real time
 		if (m_TransitionTime >= m_TransitionDuration)
 		{
@@ -365,9 +310,10 @@ void Animator::UpdateGlobalTransforms(int boneIndex, const DirectX::XMMATRIX& pa
 
 	if (m_IsBlending)
 	{
-		const Animation& prevAnim = m_Model->Animations[m_PrevAnimationIndex];
-		XMVECTOR prevS, prevR, prevT;
-		GetBoneSRT(boneIndex, prevAnim, m_PrevTime, prevS, prevR, prevT);
+		// 从快照中取出过渡前的姿态
+		XMVECTOR prevS = XMLoadFloat4(&m_SnapshotPose[boneIndex].scale);
+		XMVECTOR prevR = XMLoadFloat4(&m_SnapshotPose[boneIndex].rotation);
+		XMVECTOR prevT = XMLoadFloat4(&m_SnapshotPose[boneIndex].translation);
 		
 		float factor = (float)(m_TransitionTime / m_TransitionDuration);
 		factor = std::max(0.0f, std::min(1.0f, factor));
@@ -396,4 +342,36 @@ void Animator::UpdateGlobalTransforms(int boneIndex, const DirectX::XMMATRIX& pa
 const std::vector<DirectX::XMFLOAT4X4>& Animator::GetFinalBoneMatrices() const
 {
 	return m_FinalBoneMatrices;
+}
+
+void Animator::TakeSnapshot()
+{
+	if (!m_Model) return;
+
+	const Animation& currAnim = m_Model->Animations[m_CurrentAnimationIndex];
+
+	for (int i = 0; i < (int)m_Model->Bones.size(); ++i)
+	{
+		XMVECTOR s, r, t;
+		GetBoneSRT(i, currAnim, m_CurrentTime, s, r, t);
+
+		// 如果正在混合中，需要混入快照产生「真实视觉姿态」
+		if (m_IsBlending)
+		{
+			XMVECTOR snapS = XMLoadFloat4(&m_SnapshotPose[i].scale);
+			XMVECTOR snapR = XMLoadFloat4(&m_SnapshotPose[i].rotation);
+			XMVECTOR snapT = XMLoadFloat4(&m_SnapshotPose[i].translation);
+
+			float factor = (float)(m_TransitionTime / m_TransitionDuration);
+			factor = std::max(0.0f, std::min(1.0f, factor));
+
+			s = XMVectorLerp(snapS, s, factor);
+			r = XMQuaternionSlerp(snapR, r, factor);
+			t = XMVectorLerp(snapT, t, factor);
+		}
+
+		XMStoreFloat4(&m_SnapshotPose[i].scale, s);
+		XMStoreFloat4(&m_SnapshotPose[i].rotation, r);
+		XMStoreFloat4(&m_SnapshotPose[i].translation, t);
+	}
 }

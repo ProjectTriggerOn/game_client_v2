@@ -39,6 +39,7 @@ public:
 private:
 	void UpdateGlobalTransforms(int boneIndex, const DirectX::XMMATRIX& parentTransform, const struct Animation& anim);
 	void GetBoneSRT(int boneIndex, const Animation& anim, double time, DirectX::XMVECTOR& outS, DirectX::XMVECTOR& outR, DirectX::XMVECTOR& outT) const;
+	void TakeSnapshot(); // 拍下当前所有骨骼的实际姿态（含混合中间状态）
 
 private:
 	MODEL_ANI* m_Model;
@@ -48,13 +49,15 @@ private:
 	bool m_Loop;
 	double m_Speed = 1.0;
 
-	// Cross Fade (Blending)
-	int m_PrevAnimationIndex;
-	double m_PrevTime;
-	bool m_PrevLoop;
-	
+	// Cross Fade — Snapshot-based blending
+	struct BoneSRT {
+		DirectX::XMFLOAT4 scale;       // stored as XMFLOAT4 for XMVector load/store
+		DirectX::XMFLOAT4 rotation;    // quaternion
+		DirectX::XMFLOAT4 translation;
+	};
+	std::vector<BoneSRT> m_SnapshotPose; // per-bone snapshot at transition start
+
 	bool m_IsBlending;
-	double m_BlendFactor; // 0.0 to 1.0 (0.0 = Prev, 1.0 = Curr) -- actually tracking time is better
 	double m_TransitionTime;
 	double m_TransitionDuration;
 
