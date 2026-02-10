@@ -461,46 +461,12 @@ DirectX::XMFLOAT3 Player_Fps::GetEyePosition() const
 
 std::string Player_Fps::GetPlayerState() const
 {
-	switch (m_StateMachine->GetPlayerState())
-	{
-	case PlayerState::IDLE:
-		return "IDLE";
-	case PlayerState::WALKING:
-		return "WALKING";
-	case PlayerState::RUNNING:
-		return "RUNNING";
-	default:
-		return "UNKNOWN";
-	}
+	return PlayerStateToString(m_StateMachine->GetPlayerState());
 }
 
 std::string Player_Fps::GetWeaponState() const
 {
-	switch (m_StateMachine->GetWeaponState())
-	{
-	case WeaponState::HIP:
-		return "HIP";
-	case WeaponState::ADS_IN:
-		return "ADS_IN";
-	case WeaponState::ADS:
-		return "ADS";
-	case WeaponState::ADS_OUT:
-		return "ADS_OUT";
-	case WeaponState::HIP_FIRING:
-		return "HIP_FIRING";
-	case WeaponState::ADS_FIRING:
-		return "ADS_FIRING";
-	case WeaponState::RELOADING:
-		return "RELOADING";
-	case WeaponState::RELOADING_OUT_OF_AMMO:
-		return "RELOADING_OUT_OF_AMMO";
-	case WeaponState::INSPECTING:
-		return "INSPECTING";
-	case WeaponState::TAKING_OUT:
-		return "TAKING_OUT";
-	default:
-		return "UNKNOWN";
-	}
+	return WeaponStateToString(m_StateMachine->GetWeaponState());
 }
 
 std::string Player_Fps::GetCurrentAniName() const
