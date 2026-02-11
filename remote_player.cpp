@@ -69,7 +69,7 @@ void RemotePlayer::Initialize(const XMFLOAT3& position)
     m_SnapshotBuffer.clear();
     
     // Load character model
-    m_Model = ModelAni_Load("resource/model/arms009.fbx");
+    m_Model = ModelAni_Load("resource/model/lpsp_tpc.fbx");
     
     if (m_Model)
     {
@@ -255,7 +255,7 @@ void RemotePlayer::Update(double elapsed_time, double currentTime)
     if (m_StateMachine)
     {
         m_StateMachine->DeriveStateFromVelocity(
-            m_Velocity.x, m_Velocity.z, m_Velocity.y, isGrounded
+            m_Velocity.x, m_Velocity.z, m_Velocity.y, isGrounded, m_Yaw
         );
         m_StateMachine->Update(elapsed_time, m_Animator);
     }
@@ -361,6 +361,13 @@ std::string RemotePlayer::GetWeaponStateString() const
 {
     if (m_StateMachine)
         return m_StateMachine->GetWeaponStateString();
+    return "N/A";
+}
+
+std::string RemotePlayer::GetMoveDirectionString() const
+{
+    if (m_StateMachine)
+        return m_StateMachine->GetMoveDirectionString();
     return "N/A";
 }
 

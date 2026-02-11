@@ -79,6 +79,7 @@ public:
     bool IsStuck() const { return m_DebugIsStuck; }
     std::string GetPlayerStateString() const;
     std::string GetWeaponStateString() const;
+    std::string GetMoveDirectionString() const;
     
     void SetActive(bool active) { m_IsActive = active; }
 
