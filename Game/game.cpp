@@ -123,7 +123,7 @@ void Game_Update(double elapsed_time)
 			NetPlayerState remoteState = snap.localPlayer;
 			remoteState.position.x += 5.0f;
 
-			g_pRemotePlayer->PushSnapshot(remoteState, snap.serverTime);
+			g_pRemotePlayer->PushSnapshot(remoteState, clientClock);
 		}
 
 		// Cache for debug display
