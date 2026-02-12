@@ -6,7 +6,7 @@
 //=============================================================================
 
 #include "mock_server.h"
-#include "mock_network.h"
+#include "i_network.h"
 #include <cmath>
 
 MockServer::MockServer()
@@ -24,7 +24,7 @@ MockServer::~MockServer()
     Finalize();
 }
 
-void MockServer::Initialize(MockNetwork* pNetwork)
+void MockServer::Initialize(INetwork* pNetwork)
 {
     m_pNetwork = pNetwork;
     m_Accumulator = 0.0;

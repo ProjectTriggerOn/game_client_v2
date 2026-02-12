@@ -102,7 +102,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>.;./Core;./Graphics;./Game;./Network;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.;./Core;./Graphics;./Game;./Network;./ThirdParty/enet/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <WarningLevel>Level4</WarningLevel>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -114,7 +114,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>d3d11.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>d3d11.lib;ws2_32.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>xcopy /D /Y "$(TargetDir)*.cso" "$(ProjectDir)resource/shader"</Command>
@@ -128,7 +128,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>.;./Core;./Graphics;./Game;./Network;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.;./Core;./Graphics;./Game;./Network;./ThirdParty/enet/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <WarningLevel>Level4</WarningLevel>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -144,7 +144,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>d3d11.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>d3d11.lib;ws2_32.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>xcopy /D /Y "$(TargetDir)*.cso" "$(ProjectDir)resource/shader"</Command>
@@ -182,6 +182,7 @@
     <ClCompile Include="Graphics\model_ani.cpp" />
     <ClCompile Include="Core\mouse.cpp" />
     <ClCompile Include="Core\ms_logger.cpp" />
+    <ClCompile Include="Network\enet_client_network.cpp" />
     <ClCompile Include="Network\mock_network.cpp" />
     <ClCompile Include="Network\mock_server.cpp" />
     <ClCompile Include="Game\player.cpp" />
@@ -234,9 +235,12 @@
     <ClInclude Include="Graphics\model_ani.h" />
     <ClInclude Include="Core\mouse.h" />
     <ClInclude Include="Core\ms_logger.h" />
+    <ClInclude Include="Network\enet_client_network.h" />
+    <ClInclude Include="Network\i_network.h" />
     <ClInclude Include="Network\mock_network.h" />
     <ClInclude Include="Network\mock_server.h" />
     <ClInclude Include="Network\net_common.h" />
+    <ClInclude Include="Network\net_packet.h" />
     <ClInclude Include="Game\player.h" />
     <ClInclude Include="Game\player_cam_fps.h" />
     <ClInclude Include="Game\player_cam_tps.h" />
@@ -261,6 +265,7 @@
     <ClInclude Include="Graphics\texture.h" />
     <ClInclude Include="Game\title.h" />
     <ClInclude Include="Graphics\WICTextureLoader11.h" />
+    <ClInclude Include="ThirdParty\enet\include\enet\enet.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\infinite_grid_pixel.hlsl">
@@ -341,6 +346,9 @@
   <ItemGroup>
     <Media Include="resource\audio\bgm.wav" />
     <Media Include="resource\audio\se.wav" />
+  </ItemGroup>
+  <ItemGroup>
+    <Library Include="ThirdParty\enet\lib\enet.lib" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

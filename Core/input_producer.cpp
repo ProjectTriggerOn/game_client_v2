@@ -7,8 +7,7 @@
 //=============================================================================
 
 #include "input_producer.h"
-#include "mock_network.h"
-#include "mock_server.h"
+#include "i_network.h"
 #include "key_logger.h"
 #include "ms_logger.h"
 #include "player_cam_fps.h"
@@ -29,7 +28,7 @@ InputProducer::InputProducer()
 {
 }
 
-void InputProducer::Initialize(MockNetwork* pNetwork)
+void InputProducer::Initialize(INetwork* pNetwork)
 {
     m_pNetwork = pNetwork;
     m_TargetTick = 0;
@@ -40,6 +39,8 @@ void InputProducer::Initialize(MockNetwork* pNetwork)
     m_Buttons = InputButtons::NONE;
     m_JumpPending = false;
     m_LastCmd = {};
+    m_LastServerState = {};
+    m_HasServerState = false;
 }
 
 void InputProducer::Finalize()
@@ -69,13 +70,11 @@ void InputProducer::Update()
 
     // 4. Clear sticky jump only when server confirms we're airborne
     //    This ensures jump isn't lost due to frame/tick timing
-    extern MockServer* g_pMockServer;
-    if (m_JumpPending && g_pMockServer)
+    if (m_JumpPending && m_HasServerState)
     {
-        const NetPlayerState& state = g_pMockServer->GetPlayerState();
         // Clear pending if server shows we're jumping (not grounded)
-        if ((state.stateFlags & NetStateFlags::IS_JUMPING) ||
-            !(state.stateFlags & NetStateFlags::IS_GROUNDED))
+        if ((m_LastServerState.stateFlags & NetStateFlags::IS_JUMPING) ||
+            !(m_LastServerState.stateFlags & NetStateFlags::IS_GROUNDED))
         {
             m_JumpPending = false;
         }

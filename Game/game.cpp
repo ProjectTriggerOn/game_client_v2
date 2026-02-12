@@ -18,8 +18,9 @@
 #include "player_cam_tps.h"
 #include "player_cam_fps.h"
 #include "player_fps.h"
-#include "mock_server.h"
+#include "i_network.h"
 #include "remote_player.h"
+#include "input_producer.h"
 #include "sky_dome.h"
 #include "sprite.h"
 #include "texture.h"
@@ -40,6 +41,9 @@ namespace{
 	const char* g_CorrectionMode = "NONE";
 	float g_CorrectionError = 0.0f;
 }
+
+// Global network debug info (populated from received snapshots)
+NetworkDebugInfo g_NetDebugInfo;
 
 void Game_Initialize()
 {
@@ -84,21 +88,54 @@ void Game_Update(double elapsed_time)
 	g_PlayerFps->Update(elapsed_time);
 	
 	// ========================================================================
-	// Server Reconciliation (Prediction + Correction)
-	// 
+	// Consume Snapshots from Network (works with both Mock and ENet)
+	//
 	// Local player uses client-side prediction - NO interpolation (causes lag).
 	// Correction is handled via render offset inside Player_Fps.
 	// ========================================================================
-	extern MockServer* g_pMockServer;
-	if (g_pMockServer)
+	extern INetwork* g_pNetwork;
+	extern RemotePlayer* g_pRemotePlayer;
+	extern InputProducer* g_pInputProducer;
+	static uint32_t lastRemotePlayerTick = 0;
+	static double clientClock = 0.0;
+
+	// Increment client clock EVERY FRAME for smooth interpolation
+	clientClock += elapsed_time;
+
+	Snapshot snap;
+	while (g_pNetwork && g_pNetwork->ReceiveSnapshot(snap))
 	{
-		const NetPlayerState& serverState = g_pMockServer->GetPlayerState();
-		g_PlayerFps->ApplyServerCorrection(serverState);
-		
-		// Update debug info from player
-		g_CorrectionMode = g_PlayerFps->GetCorrectionMode();
-		g_CorrectionError = g_PlayerFps->GetCorrectionError();
+		// Apply server correction to local player
+		g_PlayerFps->ApplyServerCorrection(snap.localPlayer);
+
+		// Feed server state to InputProducer (for jump-pending logic)
+		if (g_pInputProducer)
+		{
+			g_pInputProducer->SetLastServerState(snap.localPlayer);
+		}
+
+		// Push snapshot to RemotePlayer for interpolation
+		if (g_pRemotePlayer && snap.localPlayer.tickId != lastRemotePlayerTick)
+		{
+			lastRemotePlayerTick = snap.localPlayer.tickId;
+
+			// For demo: offset position so we can see both players
+			NetPlayerState remoteState = snap.localPlayer;
+			remoteState.position.x += 5.0f;
+
+			g_pRemotePlayer->PushSnapshot(remoteState, snap.serverTime);
+		}
+
+		// Cache for debug display
+		g_NetDebugInfo.lastServerTick = snap.tickId;
+		g_NetDebugInfo.lastServerTime = snap.serverTime;
+		g_NetDebugInfo.lastServerState = snap.localPlayer;
+		g_NetDebugInfo.hasData = true;
 	}
+
+	// Update debug info from player correction
+	g_CorrectionMode = g_PlayerFps->GetCorrectionMode();
+	g_CorrectionError = g_PlayerFps->GetCorrectionError();
 
 	SkyDome_SetPosition(g_PlayerFps->GetPosition());
 
@@ -115,38 +152,9 @@ void Game_Update(double elapsed_time)
 		MSLogger_SetUIMode(!MSLogger_IsUIMode());
 	}
 
-	// Update RemotePlayer (Interpolation + Extrapolation with snapshot buffer)
-	extern RemotePlayer* g_pRemotePlayer;
-	static uint32_t lastRemotePlayerTick = 0;  // Track last pushed tick
-	static double clientClock = 0.0;  // Continuous client-side clock for interpolation
-	if (g_pRemotePlayer && g_pMockServer)
+	// Update RemotePlayer interpolation (every frame for smoothness)
+	if (g_pRemotePlayer)
 	{
-		// Increment client clock EVERY FRAME (this is the key fix!)
-		// Server time only updates at 32Hz, but we need smooth per-frame interpolation
-		clientClock += elapsed_time;
-		
-		// For demo: RemotePlayer mirrors local player's server state offset by 5 units
-		NetPlayerState remoteState = g_pMockServer->GetPlayerState();
-
-		// Offset position so we can see both players
-		//remoteState.position.x = -remoteState.position.x;  // Offset so we can see both
-		//remoteState.position.z = -remoteState.position.z;  // Offset so we can see both
-		//remoteState.yaw = fmodf(remoteState.yaw + XM_PI, XM_2PI); // Face opposite direction
-
-		remoteState.position.x = remoteState.position.x + 5.0f;  // Offset so we can see both
-
-		// Only push snapshot when server tick changes (avoid flooding buffer)
-		// Use serverTime for snapshot timestamp (when the data was valid)
-		if (remoteState.tickId != lastRemotePlayerTick)
-		{
-			lastRemotePlayerTick = remoteState.tickId;
-			// Snapshot timestamp = when this data was generated (server tick time)
-			double snapshotTime = g_pMockServer->GetServerTime();
-			g_pRemotePlayer->PushSnapshot(remoteState, snapshotTime);
-		}
-		
-		// Update with interpolation using CONTINUOUS client clock (every frame)
-		// renderTime = clientClock - interpolationDelay
 		g_pRemotePlayer->Update(elapsed_time, clientClock);
 	}
 

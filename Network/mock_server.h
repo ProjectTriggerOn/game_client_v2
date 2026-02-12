@@ -14,7 +14,7 @@
 
 #include "net_common.h"
 
-class MockNetwork;
+class INetwork;
 
 class MockServer
 {
@@ -28,7 +28,7 @@ public:
     MockServer();
     ~MockServer();
 
-    void Initialize(MockNetwork* pNetwork);
+    void Initialize(INetwork* pNetwork);
     void Finalize();
 
     //-------------------------------------------------------------------------
@@ -66,7 +66,7 @@ private:
     void BroadcastSnapshot();
 
 private:
-    MockNetwork* m_pNetwork;
+    INetwork* m_pNetwork;
     
     // Timing
     double m_Accumulator;           // Time accumulated since last tick
