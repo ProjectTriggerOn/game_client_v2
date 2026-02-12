@@ -72,6 +72,7 @@
   <PropertyGroup Label="UserMacros" />
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
+      <AdditionalIncludeDirectories>./Core;./Graphics;./Game;./Network;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -84,6 +85,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
+      <AdditionalIncludeDirectories>./Core;./Graphics;./Game;./Network;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <WarningLevel>Level3</WarningLevel>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -100,6 +102,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
+      <AdditionalIncludeDirectories>.;./Core;./Graphics;./Game;./Network;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <WarningLevel>Level4</WarningLevel>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -125,6 +128,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
+      <AdditionalIncludeDirectories>.;./Core;./Graphics;./Game;./Network;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <WarningLevel>Level4</WarningLevel>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -153,113 +157,113 @@
     </FxCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="animator.cpp" />
-    <ClCompile Include="Audio.cpp" />
-    <ClCompile Include="camera.cpp" />
-    <ClCompile Include="collision.cpp" />
-    <ClCompile Include="cube.cpp" />
-    <ClCompile Include="debug_ostream.cpp" />
-    <ClCompile Include="debug_text.cpp" />
-    <ClCompile Include="direct3d.cpp" />
-    <ClCompile Include="effect.cpp" />
-    <ClCompile Include="fade.cpp" />
-    <ClCompile Include="game.cpp" />
-    <ClCompile Include="game_window.cpp" />
-    <ClCompile Include="grid.cpp" />
-    <ClCompile Include="infinite_grid.cpp" />
-    <ClCompile Include="input_producer.cpp" />
-    <ClCompile Include="keyboard.cpp" />
-    <ClCompile Include="key_logger.cpp" />
-    <ClCompile Include="light.cpp" />
+    <ClCompile Include="Game\collision.cpp" />
+    <ClCompile Include="Graphics\animator.cpp" />
+    <ClCompile Include="Game\Audio.cpp" />
+    <ClCompile Include="Graphics\camera.cpp" />
+    <ClCompile Include="Graphics\cube.cpp" />
+    <ClCompile Include="Core\debug_ostream.cpp" />
+    <ClCompile Include="Core\debug_text.cpp" />
+    <ClCompile Include="Core\direct3d.cpp" />
+    <ClCompile Include="Graphics\effect.cpp" />
+    <ClCompile Include="Graphics\fade.cpp" />
+    <ClCompile Include="Game\game.cpp" />
+    <ClCompile Include="Core\game_window.cpp" />
+    <ClCompile Include="Game\grid.cpp" />
+    <ClCompile Include="Game\infinite_grid.cpp" />
+    <ClCompile Include="Core\input_producer.cpp" />
+    <ClCompile Include="Core\keyboard.cpp" />
+    <ClCompile Include="Core\key_logger.cpp" />
+    <ClCompile Include="Graphics\light.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="map.cpp" />
-    <ClCompile Include="mesh_field.cpp" />
-    <ClCompile Include="model.cpp" />
-    <ClCompile Include="model_ani.cpp" />
-    <ClCompile Include="mouse.cpp" />
-    <ClCompile Include="ms_logger.cpp" />
-    <ClCompile Include="mock_network.cpp" />
-    <ClCompile Include="mock_server.cpp" />
-    <ClCompile Include="player.cpp" />
-    <ClCompile Include="player_cam_fps.cpp" />
-    <ClCompile Include="player_cam_tps.cpp" />
-    <ClCompile Include="player_fps.cpp" />
-    <ClCompile Include="player_state_mechine.cpp" />
-    <ClCompile Include="remote_player.cpp" />
-    <ClCompile Include="remote_player_state_machine.cpp" />
-    <ClCompile Include="polygon.cpp" />
-    <ClCompile Include="sampler.cpp" />
-    <ClCompile Include="scene.cpp" />
-    <ClCompile Include="score.cpp" />
-    <ClCompile Include="shader.cpp" />
-    <ClCompile Include="shader_3d.cpp" />
-    <ClCompile Include="shader_3d_ani.cpp" />
-    <ClCompile Include="shader_3d_unlit.cpp" />
-    <ClCompile Include="shader_field.cpp" />
-    <ClCompile Include="shader_infinite.cpp" />
-    <ClCompile Include="sky_dome.cpp" />
-    <ClCompile Include="sprite.cpp" />
-    <ClCompile Include="sprite_anime.cpp" />
-    <ClCompile Include="system_timer.cpp" />
-    <ClCompile Include="texture.cpp" />
-    <ClCompile Include="title.cpp" />
-    <ClCompile Include="WICTextureLoader11.cpp" />
+    <ClCompile Include="Game\map.cpp" />
+    <ClCompile Include="Graphics\mesh_field.cpp" />
+    <ClCompile Include="Graphics\model.cpp" />
+    <ClCompile Include="Graphics\model_ani.cpp" />
+    <ClCompile Include="Core\mouse.cpp" />
+    <ClCompile Include="Core\ms_logger.cpp" />
+    <ClCompile Include="Network\mock_network.cpp" />
+    <ClCompile Include="Network\mock_server.cpp" />
+    <ClCompile Include="Game\player.cpp" />
+    <ClCompile Include="Game\player_cam_fps.cpp" />
+    <ClCompile Include="Game\player_cam_tps.cpp" />
+    <ClCompile Include="Game\player_fps.cpp" />
+    <ClCompile Include="Game\player_state_mechine.cpp" />
+    <ClCompile Include="Network\remote_player.cpp" />
+    <ClCompile Include="Network\remote_player_state_machine.cpp" />
+    <ClCompile Include="Graphics\polygon.cpp" />
+    <ClCompile Include="Graphics\sampler.cpp" />
+    <ClCompile Include="Game\scene.cpp" />
+    <ClCompile Include="Game\score.cpp" />
+    <ClCompile Include="Graphics\shader.cpp" />
+    <ClCompile Include="Graphics\shader_3d.cpp" />
+    <ClCompile Include="Graphics\shader_3d_ani.cpp" />
+    <ClCompile Include="Graphics\shader_3d_unlit.cpp" />
+    <ClCompile Include="Graphics\shader_field.cpp" />
+    <ClCompile Include="Graphics\shader_infinite.cpp" />
+    <ClCompile Include="Graphics\sky_dome.cpp" />
+    <ClCompile Include="Graphics\sprite.cpp" />
+    <ClCompile Include="Graphics\sprite_anime.cpp" />
+    <ClCompile Include="Core\system_timer.cpp" />
+    <ClCompile Include="Graphics\texture.cpp" />
+    <ClCompile Include="Game\title.cpp" />
+    <ClCompile Include="Graphics\WICTextureLoader11.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="animator.h" />
-    <ClInclude Include="Audio.h" />
-    <ClInclude Include="camera.h" />
-    <ClInclude Include="collision.h" />
-    <ClInclude Include="cube.h" />
-    <ClInclude Include="debug_imgui.h" />
-    <ClInclude Include="debug_text.h" />
-    <ClInclude Include="direct3d.h" />
-    <ClInclude Include="effect.h" />
-    <ClInclude Include="fade.h" />
-    <ClInclude Include="game.h" />
-    <ClInclude Include="game_window.h" />
-    <ClInclude Include="grid.h" />
-    <ClInclude Include="infinite_grid.h" />
-    <ClInclude Include="input_producer.h" />
-    <ClInclude Include="keyboard.h" />
-    <ClInclude Include="key_logger.h" />
-    <ClInclude Include="light.h" />
-    <ClInclude Include="map.h" />
-    <ClInclude Include="mesh_field.h" />
-    <ClInclude Include="model.h" />
-    <ClInclude Include="model_ani.h" />
-    <ClInclude Include="mouse.h" />
-    <ClInclude Include="ms_logger.h" />
-    <ClInclude Include="mock_network.h" />
-    <ClInclude Include="mock_server.h" />
-    <ClInclude Include="net_common.h" />
-    <ClInclude Include="player.h" />
-    <ClInclude Include="player_cam_fps.h" />
-    <ClInclude Include="player_cam_tps.h" />
-    <ClInclude Include="player_fps.h" />
-    <ClInclude Include="player_state_mechine.h" />
-    <ClInclude Include="remote_player.h" />
-    <ClInclude Include="remote_player_state_machine.h" />
-    <ClInclude Include="polygon.h" />
-    <ClInclude Include="sampler.h" />
-    <ClInclude Include="scene.h" />
-    <ClInclude Include="score.h" />
-    <ClInclude Include="shader.h" />
-    <ClInclude Include="shader_3d.h" />
-    <ClInclude Include="shader_3d_ani.h" />
-    <ClInclude Include="shader_3d_unlit.h" />
-    <ClInclude Include="shader_field.h" />
-    <ClInclude Include="shader_infinite.h" />
-    <ClInclude Include="sky_dome.h" />
-    <ClInclude Include="sprite.h" />
-    <ClInclude Include="sprite_anime.h" />
-    <ClInclude Include="system_timer.h" />
-    <ClInclude Include="texture.h" />
-    <ClInclude Include="title.h" />
-    <ClInclude Include="WICTextureLoader11.h" />
+    <ClInclude Include="Game\collision.h" />
+    <ClInclude Include="Graphics\animator.h" />
+    <ClInclude Include="Game\Audio.h" />
+    <ClInclude Include="Graphics\camera.h" />
+    <ClInclude Include="Graphics\cube.h" />
+    <ClInclude Include="Core\debug_imgui.h" />
+    <ClInclude Include="Core\debug_text.h" />
+    <ClInclude Include="Core\direct3d.h" />
+    <ClInclude Include="Graphics\effect.h" />
+    <ClInclude Include="Graphics\fade.h" />
+    <ClInclude Include="Game\game.h" />
+    <ClInclude Include="Core\game_window.h" />
+    <ClInclude Include="Game\grid.h" />
+    <ClInclude Include="Game\infinite_grid.h" />
+    <ClInclude Include="Core\input_producer.h" />
+    <ClInclude Include="Core\keyboard.h" />
+    <ClInclude Include="Core\key_logger.h" />
+    <ClInclude Include="Graphics\light.h" />
+    <ClInclude Include="Game\map.h" />
+    <ClInclude Include="Graphics\mesh_field.h" />
+    <ClInclude Include="Graphics\model.h" />
+    <ClInclude Include="Graphics\model_ani.h" />
+    <ClInclude Include="Core\mouse.h" />
+    <ClInclude Include="Core\ms_logger.h" />
+    <ClInclude Include="Network\mock_network.h" />
+    <ClInclude Include="Network\mock_server.h" />
+    <ClInclude Include="Network\net_common.h" />
+    <ClInclude Include="Game\player.h" />
+    <ClInclude Include="Game\player_cam_fps.h" />
+    <ClInclude Include="Game\player_cam_tps.h" />
+    <ClInclude Include="Game\player_fps.h" />
+    <ClInclude Include="Game\player_state_mechine.h" />
+    <ClInclude Include="Network\remote_player.h" />
+    <ClInclude Include="Network\remote_player_state_machine.h" />
+    <ClInclude Include="Graphics\polygon.h" />
+    <ClInclude Include="Graphics\sampler.h" />
+    <ClInclude Include="Game\scene.h" />
+    <ClInclude Include="Game\score.h" />
+    <ClInclude Include="Graphics\shader.h" />
+    <ClInclude Include="Graphics\shader_3d.h" />
+    <ClInclude Include="Graphics\shader_3d_ani.h" />
+    <ClInclude Include="Graphics\shader_3d_unlit.h" />
+    <ClInclude Include="Graphics\shader_field.h" />
+    <ClInclude Include="Graphics\shader_infinite.h" />
+    <ClInclude Include="Graphics\sky_dome.h" />
+    <ClInclude Include="Graphics\sprite.h" />
+    <ClInclude Include="Graphics\sprite_anime.h" />
+    <ClInclude Include="Core\system_timer.h" />
+    <ClInclude Include="Graphics\texture.h" />
+    <ClInclude Include="Game\title.h" />
+    <ClInclude Include="Graphics\WICTextureLoader11.h" />
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="infinite_grid_pixel.hlsl">
+    <FxCompile Include="Shaders\infinite_grid_pixel.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compute</ShaderType>
@@ -269,7 +273,7 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
     </FxCompile>
-    <FxCompile Include="infinite_grid_vertex.hlsl">
+    <FxCompile Include="Shaders\infinite_grid_vertex.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compute</ShaderType>
@@ -279,44 +283,44 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
     </FxCompile>
-    <FxCompile Include="shader_pixel_2d.hlsl">
+    <FxCompile Include="Shaders\shader_pixel_2d.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
     </FxCompile>
-    <FxCompile Include="shader_pixel_3d.hlsl">
+    <FxCompile Include="Shaders\shader_pixel_3d.hlsl">
       <DisableOptimizations Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</DisableOptimizations>
       <EnableDebuggingInformation Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</EnableDebuggingInformation>
     </FxCompile>
-    <FxCompile Include="shader_pixel_3dunlit.hlsl" />
-    <FxCompile Include="shader_pixel_field.hlsl" />
-    <FxCompile Include="shader_vertex_2d.hlsl">
+    <FxCompile Include="Shaders\shader_pixel_3dunlit.hlsl" />
+    <FxCompile Include="Shaders\shader_pixel_field.hlsl" />
+    <FxCompile Include="Shaders\shader_vertex_2d.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
     </FxCompile>
-    <FxCompile Include="shader_vertex_3d.hlsl">
+    <FxCompile Include="Shaders\shader_vertex_3d.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
     </FxCompile>
-    <FxCompile Include="shader_vertex_3dunlit.hlsl">
+    <FxCompile Include="Shaders\shader_vertex_3dunlit.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
     </FxCompile>
-    <FxCompile Include="shader_vertex_3d_ani.hlsl">
+    <FxCompile Include="Shaders\shader_vertex_3d_ani.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
     </FxCompile>
-    <FxCompile Include="shader_vertex_field.hlsl">
+    <FxCompile Include="Shaders\shader_vertex_field.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
     </FxCompile>
-    <FxCompile Include="shader_pixel_3d_ani.hlsl">
+    <FxCompile Include="Shaders\shader_pixel_3d_ani.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
