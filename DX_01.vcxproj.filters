@@ -327,6 +327,9 @@
     <ClInclude Include="Game\collision.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="ThirdParty\enet\include\enet\enet.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\shader_pixel_2d.hlsl">
@@ -394,5 +397,8 @@
     <Media Include="resource\audio\se.wav">
       <Filter>Resource Files</Filter>
     </Media>
+  </ItemGroup>
+  <ItemGroup>
+    <Library Include="ThirdParty\enet\lib\enet.lib" />
   </ItemGroup>
 </Project>

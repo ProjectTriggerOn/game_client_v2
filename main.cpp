@@ -43,17 +43,25 @@
 
 #include "mock_server.h"
 #include "mock_network.h"
+#include "enet_client_network.h"
 #include "input_producer.h"
 #include "remote_player.h"
+#include "i_network.h"
 
 
 //Window procedure prototype claim
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
-// Global accessor for MockServer (for debug visualization)
+// Global accessor for MockServer (for debug visualization in mock mode)
 MockServer* g_pMockServer = nullptr;
 
-int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _In_ int nCmdShow)
+// Global network interface pointer (used by game.cpp etc.)
+INetwork* g_pNetwork = nullptr;
+
+// Network mode flag
+static bool g_UseENet = false;
+
+int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR lpCmdLine, _In_ int nCmdShow)
 {
 	(void)CoInitializeEx(nullptr, COINIT_MULTITHREADED);
 
@@ -102,20 +110,55 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 	Scene_Initialize();
 
 	// ========================================================================
-	// Initialize Mock Network Layer (Server-Authoritative Architecture)
+	// Network Mode Selection
+	// --enet flag: connect to remote server via ENet
+	// Default: mock mode (local in-process server)
 	// ========================================================================
-	static MockNetwork g_Network;
-	static MockServer g_Server;
-	g_Network.Initialize();
-	g_Server.Initialize(&g_Network);
+	g_UseENet = (strstr(lpCmdLine, "--enet") != nullptr);
 
-	// Global accessor for debug visualization
-	extern MockServer* g_pMockServer;
-	g_pMockServer = &g_Server;
+	static MockNetwork g_MockNetwork;
+	static MockServer g_MockServer;
+	static ENetClientNetwork g_ENetNetwork;
+
+	if (g_UseENet)
+	{
+		// ENet mode: connect to remote server
+		const char* serverHost = "127.0.0.1";
+		uint16_t serverPort = 7777;
+
+		// Parse optional --host=X and --port=X
+		const char* hostArg = strstr(lpCmdLine, "--host=");
+		if (hostArg)
+		{
+			static char hostBuf[256];
+			sscanf_s(hostArg, "--host=%255s", hostBuf, (unsigned)sizeof(hostBuf));
+			serverHost = hostBuf;
+		}
+		const char* portArg = strstr(lpCmdLine, "--port=");
+		if (portArg)
+		{
+			int p = 0;
+			sscanf_s(portArg, "--port=%d", &p);
+			if (p > 0 && p <= 65535) serverPort = static_cast<uint16_t>(p);
+		}
+
+		g_ENetNetwork.SetServerAddress(serverHost, serverPort);
+		g_ENetNetwork.Initialize();
+		g_pNetwork = &g_ENetNetwork;
+		g_pMockServer = nullptr;
+	}
+	else
+	{
+		// Mock mode: local in-process server
+		g_MockNetwork.Initialize();
+		g_MockServer.Initialize(&g_MockNetwork);
+		g_pNetwork = &g_MockNetwork;
+		g_pMockServer = &g_MockServer;
+	}
 
 	// Initialize Input Producer (Client-side input sampling)
 	static InputProducer g_InputProducer;
-	g_InputProducer.Initialize(&g_Network);
+	g_InputProducer.Initialize(g_pNetwork);
 	extern InputProducer* g_pInputProducer;
 	g_pInputProducer = &g_InputProducer;
 
@@ -208,10 +251,16 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 				g_InputProducer.Update();
 
 				// ====================================================================
-				// Server Tick Update (32Hz Fixed Rate via Accumulator)
-				// This runs independently of render frame rate
+				// Network: Poll events (ENet) or run local server (Mock)
 				// ====================================================================
-				g_Server.Update(elapsed_time);
+				if (g_UseENet)
+				{
+					g_ENetNetwork.PollEvents();
+				}
+				else
+				{
+					g_MockServer.Update(elapsed_time);
+				}
 
 				Fade_Update(elapsed_time);
 
@@ -245,6 +294,19 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR, _I
 	} while (msg.message != WM_QUIT);
 
 	//Game_Finalize();
+
+	// Network cleanup
+	if (g_UseENet)
+	{
+		g_ENetNetwork.Finalize();
+	}
+	else
+	{
+		g_MockServer.Finalize();
+		g_MockNetwork.Finalize();
+	}
+	g_pNetwork = nullptr;
+
 #if defined(_DEBUG) || defined(DEBUG)
 
 	Collision_DebugFinalize();

@@ -11,7 +11,7 @@
 
 #include "net_common.h"
 
-class MockNetwork;
+class INetwork;
 
 class InputProducer
 {
@@ -19,7 +19,7 @@ public:
     InputProducer();
     ~InputProducer() = default;
 
-    void Initialize(MockNetwork* pNetwork);
+    void Initialize(INetwork* pNetwork);
     void Finalize();
 
     //-------------------------------------------------------------------------
@@ -31,6 +31,11 @@ public:
     // Get current input state (for client-side prediction)
     //-------------------------------------------------------------------------
     const InputCmd& GetLastInputCmd() const { return m_LastCmd; }
+
+    //-------------------------------------------------------------------------
+    // Feed last server state (for jump-pending logic without MockServer access)
+    //-------------------------------------------------------------------------
+    void SetLastServerState(const NetPlayerState& state) { m_LastServerState = state; m_HasServerState = true; }
 
     //-------------------------------------------------------------------------
     // Target tick for synchronization
@@ -50,7 +55,7 @@ private:
     InputCmd BuildInputCmd() const;
 
 private:
-    MockNetwork* m_pNetwork;
+    INetwork* m_pNetwork;
     
     uint32_t m_TargetTick;      // Next server tick to target
     
@@ -62,8 +67,11 @@ private:
     uint32_t m_Buttons;         // Button bitfield
     
     bool m_JumpPending;         // Sticky jump: persists until server processes
-    
+
     InputCmd m_LastCmd;         // Most recent command sent
+
+    NetPlayerState m_LastServerState;  // Last received server state
+    bool m_HasServerState;             // Whether we have received any server state
 };
 
 // Global accessor (set in main.cpp)

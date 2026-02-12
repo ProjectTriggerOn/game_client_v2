@@ -9,38 +9,38 @@
 // without changing game logic.
 //=============================================================================
 
-#include "net_common.h"
+#include "i_network.h"
 #include <queue>
 #include <mutex>
 
-class MockNetwork
+class MockNetwork : public INetwork
 {
 public:
     MockNetwork() = default;
-    ~MockNetwork() = default;
+    ~MockNetwork() override = default;
 
-    void Initialize();
-    void Finalize();
+    void Initialize() override;
+    void Finalize() override;
 
     //-------------------------------------------------------------------------
     // Client -> Server (Upstream)
     //-------------------------------------------------------------------------
-    void SendInputCmd(const InputCmd& cmd);
-    bool ReceiveInputCmd(InputCmd& outCmd);
-    size_t GetInputQueueSize() const;
+    void SendInputCmd(const InputCmd& cmd) override;
+    bool ReceiveInputCmd(InputCmd& outCmd) override;
+    size_t GetInputQueueSize() const override;
 
     //-------------------------------------------------------------------------
     // Server -> Client (Downstream)
     //-------------------------------------------------------------------------
-    void SendSnapshot(const Snapshot& snapshot);
-    bool ReceiveSnapshot(Snapshot& outSnapshot);
-    size_t GetSnapshotQueueSize() const;
+    void SendSnapshot(const Snapshot& snapshot) override;
+    bool ReceiveSnapshot(Snapshot& outSnapshot) override;
+    size_t GetSnapshotQueueSize() const override;
 
     //-------------------------------------------------------------------------
     // Debug / Statistics
     //-------------------------------------------------------------------------
-    uint32_t GetTotalInputsSent() const { return m_TotalInputsSent; }
-    uint32_t GetTotalSnapshotsSent() const { return m_TotalSnapshotsSent; }
+    uint32_t GetTotalInputsSent() const override { return m_TotalInputsSent; }
+    uint32_t GetTotalSnapshotsSent() const override { return m_TotalSnapshotsSent; }
 
 private:
     // Upstream: Client -> Server

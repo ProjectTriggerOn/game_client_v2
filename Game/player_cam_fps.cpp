@@ -13,7 +13,7 @@
 #include <sstream>
 
 #include "ms_logger.h"
-#include "mock_server.h"
+#include "net_common.h"
 #include "input_producer.h"
 #include "remote_player.h"
 #include "game.h"
@@ -265,31 +265,29 @@ void PlayerCamFps_Debug(const Player_Fps& pf)
 {
 #if defined(_DEBUG) || defined(DEBUG)
 
-	// Access global MockServer pointer for debug info
-	extern MockServer* g_pMockServer;
+	// Access global NetworkDebugInfo (populated from received snapshots)
+	extern NetworkDebugInfo g_NetDebugInfo;
 
 	std::stringstream ss;
-	
+
 	// Server Info Section
 	ss << "=== Server (32Hz) ===\n";
-	if (g_pMockServer)
+	if (g_NetDebugInfo.hasData)
 	{
-		ss << "ServerTick: " << g_pMockServer->GetCurrentTick() << "\n";
-		ss << "Accumulator: " << std::fixed << std::setprecision(2) 
-		   << (g_pMockServer->GetAccumulator() * 1000.0) << "ms\n";
-		ss << "ServerTime: " << std::fixed << std::setprecision(1) 
-		   << g_pMockServer->GetServerTime() << "s\n";
-		
+		ss << "ServerTick: " << g_NetDebugInfo.lastServerTick << "\n";
+		ss << "ServerTime: " << std::fixed << std::setprecision(1)
+		   << g_NetDebugInfo.lastServerTime << "s\n";
+
 		// Server authoritative position
-		const NetPlayerState& srvState = g_pMockServer->GetPlayerState();
+		const NetPlayerState& srvState = g_NetDebugInfo.lastServerState;
 		ss << "ServerPos: " << std::fixed << std::setprecision(1)
-		   << srvState.position.x << ", " 
-		   << srvState.position.y << ", " 
+		   << srvState.position.x << ", "
+		   << srvState.position.y << ", "
 		   << srvState.position.z << "\n";
 	}
 	else
 	{
-		ss << "Server: NOT INITIALIZED\n";
+		ss << "Server: NO DATA\n";
 	}
 	
 	// Correction Info
