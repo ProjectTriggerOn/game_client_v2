@@ -27,7 +27,9 @@ Player_Fps::Player_Fps()
 	, m_Animator(nullptr)
 	, m_StateMachine(nullptr)
 	, m_WeaponRPM(600.0)
+	, m_FireTimer(0.0)
 	, m_FireCounter(0)
+	, m_TransitionFiring(false)
 	
 {
 }
@@ -226,49 +228,100 @@ void Player_Fps::Update(double elapsed_time)
 	}
 
 	if (!isPressingRight && 
-		(m_StateMachine->GetWeaponState() == WeaponState::ADS || m_StateMachine->GetWeaponState() == WeaponState::ADS_IN))
+		(m_StateMachine->GetWeaponState() == WeaponState::ADS || 
+		 m_StateMachine->GetWeaponState() == WeaponState::ADS_IN ||
+		 m_StateMachine->GetWeaponState() == WeaponState::ADS_FIRING))
 	{
+		// Exit ADS — transition fire (additive) will keep firing if left is held
 		m_StateMachine->SetWeaponState(WeaponState::ADS_OUT);
 	}
 
-	if (isPressingLeft)
+	// ---- TRANSITION FIRE: fire during ADS_IN / ADS_OUT using additive ----
 	{
-		if (m_StateMachine->GetWeaponState() == WeaponState::ADS)
-		{
-			m_StateMachine->SetWeaponState(WeaponState::ADS_FIRING);
-		}
-	}
-	else
-	{
-		if (m_StateMachine->GetWeaponState() == WeaponState::ADS_FIRING)
-		{
-			m_StateMachine->SetWeaponState(WeaponState::ADS);
-		}
-	}
+		WeaponState ws = m_StateMachine->GetWeaponState();
+		bool inTransition = (ws == WeaponState::ADS_IN || ws == WeaponState::ADS_OUT);
 
-	if (m_StateMachine->GetWeaponState() == WeaponState::ADS_FIRING)
-	{
-		if (m_Animator->OnCurrAniStarted())
+		if (inTransition && isPressingLeft)
 		{
-			if (Game_GetState() == PLAY) {
-				m_FireCounter++;
+			if (!m_TransitionFiring) {
+				// First shot
+				m_TransitionFiring = true;
+				m_FireTimer = 0.0;
+				if (Game_GetState() == PLAY) {
+					m_FireCounter++;
+				}
+			} else {
+				// Full-auto at RPM interval
+				m_FireTimer += dt;
+				const double fireInterval = 60.0 / m_WeaponRPM;
+				if (m_FireTimer >= fireInterval) {
+					m_FireTimer -= fireInterval;
+					if (Game_GetState() == PLAY) {
+						m_FireCounter++;
+					}
+				}
 			}
 		}
+		else
+		{
+			m_TransitionFiring = false;
+		}
 	}
 
-	if (MSLogger_IsTrigger(MBT_LEFT) && m_StateMachine->GetWeaponState() == WeaponState::HIP) {
-		m_StateMachine->SetWeaponState(WeaponState::HIP_FIRING);
+	// ---- ADS FIRE: click to start, hold for full-auto ----
+	if (isPressingLeft && m_StateMachine->GetWeaponState() == WeaponState::ADS)
+	{
+		// First shot on press
+		m_StateMachine->SetWeaponState(WeaponState::ADS_FIRING);
+		m_FireTimer = 0.0;
 		if (Game_GetState() == PLAY) {
 			m_FireCounter++;
 		}
 	}
 
-	if (m_StateMachine->GetWeaponState() == WeaponState::HIP_FIRING &&
-		m_Animator->GetCurrentAnimationIndex() == 3 &&
-		m_Animator->GetCurrAniProgress() < 0.78f) {
-		if (MSLogger_IsTrigger(MBT_LEFT)) {
-			m_Animator->SetSameAniOverlapAllow(true);
+	if (!isPressingLeft && m_StateMachine->GetWeaponState() == WeaponState::ADS_FIRING)
+	{
+		m_StateMachine->SetWeaponState(WeaponState::ADS);
+	}
+
+	if (m_StateMachine->GetWeaponState() == WeaponState::ADS_FIRING)
+	{
+		if (isPressingLeft) {
+			// Full-auto: accumulate timer and fire at RPM interval
+			m_FireTimer += dt;
+			const double fireInterval = 60.0 / m_WeaponRPM;
+			if (m_FireTimer >= fireInterval) {
+				m_FireTimer -= fireInterval;
+				m_Animator->SetSameAniOverlapAllow(true);
+				if (Game_GetState() == PLAY) {
+					m_FireCounter++;
+				}
+			}
+		}
+	}
+
+	// ---- HIP FIRE: click to start, hold for full-auto ----
+	if (isPressingLeft && m_StateMachine->GetWeaponState() == WeaponState::HIP) {
+		// First shot on press
+		m_StateMachine->SetWeaponState(WeaponState::HIP_FIRING);
+		m_FireTimer = 0.0;
+		if (Game_GetState() == PLAY) {
 			m_FireCounter++;
+		}
+	}
+
+	if (m_StateMachine->GetWeaponState() == WeaponState::HIP_FIRING) {
+		if (isPressingLeft) {
+			// Full-auto: accumulate timer and fire at RPM interval
+			m_FireTimer += dt;
+			const double fireInterval = 60.0 / m_WeaponRPM;
+			if (m_FireTimer >= fireInterval) {
+				m_FireTimer -= fireInterval;
+				m_Animator->SetSameAniOverlapAllow(true);
+				if (Game_GetState() == PLAY) {
+					m_FireCounter++;
+				}
+			}
 		}
 	}
 
@@ -286,6 +339,13 @@ void Player_Fps::Update(double elapsed_time)
 	if (m_Model && m_Animator)
 	{
 		m_StateMachine->Update(elapsed_time, m_Animator);
+
+		// Override additive layer: fire animation during ADS transition
+		if (m_TransitionFiring)
+		{
+			// PlayAdditive with fire animation (index 3), non-loop, full weight
+			m_Animator->PlayAdditive(3, false, 1.0f);
+		}
 	}
 
 }

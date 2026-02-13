@@ -81,7 +81,9 @@ private:
 	float m_Height;
 	bool m_isJump;
 	double m_WeaponRPM;
+	double m_FireTimer;
 	int m_FireCounter;
+	bool m_TransitionFiring;
 	MODEL_ANI* m_Model;
 	Animator* m_Animator;
 	PlayerStateMachine* m_StateMachine;

@@ -49,7 +49,7 @@ void PlayerStateMachine::BuildTables()
 	m_WeaponAnimTable[WeaponState::ADS_IN]                 = { 4,  false, 0.1f };
 	m_WeaponAnimTable[WeaponState::ADS_OUT]                = { 5,  false, 0.1f };
 	m_WeaponAnimTable[WeaponState::ADS]                    = { 6,  true,  0.1f };
-	m_WeaponAnimTable[WeaponState::ADS_FIRING]             = { 7,  true,  0.1f };
+	m_WeaponAnimTable[WeaponState::ADS_FIRING]             = { 7,  false,  0.1f };
 	m_WeaponAnimTable[WeaponState::RELOADING]              = { 9,  false, 0.1f };
 	m_WeaponAnimTable[WeaponState::RELOADING_OUT_OF_AMMO]  = { 10, false, 0.1f };
 	m_WeaponAnimTable[WeaponState::INSPECTING]             = { 11, true,  0.1f };
