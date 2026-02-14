@@ -1,0 +1,20 @@
+# =============================================================================
+# TriggerOn Client — Configuration
+# =============================================================================
+
+[network]
+# Network mode: "mock" | "local" | "remote"
+#   mock   — in-process mock server (no real networking)
+#   local  — ENet connection to local machine (127.0.0.1)
+#   remote — ENet connection to remote server
+mode = "remote"
+
+server_port = 7777
+
+# Server addresses per mode
+local_host  = "127.0.0.1"
+remote_host = "127.0.0.1"
+
+[client]
+window_width  = 1280
+window_height = 720
