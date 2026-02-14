@@ -15,8 +15,9 @@
 
 using namespace DirectX;
 
-// Global accessor
-RemotePlayer* g_pRemotePlayer = nullptr;
+// Global remote player array (pre-allocated, indexed by playerId)
+RemotePlayer g_RemotePlayers[MAX_PLAYERS];
+bool g_RemotePlayerActive[MAX_PLAYERS] = {};
 
 //-----------------------------------------------------------------------------
 // Constructor

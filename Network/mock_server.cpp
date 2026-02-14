@@ -315,10 +315,12 @@ void MockServer::BroadcastSnapshot()
 {
     if (!m_pNetwork) return;
 
-    Snapshot snapshot;
+    Snapshot snapshot = {};
     snapshot.tickId = m_CurrentTick;
     snapshot.serverTime = m_ServerTime;
     snapshot.localPlayer = m_PlayerState;
+    snapshot.localPlayerId = 0;
+    snapshot.remotePlayerCount = 0;
 
     m_pNetwork->SendSnapshot(snapshot);
 }

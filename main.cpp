@@ -153,11 +153,15 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR lpC
 	extern InputProducer* g_pInputProducer;
 	g_pInputProducer = &g_InputProducer;
 
-	// Initialize Remote Player (for displaying server-controlled entities)
-	static RemotePlayer g_RemotePlayer;
-	g_RemotePlayer.Initialize({ 5.0f, 0.0f, -15.0f });  // Spawn offset from local player
-	extern RemotePlayer* g_pRemotePlayer;
-	g_pRemotePlayer = &g_RemotePlayer;
+	// Initialize Remote Players (pre-allocate MAX_PLAYERS slots, all inactive)
+	extern RemotePlayer g_RemotePlayers[];
+	extern bool g_RemotePlayerActive[];
+	for (int i = 0; i < MAX_PLAYERS; i++)
+	{
+		g_RemotePlayers[i].Initialize({ 0.0f, 0.0f, 0.0f });
+		g_RemotePlayers[i].SetActive(false);
+		g_RemotePlayerActive[i] = false;
+	}
 
 	Cube_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
 

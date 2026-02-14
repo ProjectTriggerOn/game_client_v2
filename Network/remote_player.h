@@ -129,5 +129,6 @@ private:
     RemotePlayerStateMachine* m_StateMachine;
 };
 
-// Global accessor
-extern RemotePlayer* g_pRemotePlayer;
+// Global remote player array (pre-allocated, indexed by playerId)
+extern RemotePlayer g_RemotePlayers[];
+extern bool g_RemotePlayerActive[];
