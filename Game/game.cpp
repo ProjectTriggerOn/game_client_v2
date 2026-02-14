@@ -121,7 +121,8 @@ void Game_Update(double elapsed_time)
 
 			// For demo: offset position so we can see both players
 			NetPlayerState remoteState = snap.localPlayer;
-			remoteState.position.x += 5.0f;
+			remoteState.position.x += 3.0f;
+			remoteState.yaw += XM_PI; // Face opposite direction
 
 			g_pRemotePlayer->PushSnapshot(remoteState, clientClock);
 		}

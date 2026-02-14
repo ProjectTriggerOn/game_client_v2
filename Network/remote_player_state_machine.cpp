@@ -16,7 +16,7 @@ using namespace DirectX;
 //-----------------------------------------------------------------------------
 RemotePlayerStateMachine::RemotePlayerStateMachine()
     : m_PlayerState(RemotePlayerState::IDLE)
-    , m_WeaponState(RemoteWeaponState::HIP)
+    , m_WeaponState(RemoteWeaponState::NONE)
     , m_MoveDirection(RemoteMoveDirection::NONE)
     , m_AccumulatedTime(0.0f)
 {
@@ -201,15 +201,13 @@ void RemotePlayerStateMachine::Update(double elapsed_time, Animator* animator)
     
     m_AccumulatedTime += static_cast<float>(elapsed_time);
     
+    // ================================================================
+    // BASE LAYER (lower body): always driven by movement state
+    // ================================================================
     int animationIndex = ANI_IDLE;
     bool isLoopAnimation = true;
-    float blendTime = 0.2f; // Increased blend time for smoother 8-way transitions
+    float blendTime = 0.2f;
     
-    // Logic: Weapon State Override? Or Base Movement?
-    // Usually Movement is Base, Upper Body is Weapon.
-    // For now, assuming full body generic animations.
-    
-    // 1. Movement State
     switch (m_PlayerState)
     {
     case RemotePlayerState::IDLE:
@@ -247,49 +245,71 @@ void RemotePlayerStateMachine::Update(double elapsed_time, Animator* animator)
         break;
         
     case RemotePlayerState::JUMPING:
-        animationIndex = ANI_JUMP_LOOP; // Or JUMP_START
+        animationIndex = ANI_JUMP_LOOP;
         isLoopAnimation = true;
         break;
         
     case RemotePlayerState::FALLING:
-        animationIndex = ANI_JUMP_LAND; // Or keep loop
+        animationIndex = ANI_JUMP_LAND;
         isLoopAnimation = false;
         break;
     }
     
-    // 2. Weapon State Overrides (Full body vs Upper Body todo: partial blend)
-    // For now, assuming full body overrides if explicitly in a weapon action state.
+    // Play base layer (movement) with crossfade
+    animator->PlayCrossFade(animationIndex, isLoopAnimation, blendTime);
     
-    // Note: If IDLE, we might want to show Idle or Idle_Relaxed or a gun pose.
-    // The user provided 'idle@rifle_tpc' (ANI_IDLE) and 'idle_relaxed' (ANI_IDLE_RELAXED).
-    // Let's assume IDLE state uses ANI_IDLE by default.
-    
+    // ================================================================
+    // ADDITIVE LAYER (upper body): weapon actions overlaid on movement
+    // ================================================================
     switch (m_WeaponState)
     {
-    case RemoteWeaponState::HIP_FIRING:
-        animationIndex = ANI_FIRE;
-        isLoopAnimation = false;
-        break;
-    case RemoteWeaponState::RELOADING:
-        animationIndex = ANI_RELOAD_AMMO_LEFT; // Default to this one
-        isLoopAnimation = false;
-        break;
-    case RemoteWeaponState::ADS:
-        // No ADS specific walk/run present in simple list, but might just affect upper body in future.
-        // For now, if moving, keep movement. If Idle, maybe use pose ref?
-        // Logic: if Moving, ignore ADS state for full body ani.
-        if (m_PlayerState == RemotePlayerState::IDLE)
+    case RemoteWeaponState::FIRING:
+    {
+        // RPM-based fire: first shot fires immediately, subsequent at interval
+        if (!m_WasFiring)
         {
-             // Maybe use Reference pose or specific ADS idle? 
-             // List has 'pose_ref' and 'reference'.
+            // Just started firing — play immediately
+            animator->PlayAdditive(ANI_FIRE, false, 1.0f);
+            m_FireTimer = 0.0f;
+            m_WasFiring = true;
+        }
+        else
+        {
+            // Continuous fire — accumulate timer
+            m_FireTimer += static_cast<float>(elapsed_time);
+            if (m_FireTimer >= FIRE_INTERVAL)
+            {
+                m_FireTimer -= FIRE_INTERVAL;
+                animator->PlayAdditive(ANI_FIRE, false, 1.0f);
+            }
         }
         break;
+    }
+    case RemoteWeaponState::RELOAD:
+        if (m_WasFiring) m_WasFiring = false;
+        if (!m_WasReloading)
+        {
+            animator->PlayAdditive(ANI_RELOAD_AMMO_LEFT, false, 1.0f);
+            m_WasReloading = true;
+        }
+        break;
+    case RemoteWeaponState::RELOAD_EMPTY:
+        if (m_WasFiring) m_WasFiring = false;
+        if (!m_WasReloading)
+        {
+            animator->PlayAdditive(ANI_RELOAD_OUT_OF_AMMO, false, 1.0f);
+            m_WasReloading = true;
+        }
+        break;
+    case RemoteWeaponState::NONE:
     default:
+        if (m_WasFiring) m_WasFiring = false;
+        if (m_WasReloading) m_WasReloading = false;
+        if (animator->IsAdditiveActive())
+            animator->StopAdditive(0.15);
         break;
     }
     
-    // Play animation with crossfade
-    animator->PlayCrossFade(animationIndex, isLoopAnimation, blendTime);
     animator->Update(elapsed_time);
 }
 
@@ -316,11 +336,10 @@ std::string RemotePlayerStateMachine::GetWeaponStateString() const
 {
     switch (m_WeaponState)
     {
-    case RemoteWeaponState::HIP: return "HIP";
-    case RemoteWeaponState::HIP_FIRING: return "FIRING";
-    case RemoteWeaponState::ADS: return "ADS";
-    case RemoteWeaponState::ADS_FIRING: return "ADS_FIRE";
-    case RemoteWeaponState::RELOADING: return "RELOAD";
+    case RemoteWeaponState::NONE:         return "NONE";
+    case RemoteWeaponState::FIRING:       return "FIRING";
+    case RemoteWeaponState::RELOAD:       return "RELOAD";
+    case RemoteWeaponState::RELOAD_EMPTY: return "RELOAD_EMPTY";
     default: return "UNKNOWN";
     }
 }
