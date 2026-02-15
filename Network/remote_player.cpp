@@ -134,7 +134,7 @@ void RemotePlayer::SetTeam(uint8_t teamId)
     }
 
     const char* modelPath = (m_TeamId == PlayerTeam::BLUE)
-        ? "resource/model/lpsp_tpc_blue003.fbx"
+        ? "resource/model/lpsp_tpc_blue_003.fbx"
         : "resource/model/lpsp_tpc_red_001.fbx";
     m_Model = ModelAni_Load(modelPath);
 
