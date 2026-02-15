@@ -72,7 +72,7 @@ void Game_Initialize()
 	PlayerCamTps_Initialize();
 	PlayerCamFps_Initialize();
 	PlayerCamFps_SetInvertY(true);
-	//Mouse_SetMode(MOUSE_POSITION_MODE_RELATIVE);
+	Mouse_SetMode(MOUSE_POSITION_MODE_RELATIVE);
 }
 
 void Game_Update(double elapsed_time)

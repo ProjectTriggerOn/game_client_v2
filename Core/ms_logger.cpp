@@ -3,25 +3,19 @@
 #include "direct3d.h"
 #include "mouse.h"
 
-
-namespace 
+namespace
 {
-	Mouse_State g_PrevState = {};
+	struct ModeState
+	{
+		Mouse_State current = {};
+		Mouse_State prev = {};
+		Mouse_State trigger = {};
+		Mouse_State release = {};
+	};
 
-	Mouse_State g_TriggerState = {};
+	enum { MODE_GAME = 0, MODE_UI = 1 };
 
-	Mouse_State g_ReleaseState = {};
-
-	Mouse_State g_CurrentState = {};
-
-	Mouse_State g_UIPrevState = {};
-
-	Mouse_State g_UITriggerState = {};
-
-	Mouse_State g_UIReleaseState = {};
-
-	Mouse_State g_UICurrentState = {};
-
+	ModeState g_Mode[2];
 	bool g_isUIMode = false;
 }
 
@@ -36,151 +30,73 @@ void MSLogger_Finalize()
 
 void MSLogger_Update()
 {
-	LPBYTE pCurrent;
-	LPBYTE pPrev;
-	LPBYTE pTrigger;
-	LPBYTE pRelease;
+	ModeState& m = g_Mode[g_isUIMode ? MODE_UI : MODE_GAME];
 
-	if (g_isUIMode) {
+	Mouse_GetState(&m.current);
 
-		Mouse_GetState(&g_UICurrentState);
-
-		pCurrent = (LPBYTE)&g_UICurrentState;
-		pPrev = (LPBYTE)&g_UIPrevState;
-		pTrigger = (LPBYTE)&g_UITriggerState;
-		pRelease = (LPBYTE)&g_UIReleaseState;
-	}
-	else {
-
-		Mouse_GetState(&g_CurrentState);
-
-		pCurrent = (LPBYTE)&g_CurrentState;
-		pPrev = (LPBYTE)&g_PrevState;
-		pTrigger = (LPBYTE)&g_TriggerState;
-		pRelease = (LPBYTE)&g_ReleaseState;
-	}
+	LPBYTE pCurrent = (LPBYTE)&m.current;
+	LPBYTE pPrev    = (LPBYTE)&m.prev;
+	LPBYTE pTrigger = (LPBYTE)&m.trigger;
+	LPBYTE pRelease = (LPBYTE)&m.release;
 
 	for (int i = 0; i < sizeof(Mouse_State); ++i)
 	{
 		pTrigger[i] = (pPrev[i] ^ pCurrent[i]) & pCurrent[i];
 		pRelease[i] = (pPrev[i] ^ pCurrent[i]) & pPrev[i];
 	}
-	
-	if (g_isUIMode) {
-		g_UIPrevState = g_UICurrentState;
-	}
-	else {
-		g_PrevState = g_CurrentState;
-	}
+
+	m.prev = m.current;
 }
 
-bool MSLogger_IsPressed(MSLogger_Buttons btn)
-{
-	return isButtonDown(btn, &g_CurrentState);
-}
+bool MSLogger_IsPressed(MSLogger_Buttons btn)    { return isButtonDown(btn, &g_Mode[MODE_GAME].current); }
+bool MSLogger_IsTrigger(MSLogger_Buttons btn)    { return isButtonDown(btn, &g_Mode[MODE_GAME].trigger); }
+bool MSLogger_IsReleased(MSLogger_Buttons btn)   { return isButtonDown(btn, &g_Mode[MODE_GAME].release); }
 
-bool MSLogger_IsTrigger(MSLogger_Buttons btn)
-{
-	return isButtonDown(btn, &g_TriggerState);
-}
+bool MSLogger_IsPressedUI(MSLogger_Buttons btn)  { return isButtonDown(btn, &g_Mode[MODE_UI].current); }
+bool MSLogger_IsTriggerUI(MSLogger_Buttons btn)  { return isButtonDown(btn, &g_Mode[MODE_UI].trigger); }
+bool MSLogger_IsReleasedUI(MSLogger_Buttons btn) { return isButtonDown(btn, &g_Mode[MODE_UI].release); }
 
-bool MSLogger_IsReleased(MSLogger_Buttons btn)
-{
-	return isButtonDown(btn, &g_ReleaseState);
-}
-
-bool MSLogger_IsPressedUI(MSLogger_Buttons btn)
-{
-	return isButtonDown(btn, &g_UICurrentState);
-}
-
-bool MSLogger_IsTriggerUI(MSLogger_Buttons btn)
-{
-	return isButtonDown(btn, &g_UITriggerState);
-}
-
-bool MSLogger_IsReleasedUI(MSLogger_Buttons btn)
-{
-	return isButtonDown(btn, &g_UIReleaseState);
-}
-
-int MSLogger_GetX()
-{
-	return g_CurrentState.x;
-}
-
-int MSLogger_GetXUI()
-{
-	return g_UICurrentState.x;
-}
-
-int MSLogger_GetY()
-{
-	return g_CurrentState.y;
-}
-
-int MSLogger_GetYUI()
-{
-	return g_UICurrentState.y;
-}
+int MSLogger_GetX()    { return g_Mode[MODE_GAME].current.x; }
+int MSLogger_GetXUI()  { return g_Mode[MODE_UI].current.x; }
+int MSLogger_GetY()    { return g_Mode[MODE_GAME].current.y; }
+int MSLogger_GetYUI()  { return g_Mode[MODE_UI].current.y; }
 
 int MSLogger_GetScrollWheelValue()
 {
-	return g_CurrentState.scrollWheelValue;
+	return g_Mode[MODE_GAME].current.scrollWheelValue;
 }
 
 Mouse_PositionMode MSLogger_GetPositionMode()
 {
-	return g_CurrentState.positionMode;
+	return g_Mode[MODE_GAME].current.positionMode;
 }
 
 bool isButtonDown(MSLogger_Buttons btn, const Mouse_State* pState)
 {
-    if (pState == nullptr) {
-        return false;
-    }
-    switch (btn)
-    {
-    case MBT_LEFT:
-        return pState->leftButton;
-
-    case MBT_MIDDLE:
-        return pState->middleButton;
-
-    case MBT_RIGHT:
-        return pState->rightButton;
-
-    case MBT_X1:
-        return pState->xButton1;
-
-    case MBT_X2:
-        return pState->xButton2;
-
-	default:
-		return false;
-    }
+	if (!pState) return false;
+	switch (btn)
+	{
+	case MBT_LEFT:   return pState->leftButton;
+	case MBT_MIDDLE: return pState->middleButton;
+	case MBT_RIGHT:  return pState->rightButton;
+	case MBT_X1:     return pState->xButton1;
+	case MBT_X2:     return pState->xButton2;
+	default:         return false;
+	}
 }
 
 bool isButtonDown(MSLogger_Buttons btn)
 {
-	return isButtonDown(btn, &g_CurrentState);
+	return isButtonDown(btn, &g_Mode[MODE_GAME].current);
 }
 
 void MSLogger_SetUIMode(bool isUIMode)
 {
-	if (isUIMode) {
-		Mouse_SetMode(MOUSE_POSITION_MODE_ABSOLUTE);
-	}
-	else {
-		Mouse_SetMode(MOUSE_POSITION_MODE_RELATIVE);
-	}
+	Mouse_SetMode(isUIMode ? MOUSE_POSITION_MODE_ABSOLUTE : MOUSE_POSITION_MODE_RELATIVE);
 	g_isUIMode = isUIMode;
 }
 
 bool MSLogger_IsUIMode()
 {
-	return g_isUIMode;	
+	return g_isUIMode;
 }
-
-
-
