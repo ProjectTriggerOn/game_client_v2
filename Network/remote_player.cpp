@@ -369,8 +369,12 @@ void RemotePlayer::InterpolateBetween(const RemoteSnapshot& a, const RemoteSnaps
     m_Velocity.y = a.state.velocity.y + (b.state.velocity.y - a.state.velocity.y) * t;
     m_Velocity.z = a.state.velocity.z + (b.state.velocity.z - a.state.velocity.z) * t;
     
-    // Lerp angles (simple lerp, could use slerp for yaw)
-    m_Yaw = a.state.yaw + (b.state.yaw - a.state.yaw) * t;
+    // Lerp angles (shortest-path for yaw to avoid ±π wrap-around flicker)
+    float yawDiff = b.state.yaw - a.state.yaw;
+    if (yawDiff > XM_PI)       yawDiff -= XM_2PI;
+    else if (yawDiff < -XM_PI) yawDiff += XM_2PI;
+    m_Yaw = a.state.yaw + yawDiff * t;
+
     m_Pitch = a.state.pitch + (b.state.pitch - a.state.pitch) * t;
     
     // Use later snapshot's flags
