@@ -321,7 +321,14 @@ void MockServer::BroadcastSnapshot()
     snapshot.localPlayer = m_PlayerState;
     snapshot.localPlayerId = 0;
     snapshot.localPlayerTeam = PlayerTeam::RED;
-    snapshot.remotePlayerCount = 0;
+
+    // Mirror local player as remote player for TP model debug (offset 3m forward)
+    snapshot.remotePlayers[0].playerId = 1;
+    snapshot.remotePlayers[0].teamId = PlayerTeam::RED;
+    snapshot.remotePlayers[0].state = m_PlayerState;
+    snapshot.remotePlayers[0].state.position.x += sinf(m_PlayerState.yaw) * 3.0f;
+    snapshot.remotePlayers[0].state.position.z += cosf(m_PlayerState.yaw) * 3.0f;
+    snapshot.remotePlayerCount = 1;
 
     m_pNetwork->SendSnapshot(snapshot);
 }

@@ -540,14 +540,9 @@ float Player_Fps::GetHeight() const
 
 DirectX::XMFLOAT3 Player_Fps::GetEyePosition() const
 {
-	// Calculate eye position based on height (e.g., 90% of height)
+	// Calculate eye position based on height
 	DirectX::XMFLOAT3 eyePos = m_Position;
-	eyePos.y += m_Height * 0.9f; 
-	// Or use the fixed 1.7f if preferred, but m_Height * 0.9f scales with height.
-	// Given default height 2.0, 0.9 = 1.8. 
-	// If 1.7 is desired, ratio is 0.85. 
-	// I'll stick to 0.85f to match the previous ~1.7f approximation (2.0 * 0.85 = 1.7).
-	eyePos.y = m_Position.y + (m_Height * 0.85f);
+	eyePos.y = m_Position.y + (m_Height * 0.75f);
 	return eyePos;
 }
 
