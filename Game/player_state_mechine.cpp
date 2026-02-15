@@ -38,22 +38,30 @@ const char* WeaponStateToString(WeaponState state)
 void PlayerStateMachine::BuildTables()
 {
 	// ---- Player movement → animation ----
+	// Animation indices for red_arm003 / blue_arm003:
+	//   [0] aim_fire_pose_scope_02  [1] aim_fire_scope_02
+	//   [2] aim_in_scope_02         [3] aim_out_scope_02
+	//   [4] fire                    [5] holster_weapon
+	//   [6] idle                    [7] inspect_weapon
+	//   [8] reload_ammo_left        [9] reload_out_of_ammo
+	//   [10] run                    [11] take_out_weapon
+	//   [12] walk
 	//                                       index  loop   blend
-	m_PlayerAnimTable[PlayerState::IDLE]    = { 0,  true,  0.1f };
-	m_PlayerAnimTable[PlayerState::WALKING] = { 1,  true,  0.1f };
-	m_PlayerAnimTable[PlayerState::RUNNING] = { 2,  true,  0.1f };
+	m_PlayerAnimTable[PlayerState::IDLE]    = { 6,  true,  0.1f };
+	m_PlayerAnimTable[PlayerState::WALKING] = { 12, true,  0.1f };
+	m_PlayerAnimTable[PlayerState::RUNNING] = { 10, true,  0.1f };
 
 	// ---- Weapon state → animation (overrides movement when not HIP) ----
 	//                                                       index  loop   blend
-	m_WeaponAnimTable[WeaponState::HIP_FIRING]             = { 3,  false, 0.1f };
-	m_WeaponAnimTable[WeaponState::ADS_IN]                 = { 4,  false, 0.1f };
-	m_WeaponAnimTable[WeaponState::ADS_OUT]                = { 5,  false, 0.1f };
-	m_WeaponAnimTable[WeaponState::ADS]                    = { 6,  true,  0.1f };
-	m_WeaponAnimTable[WeaponState::ADS_FIRING]             = { 7,  true,  0.1f };
-	m_WeaponAnimTable[WeaponState::RELOADING]              = { 9,  false, 0.1f };
-	m_WeaponAnimTable[WeaponState::RELOADING_OUT_OF_AMMO]  = { 10, false, 0.1f };
-	m_WeaponAnimTable[WeaponState::INSPECTING]             = { 11, true,  0.1f };
-	m_WeaponAnimTable[WeaponState::TAKING_OUT]             = { 12, false, 0.1f };
+	m_WeaponAnimTable[WeaponState::HIP_FIRING]             = { 4,  false, 0.1f };
+	m_WeaponAnimTable[WeaponState::ADS_IN]                 = { 2,  false, 0.1f };
+	m_WeaponAnimTable[WeaponState::ADS_OUT]                = { 3,  false, 0.1f };
+	m_WeaponAnimTable[WeaponState::ADS]                    = { 0,  true,  0.1f };
+	m_WeaponAnimTable[WeaponState::ADS_FIRING]             = { 1,  false, 0.1f };
+	m_WeaponAnimTable[WeaponState::RELOADING]              = { 8,  false, 0.1f };
+	m_WeaponAnimTable[WeaponState::RELOADING_OUT_OF_AMMO]  = { 9,  false, 0.1f };
+	m_WeaponAnimTable[WeaponState::INSPECTING]             = { 7,  true,  0.1f };
+	m_WeaponAnimTable[WeaponState::TAKING_OUT]             = { 11, false, 0.1f };
 	// Note: HIP has no entry — it uses the player movement animation
 
 	// ---- Auto-transitions (one-shot animations that exit automatically) ----
@@ -157,7 +165,7 @@ void PlayerStateMachine::Update(double elapsed_time, Animator* animator)
 	if (m_WeaponState == WeaponState::ADS)
 	{
 		if (!animator->IsAdditiveActive())
-			animator->PlayAdditive(0, true, 0.5f); // IDLE loop, half weight
+			animator->PlayAdditive(6, true, 0.5f); // IDLE loop, half weight
 	}
 	else
 	{

@@ -136,6 +136,29 @@ void MockServer::ProcessInputCmd(const InputCmd& cmd)
     else
         flags &= ~NetStateFlags::IS_ADS;
 
+    if (cmd.buttons & InputButtons::RELOAD)
+    {
+        // Start reload latch — keep IS_RELOADING active for duration
+        if (m_ReloadTimer <= 0.0)
+            m_ReloadTimer = RELOAD_DURATION;
+    }
+    
+    // Reload latch timer
+    if (m_ReloadTimer > 0.0)
+    {
+        flags |= NetStateFlags::IS_RELOADING;
+        m_ReloadTimer -= TICK_DURATION;
+        if (m_ReloadTimer <= 0.0)
+        {
+            m_ReloadTimer = 0.0;
+            flags &= ~NetStateFlags::IS_RELOADING;
+        }
+    }
+    else
+    {
+        flags &= ~NetStateFlags::IS_RELOADING;
+    }
+
     m_PlayerState.stateFlags = flags;
 }
 
@@ -292,10 +315,20 @@ void MockServer::BroadcastSnapshot()
 {
     if (!m_pNetwork) return;
 
-    Snapshot snapshot;
+    Snapshot snapshot = {};
     snapshot.tickId = m_CurrentTick;
     snapshot.serverTime = m_ServerTime;
     snapshot.localPlayer = m_PlayerState;
+    snapshot.localPlayerId = 0;
+    snapshot.localPlayerTeam = PlayerTeam::RED;
+
+    // Mirror local player as remote player for TP model debug (offset 3m forward)
+    snapshot.remotePlayers[0].playerId = 1;
+    snapshot.remotePlayers[0].teamId = PlayerTeam::RED;
+    snapshot.remotePlayers[0].state = m_PlayerState;
+    snapshot.remotePlayers[0].state.position.x += sinf(m_PlayerState.yaw) * 3.0f;
+    snapshot.remotePlayers[0].state.position.z += cosf(m_PlayerState.yaw) * 3.0f;
+    snapshot.remotePlayerCount = 1;
 
     m_pNetwork->SendSnapshot(snapshot);
 }

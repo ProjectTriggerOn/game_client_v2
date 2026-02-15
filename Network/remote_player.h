@@ -82,6 +82,8 @@ public:
     std::string GetMoveDirectionString() const;
     
     void SetActive(bool active) { m_IsActive = active; }
+    void SetTeam(uint8_t teamId);
+    uint8_t GetTeam() const { return m_TeamId; }
 
 private:
     //-------------------------------------------------------------------------
@@ -120,6 +122,7 @@ private:
     
     // Display properties
     bool m_IsActive;
+    uint8_t m_TeamId;
     float m_Height;
     DirectX::XMFLOAT3 m_ModelFront;
     
@@ -129,5 +132,6 @@ private:
     RemotePlayerStateMachine* m_StateMachine;
 };
 
-// Global accessor
-extern RemotePlayer* g_pRemotePlayer;
+// Global remote player array (pre-allocated, indexed by playerId)
+extern RemotePlayer g_RemotePlayers[];
+extern bool g_RemotePlayerActive[];

@@ -27,8 +27,10 @@ Player_Fps::Player_Fps()
 	, m_Animator(nullptr)
 	, m_StateMachine(nullptr)
 	, m_WeaponRPM(600.0)
+	, m_FireTimer(0.0)
 	, m_FireCounter(0)
-	
+	, m_TransitionFiring(false)
+	, m_TeamId(PlayerTeam::RED)
 {
 }
 
@@ -51,7 +53,10 @@ void Player_Fps::Initialize(const DirectX::XMFLOAT3& position, const DirectX::XM
 
 	m_StateMachine = new PlayerStateMachine();
 	
-	m_Model = ModelAni_Load("resource/model/arms009.fbx");
+	const char* modelPath = (m_TeamId == PlayerTeam::BLUE)
+		? "resource/model/blue_arm003.fbx"
+		: "resource/model/red_arm003.fbx";
+	m_Model = ModelAni_Load(modelPath);
 
 	if (m_Model)
 	{
@@ -71,6 +76,35 @@ void Player_Fps::Finalize()
 	{
 		ModelAni_Release(m_Model);
 		m_Model = nullptr;
+	}
+}
+
+void Player_Fps::SetTeam(uint8_t teamId)
+{
+	if (teamId == m_TeamId) return;
+	m_TeamId = teamId;
+
+	// Swap model for new team
+	if (m_Animator)
+	{
+		delete m_Animator;
+		m_Animator = nullptr;
+	}
+	if (m_Model)
+	{
+		ModelAni_Release(m_Model);
+		m_Model = nullptr;
+	}
+
+	const char* modelPath = (m_TeamId == PlayerTeam::BLUE)
+		? "resource/model/blue_arm003.fbx"
+		: "resource/model/red_arm003.fbx";
+	m_Model = ModelAni_Load(modelPath);
+
+	if (m_Model)
+	{
+		m_Animator = new Animator();
+		m_Animator->Init(m_Model);
 	}
 }
 
@@ -226,49 +260,100 @@ void Player_Fps::Update(double elapsed_time)
 	}
 
 	if (!isPressingRight && 
-		(m_StateMachine->GetWeaponState() == WeaponState::ADS || m_StateMachine->GetWeaponState() == WeaponState::ADS_IN))
+		(m_StateMachine->GetWeaponState() == WeaponState::ADS || 
+		 m_StateMachine->GetWeaponState() == WeaponState::ADS_IN ||
+		 m_StateMachine->GetWeaponState() == WeaponState::ADS_FIRING))
 	{
+		// Exit ADS — transition fire (additive) will keep firing if left is held
 		m_StateMachine->SetWeaponState(WeaponState::ADS_OUT);
 	}
 
-	if (isPressingLeft)
+	// ---- TRANSITION FIRE: fire during ADS_IN / ADS_OUT using additive ----
 	{
-		if (m_StateMachine->GetWeaponState() == WeaponState::ADS)
-		{
-			m_StateMachine->SetWeaponState(WeaponState::ADS_FIRING);
-		}
-	}
-	else
-	{
-		if (m_StateMachine->GetWeaponState() == WeaponState::ADS_FIRING)
-		{
-			m_StateMachine->SetWeaponState(WeaponState::ADS);
-		}
-	}
+		WeaponState ws = m_StateMachine->GetWeaponState();
+		bool inTransition = (ws == WeaponState::ADS_IN || ws == WeaponState::ADS_OUT);
 
-	if (m_StateMachine->GetWeaponState() == WeaponState::ADS_FIRING)
-	{
-		if (m_Animator->OnCurrAniStarted())
+		if (inTransition && isPressingLeft)
 		{
-			if (Game_GetState() == PLAY) {
-				m_FireCounter++;
+			if (!m_TransitionFiring) {
+				// First shot
+				m_TransitionFiring = true;
+				m_FireTimer = 0.0;
+				if (Game_GetState() == PLAY) {
+					m_FireCounter++;
+				}
+			} else {
+				// Full-auto at RPM interval
+				m_FireTimer += dt;
+				const double fireInterval = 60.0 / m_WeaponRPM;
+				if (m_FireTimer >= fireInterval) {
+					m_FireTimer -= fireInterval;
+					if (Game_GetState() == PLAY) {
+						m_FireCounter++;
+					}
+				}
 			}
 		}
+		else
+		{
+			m_TransitionFiring = false;
+		}
 	}
 
-	if (MSLogger_IsTrigger(MBT_LEFT) && m_StateMachine->GetWeaponState() == WeaponState::HIP) {
-		m_StateMachine->SetWeaponState(WeaponState::HIP_FIRING);
+	// ---- ADS FIRE: click to start, hold for full-auto ----
+	if (isPressingLeft && m_StateMachine->GetWeaponState() == WeaponState::ADS)
+	{
+		// First shot on press
+		m_StateMachine->SetWeaponState(WeaponState::ADS_FIRING);
+		m_FireTimer = 0.0;
 		if (Game_GetState() == PLAY) {
 			m_FireCounter++;
 		}
 	}
 
-	if (m_StateMachine->GetWeaponState() == WeaponState::HIP_FIRING &&
-		m_Animator->GetCurrentAnimationIndex() == 3 &&
-		m_Animator->GetCurrAniProgress() < 0.78f) {
-		if (MSLogger_IsTrigger(MBT_LEFT)) {
-			m_Animator->SetSameAniOverlapAllow(true);
+	if (!isPressingLeft && m_StateMachine->GetWeaponState() == WeaponState::ADS_FIRING)
+	{
+		m_StateMachine->SetWeaponState(WeaponState::ADS);
+	}
+
+	if (m_StateMachine->GetWeaponState() == WeaponState::ADS_FIRING)
+	{
+		if (isPressingLeft) {
+			// Full-auto: accumulate timer and fire at RPM interval
+			m_FireTimer += dt;
+			const double fireInterval = 60.0 / m_WeaponRPM;
+			if (m_FireTimer >= fireInterval) {
+				m_FireTimer -= fireInterval;
+				m_Animator->SetSameAniOverlapAllow(true);
+				if (Game_GetState() == PLAY) {
+					m_FireCounter++;
+				}
+			}
+		}
+	}
+
+	// ---- HIP FIRE: click to start, hold for full-auto ----
+	if (isPressingLeft && m_StateMachine->GetWeaponState() == WeaponState::HIP) {
+		// First shot on press
+		m_StateMachine->SetWeaponState(WeaponState::HIP_FIRING);
+		m_FireTimer = 0.0;
+		if (Game_GetState() == PLAY) {
 			m_FireCounter++;
+		}
+	}
+
+	if (m_StateMachine->GetWeaponState() == WeaponState::HIP_FIRING) {
+		if (isPressingLeft) {
+			// Full-auto: accumulate timer and fire at RPM interval
+			m_FireTimer += dt;
+			const double fireInterval = 60.0 / m_WeaponRPM;
+			if (m_FireTimer >= fireInterval) {
+				m_FireTimer -= fireInterval;
+				m_Animator->SetSameAniOverlapAllow(true);
+				if (Game_GetState() == PLAY) {
+					m_FireCounter++;
+				}
+			}
 		}
 	}
 
@@ -286,6 +371,13 @@ void Player_Fps::Update(double elapsed_time)
 	if (m_Model && m_Animator)
 	{
 		m_StateMachine->Update(elapsed_time, m_Animator);
+
+		// Override additive layer: fire animation during ADS transition
+		if (m_TransitionFiring)
+		{
+			// PlayAdditive with fire animation (index 4), non-loop, full weight
+			m_Animator->PlayAdditive(4, false, 1.0f);
+		}
 	}
 
 }
@@ -448,14 +540,9 @@ float Player_Fps::GetHeight() const
 
 DirectX::XMFLOAT3 Player_Fps::GetEyePosition() const
 {
-	// Calculate eye position based on height (e.g., 90% of height)
+	// Calculate eye position based on height
 	DirectX::XMFLOAT3 eyePos = m_Position;
-	eyePos.y += m_Height * 0.9f; 
-	// Or use the fixed 1.7f if preferred, but m_Height * 0.9f scales with height.
-	// Given default height 2.0, 0.9 = 1.8. 
-	// If 1.7 is desired, ratio is 0.85. 
-	// I'll stick to 0.85f to match the previous ~1.7f approximation (2.0 * 0.85 = 1.7).
-	eyePos.y = m_Position.y + (m_Height * 0.85f);
+	eyePos.y = m_Position.y + (m_Height * 0.75f);
 	return eyePos;
 }
 

@@ -72,7 +72,7 @@ void Game_Initialize()
 	PlayerCamTps_Initialize();
 	PlayerCamFps_Initialize();
 	PlayerCamFps_SetInvertY(true);
-	//Mouse_SetMode(MOUSE_POSITION_MODE_RELATIVE);
+	Mouse_SetMode(MOUSE_POSITION_MODE_RELATIVE);
 }
 
 void Game_Update(double elapsed_time)
@@ -94,9 +94,9 @@ void Game_Update(double elapsed_time)
 	// Correction is handled via render offset inside Player_Fps.
 	// ========================================================================
 	extern INetwork* g_pNetwork;
-	extern RemotePlayer* g_pRemotePlayer;
+	extern RemotePlayer g_RemotePlayers[];
+	extern bool g_RemotePlayerActive[];
 	extern InputProducer* g_pInputProducer;
-	static uint32_t lastRemotePlayerTick = 0;
 	static double clientClock = 0.0;
 
 	// Increment client clock EVERY FRAME for smooth interpolation
@@ -107,6 +107,7 @@ void Game_Update(double elapsed_time)
 	{
 		// Apply server correction to local player
 		g_PlayerFps->ApplyServerCorrection(snap.localPlayer);
+		g_PlayerFps->SetTeam(snap.localPlayerTeam);
 
 		// Feed server state to InputProducer (for jump-pending logic)
 		if (g_pInputProducer)
@@ -114,16 +115,17 @@ void Game_Update(double elapsed_time)
 			g_pInputProducer->SetLastServerState(snap.localPlayer);
 		}
 
-		// Push snapshot to RemotePlayer for interpolation
-		if (g_pRemotePlayer && snap.localPlayer.tickId != lastRemotePlayerTick)
+		// Dispatch remote players from snapshot
+		for (uint8_t i = 0; i < snap.remotePlayerCount; i++)
 		{
-			lastRemotePlayerTick = snap.localPlayer.tickId;
-
-			// For demo: offset position so we can see both players
-			NetPlayerState remoteState = snap.localPlayer;
-			remoteState.position.x += 5.0f;
-
-			g_pRemotePlayer->PushSnapshot(remoteState, clientClock);
+			uint8_t rid = snap.remotePlayers[i].playerId;
+			if (rid < MAX_PLAYERS)
+			{
+				g_RemotePlayerActive[rid] = true;
+				g_RemotePlayers[rid].SetActive(true);
+				g_RemotePlayers[rid].SetTeam(snap.remotePlayers[i].teamId);
+				g_RemotePlayers[rid].PushSnapshot(snap.remotePlayers[i].state, clientClock);
+			}
 		}
 
 		// Cache for debug display
@@ -152,10 +154,11 @@ void Game_Update(double elapsed_time)
 		MSLogger_SetUIMode(!MSLogger_IsUIMode());
 	}
 
-	// Update RemotePlayer interpolation (every frame for smoothness)
-	if (g_pRemotePlayer)
+	// Update all active RemotePlayer instances (every frame for smooth interpolation)
+	for (int i = 0; i < MAX_PLAYERS; i++)
 	{
-		g_pRemotePlayer->Update(elapsed_time, clientClock);
+		if (g_RemotePlayerActive[i])
+			g_RemotePlayers[i].Update(elapsed_time, clientClock);
 	}
 
 }
@@ -220,11 +223,13 @@ void Game_Draw()
 
 	g_PlayerFps->Draw();
 
-	// Draw Remote Player
-	extern RemotePlayer* g_pRemotePlayer;
-	if (g_pRemotePlayer)
+	// Draw all active Remote Players
+	extern RemotePlayer g_RemotePlayers[];
+	extern bool g_RemotePlayerActive[];
+	for (int i = 0; i < MAX_PLAYERS; i++)
 	{
-		g_pRemotePlayer->Draw();
+		if (g_RemotePlayerActive[i])
+			g_RemotePlayers[i].Draw();
 	}
 
 	MeshField_Draw(mtxW);

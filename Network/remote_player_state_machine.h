@@ -27,11 +27,10 @@ enum class RemotePlayerState
 //-----------------------------------------------------------------------------
 enum class RemoteWeaponState
 {
-    HIP,
-    HIP_FIRING,
-    ADS,
-    ADS_FIRING,
-    RELOADING,
+    NONE,           // No weapon action — lower body only
+    FIRING,         // Fire animation (additive upper body)
+    RELOAD,         // Reload with ammo left (additive upper body)
+    RELOAD_EMPTY,   // Reload out of ammo (additive upper body)
 };
 
 //-----------------------------------------------------------------------------
@@ -131,6 +130,13 @@ private:
     RemoteWeaponState m_WeaponState;
     RemoteMoveDirection m_MoveDirection;
     float m_AccumulatedTime;
+    
+    // Fire overlap timer (RPM-based, matches local player)
+    static constexpr float WEAPON_RPM = 600.0f;
+    static constexpr float FIRE_INTERVAL = 60.0f / WEAPON_RPM;  // 0.1s at 600 RPM
+    float m_FireTimer = 0.0f;
+    bool m_WasFiring = false;
+    bool m_WasReloading = false;
     
     // Helper to calculate direction from velocity relative to yaw
     RemoteMoveDirection CalculateDirection(float velX, float velZ, float yaw);

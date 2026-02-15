@@ -15,8 +15,9 @@
 
 using namespace DirectX;
 
-// Global accessor
-RemotePlayer* g_pRemotePlayer = nullptr;
+// Global remote player array (pre-allocated, indexed by playerId)
+RemotePlayer g_RemotePlayers[MAX_PLAYERS];
+bool g_RemotePlayerActive[MAX_PLAYERS] = {};
 
 //-----------------------------------------------------------------------------
 // Constructor
@@ -36,6 +37,7 @@ RemotePlayer::RemotePlayer()
     , m_LastRenderPosition{ 0.0f, 0.0f, 0.0f }
     , m_DebugIsStuck(false)
     , m_IsActive(false)
+    , m_TeamId(PlayerTeam::RED)
     , m_Height(2.0f)
     , m_ModelFront{ 0.0f, 0.0f, 1.0f }
     , m_Model(nullptr)
@@ -68,8 +70,11 @@ void RemotePlayer::Initialize(const XMFLOAT3& position)
     m_SyncMode = "INIT";
     m_SnapshotBuffer.clear();
     
-    // Load character model
-    m_Model = ModelAni_Load("resource/model/lpsp_tpc.fbx");
+    // Load character model (default based on m_TeamId)
+    const char* modelPath = (m_TeamId == PlayerTeam::BLUE)
+        ? "resource/model/lpsp_tpc_blue_003.fbx"
+        : "resource/model/lpsp_tpc_red_001.fbx";
+    m_Model = ModelAni_Load(modelPath);
     
     if (m_Model)
     {
@@ -105,6 +110,38 @@ void RemotePlayer::Finalize()
     {
         ModelAni_Release(m_Model);
         m_Model = nullptr;
+    }
+}
+
+//-----------------------------------------------------------------------------
+// SetTeam - Swap model when team changes
+//-----------------------------------------------------------------------------
+void RemotePlayer::SetTeam(uint8_t teamId)
+{
+    if (teamId == m_TeamId) return;
+    m_TeamId = teamId;
+
+    // Swap model for new team
+    if (m_Animator)
+    {
+        delete m_Animator;
+        m_Animator = nullptr;
+    }
+    if (m_Model)
+    {
+        ModelAni_Release(m_Model);
+        m_Model = nullptr;
+    }
+
+    const char* modelPath = (m_TeamId == PlayerTeam::BLUE)
+        ? "resource/model/lpsp_tpc_blue_003.fbx"
+        : "resource/model/lpsp_tpc_red_001.fbx";
+    m_Model = ModelAni_Load(modelPath);
+
+    if (m_Model)
+    {
+        m_Animator = new Animator();
+        m_Animator->Init(m_Model);
     }
 }
 
@@ -257,6 +294,24 @@ void RemotePlayer::Update(double elapsed_time, double currentTime)
         m_StateMachine->DeriveStateFromVelocity(
             m_Velocity.x, m_Velocity.z, m_Velocity.y, isGrounded, m_Yaw
         );
+        
+        // Derive weapon state from network state flags
+        if (m_StateFlags & NetStateFlags::IS_RELOADING)
+        {
+            if (m_StateFlags & NetStateFlags::IS_RELOAD_EMPTY)
+                m_StateMachine->SetWeaponState(RemoteWeaponState::RELOAD_EMPTY);
+            else
+                m_StateMachine->SetWeaponState(RemoteWeaponState::RELOAD);
+        }
+        else if (m_StateFlags & NetStateFlags::IS_FIRING)
+        {
+            m_StateMachine->SetWeaponState(RemoteWeaponState::FIRING);
+        }
+        else
+        {
+            m_StateMachine->SetWeaponState(RemoteWeaponState::NONE);
+        }
+        
         m_StateMachine->Update(elapsed_time, m_Animator);
     }
     

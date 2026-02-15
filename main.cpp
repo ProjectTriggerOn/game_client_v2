@@ -47,6 +47,7 @@
 #include "input_producer.h"
 #include "remote_player.h"
 #include "i_network.h"
+#include "config.h"
 
 
 //Window procedure prototype claim
@@ -58,8 +59,8 @@ MockServer* g_pMockServer = nullptr;
 // Global network interface pointer (used by game.cpp etc.)
 INetwork* g_pNetwork = nullptr;
 
-// Network mode flag
-static bool g_UseENet = false;
+// Network mode: "mock", "local", or "remote" (read from config.toml)
+static std::string g_NetworkMode;
 
 int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR lpCmdLine, _In_ int nCmdShow)
 {
@@ -110,46 +111,36 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR lpC
 	Scene_Initialize();
 
 	// ========================================================================
-	// Network Mode Selection
-	// --enet flag: connect to remote server via ENet
-	// Default: mock mode (local in-process server)
+	// Network Mode Selection (from config.toml)
+	//   "mock"   — in-process mock server
+	//   "local"  — ENet to local machine
+	//   "remote" — ENet to remote server
 	// ========================================================================
-	g_UseENet = (strstr(lpCmdLine, "--enet") != nullptr);
+
+	// Load global config
+	Config::GetInstance().Load("config.toml");
+	g_NetworkMode = Config::GetInstance().GetString("network", "mode", "mock");
 
 	static MockNetwork g_MockNetwork;
 	static MockServer g_MockServer;
 	static ENetClientNetwork g_ENetNetwork;
 
-	if (g_UseENet)
+	if (g_NetworkMode == "local" || g_NetworkMode == "remote")
 	{
-		// ENet mode: connect to remote server
-		const char* serverHost = "127.0.0.1";
-		uint16_t serverPort = 7777;
+		// ENet mode: pick host from config based on mode
+		std::string serverHost = (g_NetworkMode == "remote")
+			? Config::GetInstance().GetString("network", "remote_host", "127.0.0.1")
+			: Config::GetInstance().GetString("network", "local_host", "127.0.0.1");
+		uint16_t serverPort = static_cast<uint16_t>(Config::GetInstance().ServerPort());
 
-		// Parse optional --host=X and --port=X
-		const char* hostArg = strstr(lpCmdLine, "--host=");
-		if (hostArg)
-		{
-			static char hostBuf[256];
-			sscanf_s(hostArg, "--host=%255s", hostBuf, (unsigned)sizeof(hostBuf));
-			serverHost = hostBuf;
-		}
-		const char* portArg = strstr(lpCmdLine, "--port=");
-		if (portArg)
-		{
-			int p = 0;
-			sscanf_s(portArg, "--port=%d", &p);
-			if (p > 0 && p <= 65535) serverPort = static_cast<uint16_t>(p);
-		}
-
-		g_ENetNetwork.SetServerAddress(serverHost, serverPort);
+		g_ENetNetwork.SetServerAddress(serverHost.c_str(), serverPort);
 		g_ENetNetwork.Initialize();
 		g_pNetwork = &g_ENetNetwork;
 		g_pMockServer = nullptr;
 	}
 	else
 	{
-		// Mock mode: local in-process server
+		// Mock mode: local in-process server (default)
 		g_MockNetwork.Initialize();
 		g_MockServer.Initialize(&g_MockNetwork);
 		g_pNetwork = &g_MockNetwork;
@@ -162,11 +153,15 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR lpC
 	extern InputProducer* g_pInputProducer;
 	g_pInputProducer = &g_InputProducer;
 
-	// Initialize Remote Player (for displaying server-controlled entities)
-	static RemotePlayer g_RemotePlayer;
-	g_RemotePlayer.Initialize({ 5.0f, 0.0f, -15.0f });  // Spawn offset from local player
-	extern RemotePlayer* g_pRemotePlayer;
-	g_pRemotePlayer = &g_RemotePlayer;
+	// Initialize Remote Players (pre-allocate MAX_PLAYERS slots, all inactive)
+	extern RemotePlayer g_RemotePlayers[];
+	extern bool g_RemotePlayerActive[];
+	for (int i = 0; i < MAX_PLAYERS; i++)
+	{
+		g_RemotePlayers[i].Initialize({ 0.0f, 0.0f, 0.0f });
+		g_RemotePlayers[i].SetActive(false);
+		g_RemotePlayerActive[i] = false;
+	}
 
 	Cube_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
 
@@ -253,7 +248,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR lpC
 				// ====================================================================
 				// Network: Poll events (ENet) or run local server (Mock)
 				// ====================================================================
-				if (g_UseENet)
+				if (g_NetworkMode == "local" || g_NetworkMode == "remote")
 				{
 					g_ENetNetwork.PollEvents();
 				}
@@ -296,7 +291,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR lpC
 	//Game_Finalize();
 
 	// Network cleanup
-	if (g_UseENet)
+	if (g_NetworkMode == "local" || g_NetworkMode == "remote")
 	{
 		g_ENetNetwork.Finalize();
 	}

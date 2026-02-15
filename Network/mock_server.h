@@ -76,4 +76,8 @@ private:
     // Game State (Server Authoritative)
     NetPlayerState m_PlayerState;
     InputCmd m_LastInputCmd;        // Most recent input from client
+    
+    // Reload latch timer — keeps IS_RELOADING active for full animation duration
+    static constexpr double RELOAD_DURATION = 10.0;  // seconds
+    double m_ReloadTimer = 0.0;
 };
