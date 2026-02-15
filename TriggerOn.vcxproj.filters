@@ -374,7 +374,7 @@
     <None Include="resource\model\sky.fbx">
       <Filter>Resource Files</Filter>
     </None>
-    <None Include="DX_01.sln" />
+    <None Include="TriggerOn.sln" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="resource\texture\consolab_ascii_512.png">
