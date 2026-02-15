@@ -29,6 +29,9 @@ public:
 	// Returns the matrices to be sent to the shader
 	const std::vector<DirectX::XMFLOAT4X4>& GetFinalBoneMatrices() const;
 
+	// Returns the global (model-space) transform of a bone (for attachment)
+	const DirectX::XMFLOAT4X4& GetBoneGlobalMatrix(int boneIndex) const;
+
 	int GetCurrentAnimationIndex() const { return m_CurrentAnimationIndex; }
 
 	using AnimationCallBack = std::function<void(const std::string&)>;
