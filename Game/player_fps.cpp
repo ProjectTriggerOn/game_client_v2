@@ -30,7 +30,7 @@ Player_Fps::Player_Fps()
 	, m_FireTimer(0.0)
 	, m_FireCounter(0)
 	, m_TransitionFiring(false)
-	
+	, m_TeamId(PlayerTeam::RED)
 {
 }
 
@@ -53,7 +53,10 @@ void Player_Fps::Initialize(const DirectX::XMFLOAT3& position, const DirectX::XM
 
 	m_StateMachine = new PlayerStateMachine();
 	
-	m_Model = ModelAni_Load("resource/model/arms009.fbx");
+	const char* modelPath = (m_TeamId == PlayerTeam::BLUE)
+		? "resource/model/blue_arm003.fbx"
+		: "resource/model/red_arm003.fbx";
+	m_Model = ModelAni_Load(modelPath);
 
 	if (m_Model)
 	{
@@ -73,6 +76,35 @@ void Player_Fps::Finalize()
 	{
 		ModelAni_Release(m_Model);
 		m_Model = nullptr;
+	}
+}
+
+void Player_Fps::SetTeam(uint8_t teamId)
+{
+	if (teamId == m_TeamId) return;
+	m_TeamId = teamId;
+
+	// Swap model for new team
+	if (m_Animator)
+	{
+		delete m_Animator;
+		m_Animator = nullptr;
+	}
+	if (m_Model)
+	{
+		ModelAni_Release(m_Model);
+		m_Model = nullptr;
+	}
+
+	const char* modelPath = (m_TeamId == PlayerTeam::BLUE)
+		? "resource/model/blue_arm003.fbx"
+		: "resource/model/red_arm003.fbx";
+	m_Model = ModelAni_Load(modelPath);
+
+	if (m_Model)
+	{
+		m_Animator = new Animator();
+		m_Animator->Init(m_Model);
 	}
 }
 
@@ -343,8 +375,8 @@ void Player_Fps::Update(double elapsed_time)
 		// Override additive layer: fire animation during ADS transition
 		if (m_TransitionFiring)
 		{
-			// PlayAdditive with fire animation (index 3), non-loop, full weight
-			m_Animator->PlayAdditive(3, false, 1.0f);
+			// PlayAdditive with fire animation (index 4), non-loop, full weight
+			m_Animator->PlayAdditive(4, false, 1.0f);
 		}
 	}
 

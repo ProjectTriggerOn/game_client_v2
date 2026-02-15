@@ -107,6 +107,7 @@ void Game_Update(double elapsed_time)
 	{
 		// Apply server correction to local player
 		g_PlayerFps->ApplyServerCorrection(snap.localPlayer);
+		g_PlayerFps->SetTeam(snap.localPlayerTeam);
 
 		// Feed server state to InputProducer (for jump-pending logic)
 		if (g_pInputProducer)
@@ -122,6 +123,7 @@ void Game_Update(double elapsed_time)
 			{
 				g_RemotePlayerActive[rid] = true;
 				g_RemotePlayers[rid].SetActive(true);
+				g_RemotePlayers[rid].SetTeam(snap.remotePlayers[i].teamId);
 				g_RemotePlayers[rid].PushSnapshot(snap.remotePlayers[i].state, clientClock);
 			}
 		}

@@ -312,6 +312,7 @@ void PlayerCamFps_Debug(const Player_Fps& pf)
 	}
 	
 	ss << "\n=== Player ===\n";
+	ss << "Team: " << (pf.GetTeam() == PlayerTeam::RED ? "RED" : "BLUE") << "\n";
 	ss << "PlayerState: " << pf.GetPlayerState() << "\n";
 	ss << "WeaponState: " << pf.GetWeaponState() << "\n";
 	ss << "CurrentAnimation: " << pf.GetCurrentAniName() << "\n";
@@ -327,6 +328,7 @@ void PlayerCamFps_Debug(const Player_Fps& pf)
 		if (!g_RemotePlayerActive[rpi] || !g_RemotePlayers[rpi].IsActive()) continue;
 		RemotePlayer& rp = g_RemotePlayers[rpi];
 		ss << "\n=== RemotePlayer[" << rpi << "] ===\n";
+		ss << "Team: " << (rp.GetTeam() == PlayerTeam::RED ? "RED" : "BLUE") << "\n";
 		ss << "SyncMode: " << rp.GetSyncMode();
 		if (rp.IsStuck()) ss << " [STUCK!]";
 		ss << "\n";

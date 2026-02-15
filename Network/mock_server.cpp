@@ -320,6 +320,7 @@ void MockServer::BroadcastSnapshot()
     snapshot.serverTime = m_ServerTime;
     snapshot.localPlayer = m_PlayerState;
     snapshot.localPlayerId = 0;
+    snapshot.localPlayerTeam = PlayerTeam::RED;
     snapshot.remotePlayerCount = 0;
 
     m_pNetwork->SendSnapshot(snapshot);

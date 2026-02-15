@@ -56,7 +56,10 @@ public:
 	float GetCurrentAniProgress() const;
 
 	int GetFireCounter() const { return m_FireCounter; }
-	
+
+	void SetTeam(uint8_t teamId);
+	uint8_t GetTeam() const { return m_TeamId; }
+
 	//-------------------------------------------------------------------------
 	// Debug info
 	//-------------------------------------------------------------------------
@@ -84,6 +87,7 @@ private:
 	double m_FireTimer;
 	int m_FireCounter;
 	bool m_TransitionFiring;
+	uint8_t m_TeamId;
 	MODEL_ANI* m_Model;
 	Animator* m_Animator;
 	PlayerStateMachine* m_StateMachine;
