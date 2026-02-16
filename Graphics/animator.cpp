@@ -387,6 +387,11 @@ const std::vector<DirectX::XMFLOAT4X4>& Animator::GetFinalBoneMatrices() const
 	return m_FinalBoneMatrices;
 }
 
+const DirectX::XMFLOAT4X4& Animator::GetBoneGlobalMatrix(int boneIndex) const
+{
+	return m_GlobalMatrices[boneIndex];
+}
+
 void Animator::TakeSnapshot()
 {
 	if (!m_Model) return;

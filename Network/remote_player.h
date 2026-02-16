@@ -16,6 +16,7 @@
 #include <vector>
 #include "net_common.h"
 #include "model_ani.h"
+#include "model.h"
 #include "remote_player_state_machine.h"
 
 //-----------------------------------------------------------------------------
@@ -130,6 +131,9 @@ private:
     MODEL_ANI* m_Model;
     Animator* m_Animator;
     RemotePlayerStateMachine* m_StateMachine;
+
+    // Weapon attachment
+    MODEL* m_WeaponModel;
 };
 
 // Global remote player array (pre-allocated, indexed by playerId)

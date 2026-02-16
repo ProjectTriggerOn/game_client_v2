@@ -43,6 +43,7 @@ RemotePlayer::RemotePlayer()
     , m_Model(nullptr)
     , m_Animator(nullptr)
     , m_StateMachine(nullptr)
+    , m_WeaponModel(nullptr)
 {
 }
 
@@ -73,15 +74,21 @@ void RemotePlayer::Initialize(const XMFLOAT3& position)
     // Load character model (default based on m_TeamId)
     const char* modelPath = (m_TeamId == PlayerTeam::BLUE)
         ? "resource/model/lpsp_tpc_blue_003.fbx"
-        : "resource/model/lpsp_tpc_red_001.fbx";
+        : "resource/model/lpsp_tpc_red_004.fbx";
     m_Model = ModelAni_Load(modelPath);
-    
+
     if (m_Model)
     {
         m_Animator = new Animator();
         m_Animator->Init(m_Model);
     }
-    
+
+    // Load weapon model based on team
+    const char* weaponPath = (m_TeamId == PlayerTeam::BLUE)
+        ? "resource/model/m4_003.fbx"
+        : "resource/model/ak_002.fbx";
+    m_WeaponModel = ModelLoad(weaponPath, 1.0f);
+
     // Initialize state machine
     m_StateMachine = new RemotePlayerStateMachine();
 }
@@ -111,6 +118,12 @@ void RemotePlayer::Finalize()
         ModelAni_Release(m_Model);
         m_Model = nullptr;
     }
+
+    if (m_WeaponModel)
+    {
+        ModelRelease(m_WeaponModel);
+        m_WeaponModel = nullptr;
+    }
 }
 
 //-----------------------------------------------------------------------------
@@ -135,7 +148,7 @@ void RemotePlayer::SetTeam(uint8_t teamId)
 
     const char* modelPath = (m_TeamId == PlayerTeam::BLUE)
         ? "resource/model/lpsp_tpc_blue_003.fbx"
-        : "resource/model/lpsp_tpc_red_001.fbx";
+        : "resource/model/lpsp_tpc_red_004.fbx";
     m_Model = ModelAni_Load(modelPath);
 
     if (m_Model)
@@ -143,6 +156,17 @@ void RemotePlayer::SetTeam(uint8_t teamId)
         m_Animator = new Animator();
         m_Animator->Init(m_Model);
     }
+
+    // Swap weapon model
+    if (m_WeaponModel)
+    {
+        ModelRelease(m_WeaponModel);
+        m_WeaponModel = nullptr;
+    }
+    const char* weaponPath = (m_TeamId == PlayerTeam::BLUE)
+        ? "resource/model/m4_003.fbx"
+        : "resource/model/ak_002.fbx";
+    m_WeaponModel = ModelLoad(weaponPath, 1.0f);
 }
 
 //-----------------------------------------------------------------------------
@@ -345,8 +369,12 @@ void RemotePlayer::InterpolateBetween(const RemoteSnapshot& a, const RemoteSnaps
     m_Velocity.y = a.state.velocity.y + (b.state.velocity.y - a.state.velocity.y) * t;
     m_Velocity.z = a.state.velocity.z + (b.state.velocity.z - a.state.velocity.z) * t;
     
-    // Lerp angles (simple lerp, could use slerp for yaw)
-    m_Yaw = a.state.yaw + (b.state.yaw - a.state.yaw) * t;
+    // Lerp angles (shortest-path for yaw to avoid ±π wrap-around flicker)
+    float yawDiff = b.state.yaw - a.state.yaw;
+    if (yawDiff > XM_PI)       yawDiff -= XM_2PI;
+    else if (yawDiff < -XM_PI) yawDiff += XM_2PI;
+    m_Yaw = a.state.yaw + yawDiff * t;
+
     m_Pitch = a.state.pitch + (b.state.pitch - a.state.pitch) * t;
     
     // Use later snapshot's flags
@@ -376,7 +404,7 @@ void RemotePlayer::ExtrapolateFrom(const RemoteSnapshot& latest, double dt)
 void RemotePlayer::Draw()
 {
     if (!m_IsActive || !m_Model) return;
-    
+
     XMMATRIX rotation = XMMatrixRotationY(m_Yaw + XM_PI);
     XMMATRIX translation = XMMatrixTranslation(
         m_RenderPosition.x,
@@ -384,11 +412,28 @@ void RemotePlayer::Draw()
         m_RenderPosition.z
     );
     XMMATRIX world = rotation * translation;
-    
+
     if (m_Animator)
     {
-        // ModelAni_Draw takes: MODEL_ANI*, XMMATRIX, Animator*, bool
         ModelAni_Draw(m_Model, world, m_Animator, true);
+
+        // Weapon attachment via "weapon" bone
+        if (m_WeaponModel && m_Model->BoneMapping.count("weapon"))
+        {
+            int boneIdx = m_Model->BoneMapping.at("weapon");
+            XMMATRIX weaponBone = XMLoadFloat4x4(&m_Animator->GetBoneGlobalMatrix(boneIdx));
+
+            XMMATRIX preRot  = XMMatrixRotationX(XMConvertToRadians(90.0f));
+            XMMATRIX postRot = XMMatrixRotationX(XMConvertToRadians(90.0f));
+
+            // Per-weapon offset (RED=ak, BLUE=m4)
+            XMMATRIX offset = (m_TeamId == PlayerTeam::BLUE)
+                ? XMMatrixTranslation(0.0f, 0.0f, 0.03f)   // m4
+                : XMMatrixTranslation(0.0f, 0.0f, 0.07f);  // ak
+
+            XMMATRIX weaponWorld = offset * postRot * weaponBone * preRot * world;
+            ModelDraw(m_WeaponModel, weaponWorld);
+        }
     }
 }
 

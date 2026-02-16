@@ -328,6 +328,7 @@ void MockServer::BroadcastSnapshot()
     snapshot.remotePlayers[0].state = m_PlayerState;
     snapshot.remotePlayers[0].state.position.x += sinf(m_PlayerState.yaw) * 3.0f;
     snapshot.remotePlayers[0].state.position.z += cosf(m_PlayerState.yaw) * 3.0f;
+    snapshot.remotePlayers[0].state.yaw += DirectX::XM_PI/2;  // Face opposite direction
     snapshot.remotePlayerCount = 1;
 
     m_pNetwork->SendSnapshot(snapshot);
