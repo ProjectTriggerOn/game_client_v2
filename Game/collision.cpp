@@ -577,6 +577,35 @@ void Collision_DebugDraw(const AABB& aabb, const DirectX::XMFLOAT4& color)
 	g_pContext->Draw(24, 0);
 }
 
+void Collision_DebugDrawLine(const DirectX::XMFLOAT3& start, const DirectX::XMFLOAT3& end, const DirectX::XMFLOAT4& color)
+{
+	Vertex v[2];
+	v[0].position = start;
+	v[0].color = color;
+	v[0].uv = { 0, 0 };
+	v[1].position = end;
+	v[1].color = color;
+	v[1].uv = { 0, 0 };
+
+	Shader_Begin();
+	Shader_SetMatrix(g_DebugViewProj);
+
+	D3D11_MAPPED_SUBRESOURCE msr;
+	g_pContext->Map(g_pVertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &msr);
+	memcpy(msr.pData, v, sizeof(Vertex) * 2);
+	g_pContext->Unmap(g_pVertexBuffer, 0);
+
+	UINT stride = sizeof(Vertex);
+	UINT offset = 0;
+	g_pContext->IASetVertexBuffers(0, 1, &g_pVertexBuffer, &stride, &offset);
+
+	Shader_SetWorldMatrix(DirectX::XMMatrixIdentity());
+	g_pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
+	Texture_Set(g_WhiteId);
+
+	g_pContext->Draw(2, 0);
+}
+
 void Collision_DebugDraw(const Capsule& capsule, const DirectX::XMFLOAT4& color)
 {
 	const int CIRCLE_SEGMENTS = 16; // 每个圆环的分段数

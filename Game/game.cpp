@@ -282,6 +282,20 @@ void Game_Draw()
 				: XMFLOAT4{ 1.0f, 0.5f, 0.0f, 1.0f };   // orange for walls
 			Collision_DebugDraw(collider.aabb, color);
 		}
+
+		// Draw shooting ray (yellow)
+		XMFLOAT3 eyePos = g_PlayerFps->GetEyePosition();
+		XMFLOAT3 fwd = { mtxView._13, mtxView._23, mtxView._33 };
+		float rayLen = 200.0f;
+		XMFLOAT3 rayEnd = {
+			eyePos.x + fwd.x * rayLen,
+			eyePos.y + fwd.y * rayLen,
+			eyePos.z + fwd.z * rayLen
+		};
+		Collision_DebugDrawLine(eyePos, rayEnd, { 1.0f, 1.0f, 0.0f, 1.0f });
+
+		// Restore 2D ortho projection after debug draw overwrote CB0
+		Sprite_Begin();
 	}
 
 	float sw = (float)Direct3D_GetBackBufferWidth();
@@ -302,10 +316,10 @@ void Game_Draw()
 		Sprite_Draw(g_CursorTexId, (float)mouse_x, (float)mouse_y, 32.0f, 32.0f);
 	}
 
-	Direct3D_SetDepthEnable(true);
-
-	// Fade overlay (must be drawn last, covers everything)
+	// Fade overlay (depth off so it covers everything including crosshair)
 	Fade_Draw();
+
+	Direct3D_SetDepthEnable(true);
 }
 
 void Game_Finalize()
