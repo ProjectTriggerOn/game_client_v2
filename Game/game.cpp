@@ -25,6 +25,7 @@
 #include "sky_dome.h"
 #include "sprite.h"
 #include "texture.h"
+#include "fade.h"
 using namespace DirectX;
 
 namespace{
@@ -81,6 +82,7 @@ void Game_Initialize()
 	PlayerCamFps_Initialize();
 	PlayerCamFps_SetInvertY(true);
 	Mouse_SetMode(MOUSE_POSITION_MODE_RELATIVE);
+	Fade_Initialize();
 }
 
 void Game_Update(double elapsed_time)
@@ -169,6 +171,7 @@ void Game_Update(double elapsed_time)
 			g_RemotePlayers[i].Update(elapsed_time, clientClock);
 	}
 
+	Fade_Update(elapsed_time);
 }
 
 void Game_Draw()
@@ -278,6 +281,9 @@ void Game_Draw()
 	}
 
 	Direct3D_SetDepthEnable(true);
+
+	// Fade overlay (must be drawn last, covers everything)
+	Fade_Draw();
 }
 
 void Game_Finalize()
@@ -289,6 +295,7 @@ void Game_Finalize()
 	g_PlayerFps->Finalize();
 	ModelAni_Release(g_pModel0);
 	Map_Finalize();
+	Fade_Finalize();
 }
 
 void Game_SetState(GameState state)

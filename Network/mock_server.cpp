@@ -39,6 +39,9 @@ void MockServer::Initialize(INetwork* pNetwork, CollisionWorld* pCollisionWorld)
     m_PlayerState.yaw = 0.0f;
     m_PlayerState.pitch = 0.0f;
     m_PlayerState.stateFlags = NetStateFlags::IS_GROUNDED;
+    m_PlayerState.health = 200;
+    m_PlayerState.hitByPlayerId = 0xFF;
+    m_PlayerState.fireCounter = 0;
 
     // Initialize last input
     m_LastInputCmd = {};

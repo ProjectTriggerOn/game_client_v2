@@ -63,6 +63,9 @@ public:
 	void SetTeam(uint8_t teamId);
 	uint8_t GetTeam() const { return m_TeamId; }
 
+	uint8_t GetHealth() const { return m_Health; }
+	bool IsDead() const { return m_IsDead; }
+
 	//-------------------------------------------------------------------------
 	// Debug info
 	//-------------------------------------------------------------------------
@@ -93,6 +96,9 @@ private:
 	int m_FireCounter;
 	bool m_TransitionFiring;
 	uint8_t m_TeamId;
+	uint8_t m_Health;
+	bool m_IsDead;
+	bool m_WasDead;
 	MODEL_ANI* m_Model;
 	Animator* m_Animator;
 	PlayerStateMachine* m_StateMachine;

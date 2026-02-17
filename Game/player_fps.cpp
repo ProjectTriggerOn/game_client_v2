@@ -4,6 +4,7 @@
 #include "key_logger.h"
 #include "cube.h"
 #include "direct3d.h"
+#include "fade.h"
 #include "game.h"
 #include "mouse.h"
 #include "ms_logger.h"
@@ -33,6 +34,9 @@ Player_Fps::Player_Fps()
 	, m_FireCounter(0)
 	, m_TransitionFiring(false)
 	, m_TeamId(PlayerTeam::RED)
+	, m_Health(200)
+	, m_IsDead(false)
+	, m_WasDead(false)
 {
 }
 
@@ -126,6 +130,14 @@ void Player_Fps::Update(double elapsed_time)
 	m_RenderOffset.x *= decayFactor;
 	m_RenderOffset.y *= decayFactor;
 	m_RenderOffset.z *= decayFactor;
+
+	// ========================================================================
+	// Dead — skip all input and gameplay
+	// ========================================================================
+	if (m_IsDead)
+	{
+		return;
+	}
 	
 	// ========================================================================
 	// CS:GO / Valorant Style Movement Parameters (match mock_server.cpp)
@@ -541,6 +553,29 @@ void Player_Fps::ApplyServerCorrection(const NetPlayerState& serverState)
 		m_CorrectionMode = "OK";
 		// Keep m_Position as-is (client prediction is good)
 	}
+
+	// ========================================================================
+	// Combat State: health and death
+	// ========================================================================
+	m_Health = serverState.health;
+	bool isDead = (serverState.stateFlags & NetStateFlags::IS_DEAD) != 0;
+
+	if (isDead && !m_WasDead)
+	{
+		// Just died — fade to red
+		Fade_Start(0.5, true, { 0.5f, 0.0f, 0.0f });
+		m_IsDead = true;
+	}
+	else if (!isDead && m_WasDead)
+	{
+		// Just respawned — fade in from black, snap to spawn position
+		Fade_Start(0.5, false, { 0.0f, 0.0f, 0.0f });
+		m_IsDead = false;
+		m_Position = serverState.position;
+		m_Velocity = serverState.velocity;
+		m_RenderOffset = { 0.0f, 0.0f, 0.0f };
+	}
+	m_WasDead = isDead;
 }
 
 AABB Player_Fps::GetAABB() const

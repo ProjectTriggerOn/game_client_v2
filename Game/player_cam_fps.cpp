@@ -313,10 +313,11 @@ void PlayerCamFps_Debug(const Player_Fps& pf)
 	
 	ss << "\n=== Player ===\n";
 	ss << "Team: " << (pf.GetTeam() == PlayerTeam::RED ? "RED" : "BLUE") << "\n";
+	ss << "Health: " << (int)pf.GetHealth() << "/200" << (pf.IsDead() ? " [DEAD]" : "") << "\n";
 	ss << "PlayerState: " << pf.GetPlayerState() << "\n";
 	ss << "WeaponState: " << pf.GetWeaponState() << "\n";
 	ss << "CurrentAnimation: " << pf.GetCurrentAniName() << "\n";
-	ss << "FireCounter: " << pf.GetFireCounter() << "\n";
+	ss << "FireCounter: " << pf.GetFireCounter() << " (Srv: " << g_NetDebugInfo.lastServerState.fireCounter << ")\n";
 	ss << "AniDuration: " << std::fixed << std::setprecision(2) << pf.GetCurrentAniDuration() << "s\n";
 	ss << "AniProgress: " << std::fixed << std::setprecision(2) << pf.GetCurrentAniProgress() * 100.0f << "%\n";
 	
