@@ -77,6 +77,7 @@ bool Collision_OverlapCapsuleAABB(const Capsule& capsule, const AABB& aabb);
 bool Collision_isHitRayOnCapsule(const Ray& ray, const Capsule& capsule, float* outDistance = nullptr);
 Hit Collision_IsHitCapsuleCapsule(const Capsule& a, const Capsule& b);
 
+void Collision_DebugSetViewProj(const DirectX::XMMATRIX& viewProj);
 void Collision_DebugInitialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext);
 void Collision_DebugFinalize();
 void Collision_DebugDraw(const Circle& circle, const DirectX::XMFLOAT4& color = { 1.0f,1.0f,0.0f,1.0f });

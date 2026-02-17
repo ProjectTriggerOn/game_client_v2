@@ -339,6 +339,7 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
+    <None Include="config.toml" />
     <None Include="TriggerOn.sln" />
     <None Include="resource\model\sky.fbx" />
   </ItemGroup>

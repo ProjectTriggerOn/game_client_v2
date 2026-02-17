@@ -38,7 +38,7 @@ RemotePlayer::RemotePlayer()
     , m_DebugIsStuck(false)
     , m_IsActive(false)
     , m_TeamId(PlayerTeam::RED)
-    , m_Height(2.0f)
+    , m_Height(1.6f)
     , m_ModelFront{ 0.0f, 0.0f, 1.0f }
     , m_Model(nullptr)
     , m_Animator(nullptr)
@@ -65,7 +65,7 @@ void RemotePlayer::Initialize(const XMFLOAT3& position)
     m_Yaw = 0.0f;
     m_Pitch = 0.0f;
     m_StateFlags = NetStateFlags::IS_GROUNDED;
-    m_Height = 2.0f;
+    m_Height = 1.6f;
     m_ModelFront = { 0.0f, 0.0f, 1.0f };
     m_IsActive = true;
     m_SyncMode = "INIT";

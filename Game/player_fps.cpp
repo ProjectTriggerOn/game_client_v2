@@ -22,8 +22,8 @@ Player_Fps::Player_Fps()
 	, m_ModelFront({ 0,0,1 })
 	, m_MoveDir({ 0,0,1 })
 	, m_CamRelativePos({ 0.0f, 0.0f,0.3f })
-	, m_Height(2.0f)
-	, m_CapsuleRadius(0.5f)
+	, m_Height(1.6f)
+	, m_CapsuleRadius(0.3f)
 	, m_isJump(false)
 	, m_pCollisionWorld(nullptr)
 	, m_Model(nullptr)
@@ -609,7 +609,7 @@ DirectX::XMFLOAT3 Player_Fps::GetEyePosition() const
 {
 	// Calculate eye position based on height
 	DirectX::XMFLOAT3 eyePos = m_Position;
-	eyePos.y = m_Position.y + (m_Height * 0.75f);
+	eyePos.y = m_Position.y + 1.5f;
 	return eyePos;
 }
 

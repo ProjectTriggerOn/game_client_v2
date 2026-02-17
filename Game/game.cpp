@@ -36,6 +36,7 @@ namespace{
 	int g_CrossHairTexId = -1;
 	int g_CursorTexId = -1;
 	bool isDebugCam = false;
+	bool isDebugCollision = false;
 	Player_Fps* g_PlayerFps;
 	GameState g_GameState;
 	
@@ -93,6 +94,9 @@ void Game_Update(double elapsed_time)
 
 	if (KeyLogger_IsTrigger(KK_C)) {
 		isDebugCam = !isDebugCam;
+	}
+	if (KeyLogger_IsTrigger(KK_F3)) {
+		isDebugCollision = !isDebugCollision;
 	}
 
 	g_PlayerFps->Update(elapsed_time);
@@ -245,12 +249,30 @@ void Game_Draw()
 
 	Map_Draw();
 
-	// Debug draw: collision shapes (only in debug camera mode)
-	if (isDebugCam)
+	// Debug draw: collision shapes (F3 toggle)
+	if (isDebugCollision)
 	{
-		// Draw player capsule
+		Collision_DebugSetViewProj(view * proj);
+
+		// Draw local player capsule (green)
 		Capsule playerCapsule = g_PlayerFps->GetCapsule();
 		Collision_DebugDraw(playerCapsule, { 0.0f, 1.0f, 0.0f, 1.0f });
+
+		// Draw remote player capsules (red)
+		for (int i = 0; i < MAX_PLAYERS; i++)
+		{
+			if (g_RemotePlayerActive[i])
+			{
+				XMFLOAT3 rpos = g_RemotePlayers[i].GetRenderPosition();
+				float height = g_RemotePlayers[i].GetHeight();
+				float radius = 0.3f;
+				Capsule remoteCapsule;
+				remoteCapsule.pointA = { rpos.x, rpos.y + radius, rpos.z };
+				remoteCapsule.pointB = { rpos.x, rpos.y + height - radius, rpos.z };
+				remoteCapsule.radius = radius;
+				Collision_DebugDraw(remoteCapsule, { 1.0f, 0.2f, 0.2f, 1.0f });
+			}
+		}
 
 		// Draw all world AABB colliders
 		for (const auto& collider : g_CollisionWorld.GetColliders())

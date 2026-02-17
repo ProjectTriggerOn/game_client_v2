@@ -86,6 +86,6 @@ private:
     CollisionWorld* m_pCollisionWorld = nullptr;
 
     // Player collision parameters (must match Player_Fps)
-    static constexpr float PLAYER_HEIGHT = 2.0f;
-    static constexpr float CAPSULE_RADIUS = 0.5f;
+    static constexpr float PLAYER_HEIGHT = 1.6f;
+    static constexpr float CAPSULE_RADIUS = 0.3f;
 };

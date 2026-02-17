@@ -49,6 +49,12 @@ namespace
 	ID3D11Device* g_pDevice = nullptr;
 	ID3D11DeviceContext* g_pContext = nullptr;
 	int g_WhiteId = -1; // 白色のテクスチャID
+	XMMATRIX g_DebugViewProj = XMMatrixIdentity();
+}
+
+void Collision_DebugSetViewProj(const DirectX::XMMATRIX& viewProj)
+{
+	g_DebugViewProj = viewProj;
 }
 
 struct Vertex
@@ -546,6 +552,7 @@ void Collision_DebugDraw(const AABB& aabb, const DirectX::XMFLOAT4& color)
 
 	// 3. 复制标准D3D绘制流程
 	Shader_Begin();
+	Shader_SetMatrix(g_DebugViewProj);
 
 	D3D11_MAPPED_SUBRESOURCE msr;
 	g_pContext->Map(g_pVertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &msr);
@@ -673,6 +680,7 @@ void Collision_DebugDraw(const Capsule& capsule, const DirectX::XMFLOAT4& color)
 
 	// 绘制
 	Shader_Begin();
+	Shader_SetMatrix(g_DebugViewProj);
 
 	D3D11_MAPPED_SUBRESOURCE msr;
 	g_pContext->Map(g_pVertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &msr);
