@@ -22,7 +22,9 @@ Player_Fps::Player_Fps()
 	, m_MoveDir({ 0,0,1 })
 	, m_CamRelativePos({ 0.0f, 0.0f,0.3f })
 	, m_Height(2.0f)
+	, m_CapsuleRadius(0.5f)
 	, m_isJump(false)
+	, m_pCollisionWorld(nullptr)
 	, m_Model(nullptr)
 	, m_Animator(nullptr)
 	, m_StateMachine(nullptr)
@@ -39,9 +41,11 @@ Player_Fps::~Player_Fps()
 	Finalize();
 }
 
-void Player_Fps::Initialize(const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3& front)
+void Player_Fps::Initialize(const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3& front,
+                            CollisionWorld* pCollisionWorld)
 {
 	m_Position = position;
+	m_pCollisionWorld = pCollisionWorld;
 	m_Velocity = { 0.0f, 0.0f, 0.0f };
 	m_RenderOffset = { 0.0f, 0.0f, 0.0f };
 	m_CorrectionMode = "NONE";
@@ -224,13 +228,32 @@ void Player_Fps::Update(double elapsed_time)
 	m_Position.y += m_Velocity.y * dt;
 	
 	// ========================================================================
-	// Floor Collision
+	// Collision Detection (Capsule vs World AABBs)
 	// ========================================================================
-	if (m_Position.y <= 0.0f)
+	if (m_pCollisionWorld)
 	{
-		m_Position.y = 0.0f;
-		m_Velocity.y = 0.0f;
-		m_isJump = false;
+		auto result = m_pCollisionWorld->ResolveCapsule(
+			m_Position, m_Height, m_CapsuleRadius, m_Velocity);
+		m_Position = result.position;
+		m_Velocity = result.velocity;
+		if (result.isGrounded)
+		{
+			m_isJump = false;
+		}
+		else
+		{
+			m_isJump = true;
+		}
+	}
+	else
+	{
+		// Fallback: simple floor at y=0
+		if (m_Position.y <= 0.0f)
+		{
+			m_Position.y = 0.0f;
+			m_Velocity.y = 0.0f;
+			m_isJump = false;
+		}
 	}
 	
 	// ========================================================================
@@ -525,6 +548,15 @@ AABB Player_Fps::GetAABB() const
 	return {
 		{m_Position.x - 1.0f, m_Position.y, m_Position.z - 1.0f },
 		{m_Position.x + 1.0f, m_Position.y + m_Height, m_Position.z + 1.0f}
+	};
+}
+
+Capsule Player_Fps::GetCapsule() const
+{
+	return {
+		{ m_Position.x, m_Position.y + m_CapsuleRadius, m_Position.z },
+		{ m_Position.x, m_Position.y + m_Height - m_CapsuleRadius, m_Position.z },
+		m_CapsuleRadius
 	};
 }
 

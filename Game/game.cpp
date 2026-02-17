@@ -1,7 +1,8 @@
 #include "game.h"
 
-
+#include "collision_world.h"
 #include "cube.h"
+#include "map.h"
 #include "shader.h"
 #include "camera.h"
 #include "direct3d.h"
@@ -40,6 +41,9 @@ namespace{
 	// Correction state for debug display
 	const char* g_CorrectionMode = "NONE";
 	float g_CorrectionError = 0.0f;
+
+	// Collision world
+	CollisionWorld g_CollisionWorld;
 }
 
 // Global network debug info (populated from received snapshots)
@@ -64,9 +68,13 @@ void Game_Initialize()
 	//ModelAni_SetAnimation(g_pModel0, 0);
 	//g_pModel0 = ModelLoad("resource/model/(Legacy)arms_assault_rifle_01.fbx", 10.0f);
 	//Player_Initialize({ 0.0f,0.0f,0.0f }, { 0.0f,0.0f,1.0f });
+	// Initialize map and register colliders
+	Map_Initialize();
+	Map_RegisterColliders(g_CollisionWorld);
+
 	SkyDome_Initialize();
 	g_PlayerFps = new Player_Fps();
-	g_PlayerFps->Initialize({ 0.0f,0.0f,-20.0f }, { 0.0f,0.0f,1.0f });
+	g_PlayerFps->Initialize({ 0.0f,0.0f,-20.0f }, { 0.0f,0.0f,1.0f }, &g_CollisionWorld);
 
 	Camera_Initialize();
 	PlayerCamTps_Initialize();
@@ -232,7 +240,24 @@ void Game_Draw()
 			g_RemotePlayers[i].Draw();
 	}
 
-	MeshField_Draw(mtxW);
+	Map_Draw();
+
+	// Debug draw: collision shapes (only in debug camera mode)
+	if (isDebugCam)
+	{
+		// Draw player capsule
+		Capsule playerCapsule = g_PlayerFps->GetCapsule();
+		Collision_DebugDraw(playerCapsule, { 0.0f, 1.0f, 0.0f, 1.0f });
+
+		// Draw all world AABB colliders
+		for (const auto& collider : g_CollisionWorld.GetColliders())
+		{
+			XMFLOAT4 color = collider.isGround
+				? XMFLOAT4{ 0.0f, 0.5f, 1.0f, 1.0f }   // blue for ground
+				: XMFLOAT4{ 1.0f, 0.5f, 0.0f, 1.0f };   // orange for walls
+			Collision_DebugDraw(collider.aabb, color);
+		}
+	}
 
 	float sw = (float)Direct3D_GetBackBufferWidth();
 	float sh = (float)Direct3D_GetBackBufferHeight();
@@ -263,6 +288,7 @@ void Game_Finalize()
 	PlayerCamFps_Finalize();
 	g_PlayerFps->Finalize();
 	ModelAni_Release(g_pModel0);
+	Map_Finalize();
 }
 
 void Game_SetState(GameState state)
@@ -283,5 +309,10 @@ const char* Game_GetCorrectionMode()
 float Game_GetCorrectionError()
 {
 	return g_CorrectionError;
+}
+
+CollisionWorld* Game_GetCollisionWorld()
+{
+	return &g_CollisionWorld;
 }
 

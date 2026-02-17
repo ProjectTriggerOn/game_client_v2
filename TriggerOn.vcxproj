@@ -161,6 +161,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Game\collision.cpp" />
+    <ClCompile Include="Game\collision_world.cpp" />
     <ClCompile Include="Graphics\animator.cpp" />
     <ClCompile Include="Game\Audio.cpp" />
     <ClCompile Include="Graphics\camera.cpp" />
@@ -215,6 +216,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Game\collision.h" />
+    <ClInclude Include="Game\collision_world.h" />
     <ClInclude Include="Graphics\animator.h" />
     <ClInclude Include="Game\Audio.h" />
     <ClInclude Include="Graphics\camera.h" />

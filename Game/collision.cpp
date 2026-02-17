@@ -142,6 +142,251 @@ bool Collision_OverlapSphere(const Sphere& sphereA, const Sphere& sphereB)
 	return (sphereA.radius + sphereB.radius) * (sphereA.radius + sphereB.radius) > XMVectorGetX(lsq);
 }
 
+// ============================================================
+// 辅助函数：点到线段的最近点（返回参数t in [0,1]）
+// ============================================================
+static XMVECTOR ClosestPointOnSegment(XMVECTOR segA, XMVECTOR segB, XMVECTOR point, float* outT = nullptr)
+{
+	XMVECTOR ab = segB - segA;
+	float abLenSq = XMVectorGetX(XMVector3LengthSq(ab));
+	float t = 0.0f;
+	if (abLenSq > 1e-8f) {
+		t = XMVectorGetX(XMVector3Dot(point - segA, ab)) / abLenSq;
+		t = std::clamp(t, 0.0f, 1.0f);
+	}
+	if (outT) *outT = t;
+	return segA + ab * t;
+}
+
+// ============================================================
+// 辅助函数：两条线段之间的最近距离的平方及最近点
+// ============================================================
+static float ClosestDistanceSqSegmentSegment(
+	XMVECTOR p1, XMVECTOR q1,
+	XMVECTOR p2, XMVECTOR q2,
+	XMVECTOR* outClosest1 = nullptr,
+	XMVECTOR* outClosest2 = nullptr)
+{
+	XMVECTOR d1 = q1 - p1; // 线段1方向
+	XMVECTOR d2 = q2 - p2; // 线段2方向
+	XMVECTOR r = p1 - p2;
+
+	float a = XMVectorGetX(XMVector3Dot(d1, d1)); // |d1|^2
+	float e = XMVectorGetX(XMVector3Dot(d2, d2)); // |d2|^2
+	float f = XMVectorGetX(XMVector3Dot(d2, r));
+
+	float s, t;
+	const float EPSILON = 1e-8f;
+
+	if (a <= EPSILON && e <= EPSILON) {
+		// 两条线段都退化为点
+		s = t = 0.0f;
+	}
+	else if (a <= EPSILON) {
+		// 线段1退化为点
+		s = 0.0f;
+		t = std::clamp(f / e, 0.0f, 1.0f);
+	}
+	else {
+		float c = XMVectorGetX(XMVector3Dot(d1, r));
+		if (e <= EPSILON) {
+			// 线段2退化为点
+			t = 0.0f;
+			s = std::clamp(-c / a, 0.0f, 1.0f);
+		}
+		else {
+			float b = XMVectorGetX(XMVector3Dot(d1, d2));
+			float denom = a * e - b * b;
+
+			if (denom != 0.0f) {
+				s = std::clamp((b * f - c * e) / denom, 0.0f, 1.0f);
+			}
+			else {
+				s = 0.0f;
+			}
+
+			t = (b * s + f) / e;
+
+			if (t < 0.0f) {
+				t = 0.0f;
+				s = std::clamp(-c / a, 0.0f, 1.0f);
+			}
+			else if (t > 1.0f) {
+				t = 1.0f;
+				s = std::clamp((b - c) / a, 0.0f, 1.0f);
+			}
+		}
+	}
+
+	XMVECTOR closest1 = p1 + d1 * s;
+	XMVECTOR closest2 = p2 + d2 * t;
+	if (outClosest1) *outClosest1 = closest1;
+	if (outClosest2) *outClosest2 = closest2;
+
+	return XMVectorGetX(XMVector3LengthSq(closest1 - closest2));
+}
+
+// ============================================================
+// Capsule vs Capsule 重叠判定
+// ============================================================
+bool Collision_OverlapCapsuleCapsule(const Capsule& a, const Capsule& b)
+{
+	XMVECTOR a1 = XMLoadFloat3(&a.pointA);
+	XMVECTOR a2 = XMLoadFloat3(&a.pointB);
+	XMVECTOR b1 = XMLoadFloat3(&b.pointA);
+	XMVECTOR b2 = XMLoadFloat3(&b.pointB);
+
+	float distSq = ClosestDistanceSqSegmentSegment(a1, a2, b1, b2);
+	float radiusSum = a.radius + b.radius;
+	return distSq <= radiusSum * radiusSum;
+}
+
+// ============================================================
+// Capsule vs Capsule 碰撞判定（带法线）
+// ============================================================
+Hit Collision_IsHitCapsuleCapsule(const Capsule& a, const Capsule& b)
+{
+	Hit hit{};
+
+	XMVECTOR a1 = XMLoadFloat3(&a.pointA);
+	XMVECTOR a2 = XMLoadFloat3(&a.pointB);
+	XMVECTOR b1 = XMLoadFloat3(&b.pointA);
+	XMVECTOR b2 = XMLoadFloat3(&b.pointB);
+
+	XMVECTOR closestA, closestB;
+	float distSq = ClosestDistanceSqSegmentSegment(a1, a2, b1, b2, &closestA, &closestB);
+	float radiusSum = a.radius + b.radius;
+
+	hit.isHit = (distSq <= radiusSum * radiusSum);
+	if (!hit.isHit) return hit;
+
+	XMVECTOR diff = closestA - closestB;
+	float dist = sqrtf(distSq);
+	if (dist > 1e-8f) {
+		XMVECTOR normal = diff / dist;
+		XMStoreFloat3(&hit.normal, normal);
+	}
+	else {
+		hit.normal = { 0.0f, 1.0f, 0.0f }; // 重叠时默认向上
+	}
+	return hit;
+}
+
+// ============================================================
+// Capsule vs Sphere 重叠判定
+// ============================================================
+bool Collision_OverlapCapsuleSphere(const Capsule& capsule, const Sphere& sphere)
+{
+	XMVECTOR a = XMLoadFloat3(&capsule.pointA);
+	XMVECTOR b = XMLoadFloat3(&capsule.pointB);
+	XMVECTOR center = XMLoadFloat3(&sphere.center);
+
+	XMVECTOR closest = ClosestPointOnSegment(a, b, center);
+	XMVECTOR diff = center - closest;
+	float distSq = XMVectorGetX(XMVector3LengthSq(diff));
+	float radiusSum = capsule.radius + sphere.radius;
+	return distSq <= radiusSum * radiusSum;
+}
+
+// ============================================================
+// Capsule vs AABB 重叠判定
+// ============================================================
+bool Collision_OverlapCapsuleAABB(const Capsule& capsule, const AABB& aabb)
+{
+	// 将胶囊体线段上采样多个点，找到离AABB最近的距离
+	// 更精确的做法：找线段上离AABB最近的点
+	XMVECTOR segA = XMLoadFloat3(&capsule.pointA);
+	XMVECTOR segB = XMLoadFloat3(&capsule.pointB);
+	XMVECTOR aabbMin = XMLoadFloat3(&aabb.min);
+	XMVECTOR aabbMax = XMLoadFloat3(&aabb.max);
+
+	// 在线段上搜索离AABB最近的点（迭代法）
+	// 对线段参数t进行二分/采样
+	float bestDistSq = FLT_MAX;
+	const int STEPS = 16;
+	for (int i = 0; i <= STEPS; ++i) {
+		float t = static_cast<float>(i) / STEPS;
+		XMVECTOR segPoint = segA + (segB - segA) * t;
+
+		// AABB上离segPoint最近的点（clamp到AABB范围）
+		XMVECTOR clamped = XMVectorClamp(segPoint, aabbMin, aabbMax);
+		float distSq = XMVectorGetX(XMVector3LengthSq(segPoint - clamped));
+		if (distSq < bestDistSq) {
+			bestDistSq = distSq;
+		}
+	}
+
+	return bestDistSq <= capsule.radius * capsule.radius;
+}
+
+// ============================================================
+// Ray vs Capsule 射线判定
+// ============================================================
+bool Collision_isHitRayOnCapsule(const Ray& ray, const Capsule& capsule, float* outDistance)
+{
+	// 将胶囊体视为：无限圆柱体 + 两端半球
+	// 先检测射线与圆柱体部分，再检测与两端球
+
+	XMVECTOR rayOrig = XMLoadFloat3(&ray.origin);
+	XMVECTOR rayDir = XMLoadFloat3(&ray.direction);
+	XMVECTOR capA = XMLoadFloat3(&capsule.pointA);
+	XMVECTOR capB = XMLoadFloat3(&capsule.pointB);
+	XMVECTOR capAxis = capB - capA;
+	float capLenSq = XMVectorGetX(XMVector3LengthSq(capAxis));
+
+	float bestT = FLT_MAX;
+	bool hasHit = false;
+
+	if (capLenSq > 1e-8f) {
+		// 圆柱体部分的射线检测
+		XMVECTOR capDir = capAxis / sqrtf(capLenSq);
+		XMVECTOR oc = rayOrig - capA;
+
+		// 去除沿胶囊体轴方向的分量
+		float dDotAxis = XMVectorGetX(XMVector3Dot(rayDir, capDir));
+		float ocDotAxis = XMVectorGetX(XMVector3Dot(oc, capDir));
+
+		XMVECTOR dPerp = rayDir - capDir * dDotAxis;
+		XMVECTOR ocPerp = oc - capDir * ocDotAxis;
+
+		float a = XMVectorGetX(XMVector3Dot(dPerp, dPerp));
+		float b = XMVectorGetX(XMVector3Dot(dPerp, ocPerp));
+		float c = XMVectorGetX(XMVector3Dot(ocPerp, ocPerp)) - capsule.radius * capsule.radius;
+
+		float disc = b * b - a * c;
+		if (disc >= 0.0f && a > 1e-8f) {
+			float sqrtDisc = sqrtf(disc);
+			float t = (-b - sqrtDisc) / a;
+			if (t < 0.0f) t = (-b + sqrtDisc) / a;
+
+			if (t >= 0.0f) {
+				// 检查交点是否在胶囊体圆柱段内
+				float hitOnAxis = ocDotAxis + t * dDotAxis;
+				float capLen = sqrtf(capLenSq);
+				if (hitOnAxis >= 0.0f && hitOnAxis <= capLen) {
+					if (t < bestT) { bestT = t; hasHit = true; }
+				}
+			}
+		}
+	}
+
+	// 检测两端半球
+	Sphere sphereA = { capsule.pointA, capsule.radius };
+	Sphere sphereB = { capsule.pointB, capsule.radius };
+	float tA, tB;
+	if (Collision_isHitRayOnSphere(ray, sphereA, &tA)) {
+		if (tA < bestT) { bestT = tA; hasHit = true; }
+	}
+	if (Collision_isHitRayOnSphere(ray, sphereB, &tB)) {
+		if (tB < bestT) { bestT = tB; hasHit = true; }
+	}
+
+	if (hasHit && outDistance) {
+		*outDistance = bestT;
+	}
+	return hasHit;
+}
+
 
 void Collision_DebugInitialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 {
@@ -323,4 +568,124 @@ void Collision_DebugDraw(const AABB& aabb, const DirectX::XMFLOAT4& color)
 
 	// *** 注意：绘制24个顶点 ***
 	g_pContext->Draw(24, 0);
+}
+
+void Collision_DebugDraw(const Capsule& capsule, const DirectX::XMFLOAT4& color)
+{
+	const int CIRCLE_SEGMENTS = 16; // 每个圆环的分段数
+	const int NUM_RINGS = 3;        // 沿轴方向的圆环数（除两端）
+
+	XMVECTOR a = XMLoadFloat3(&capsule.pointA);
+	XMVECTOR b = XMLoadFloat3(&capsule.pointB);
+	XMVECTOR axis = b - a;
+	float axisLen = XMVectorGetX(XMVector3Length(axis));
+
+	// 构建正交基
+	XMVECTOR up;
+	if (axisLen > 1e-6f) {
+		up = XMVector3Normalize(axis);
+	}
+	else {
+		up = XMVectorSet(0, 1, 0, 0);
+	}
+
+	// 找一个不平行的向量来叉乘
+	XMVECTOR helper = XMVectorSet(1, 0, 0, 0);
+	if (fabsf(XMVectorGetX(XMVector3Dot(up, helper))) > 0.9f) {
+		helper = XMVectorSet(0, 0, 1, 0);
+	}
+	XMVECTOR right = XMVector3Normalize(XMVector3Cross(up, helper));
+	XMVECTOR forward = XMVector3Cross(right, up);
+
+	// 顶点数组
+	// 圆环线: (NUM_RINGS + 2) * CIRCLE_SEGMENTS * 2 (LINELIST)
+	// 连接线: 4条纵线 * 2 顶点 = 8
+	// 半球弧线: 两端各2条弧(right平面和forward平面) * (CIRCLE_SEGMENTS/2+1) 顶点
+	const int ringVertices = (NUM_RINGS + 2) * CIRCLE_SEGMENTS * 2;
+	const int lineVertices = 8;
+	const int arcSegments = CIRCLE_SEGMENTS / 2;
+	const int arcVertices = 4 * arcSegments * 2; // 4条弧线
+	const int totalVertices = ringVertices + lineVertices + arcVertices;
+
+	Vertex v[NUM_VERTEX]; // 使用已有的上限
+	int vi = 0;
+
+	auto addLine = [&](XMVECTOR p1, XMVECTOR p2) {
+		if (vi + 2 > NUM_VERTEX) return;
+		XMStoreFloat3(&v[vi].position, p1);
+		v[vi].color = color;
+		v[vi].uv = { 0, 0 };
+		vi++;
+		XMStoreFloat3(&v[vi].position, p2);
+		v[vi].color = color;
+		v[vi].uv = { 0, 0 };
+		vi++;
+	};
+
+	// 绘制圆环（底端、顶端、中间）
+	for (int ring = 0; ring <= NUM_RINGS + 1; ++ring) {
+		float t = static_cast<float>(ring) / (NUM_RINGS + 1);
+		XMVECTOR center = a + axis * t;
+
+		for (int i = 0; i < CIRCLE_SEGMENTS; ++i) {
+			float angle0 = XM_2PI * i / CIRCLE_SEGMENTS;
+			float angle1 = XM_2PI * (i + 1) / CIRCLE_SEGMENTS;
+
+			XMVECTOR p0 = center + (right * cosf(angle0) + forward * sinf(angle0)) * capsule.radius;
+			XMVECTOR p1 = center + (right * cosf(angle1) + forward * sinf(angle1)) * capsule.radius;
+			addLine(p0, p1);
+		}
+	}
+
+	// 绘制4条纵线连接底端和顶端
+	for (int i = 0; i < 4; ++i) {
+		float angle = XM_2PI * i / 4;
+		XMVECTOR offset = (right * cosf(angle) + forward * sinf(angle)) * capsule.radius;
+		addLine(a + offset, b + offset);
+	}
+
+	// 绘制两端半球弧线
+	// 底端半球（朝下）: right平面弧和forward平面弧
+	for (int plane = 0; plane < 2; ++plane) {
+		XMVECTOR planeDir = (plane == 0) ? right : forward;
+		for (int i = 0; i < arcSegments; ++i) {
+			float angle0 = XM_PI * 0.5f + XM_PI * i / arcSegments;
+			float angle1 = XM_PI * 0.5f + XM_PI * (i + 1) / arcSegments;
+
+			XMVECTOR p0 = a + planeDir * (cosf(angle0) * capsule.radius) + up * (sinf(angle0) * capsule.radius);
+			XMVECTOR p1 = a + planeDir * (cosf(angle1) * capsule.radius) + up * (sinf(angle1) * capsule.radius);
+			addLine(p0, p1);
+		}
+	}
+
+	// 顶端半球（朝上）
+	for (int plane = 0; plane < 2; ++plane) {
+		XMVECTOR planeDir = (plane == 0) ? right : forward;
+		for (int i = 0; i < arcSegments; ++i) {
+			float angle0 = -XM_PI * 0.5f + XM_PI * i / arcSegments;
+			float angle1 = -XM_PI * 0.5f + XM_PI * (i + 1) / arcSegments;
+
+			XMVECTOR p0 = b + planeDir * (cosf(angle0) * capsule.radius) + up * (sinf(angle0) * capsule.radius);
+			XMVECTOR p1 = b + planeDir * (cosf(angle1) * capsule.radius) + up * (sinf(angle1) * capsule.radius);
+			addLine(p0, p1);
+		}
+	}
+
+	// 绘制
+	Shader_Begin();
+
+	D3D11_MAPPED_SUBRESOURCE msr;
+	g_pContext->Map(g_pVertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &msr);
+	memcpy(msr.pData, v, sizeof(Vertex) * vi);
+	g_pContext->Unmap(g_pVertexBuffer, 0);
+
+	UINT stride = sizeof(Vertex);
+	UINT offset = 0;
+	g_pContext->IASetVertexBuffers(0, 1, &g_pVertexBuffer, &stride, &offset);
+
+	Shader_SetWorldMatrix(DirectX::XMMatrixIdentity());
+	g_pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
+	Texture_Set(g_WhiteId);
+
+	g_pContext->Draw(vi, 0);
 }
