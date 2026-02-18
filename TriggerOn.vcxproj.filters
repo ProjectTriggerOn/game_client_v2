@@ -1,372 +1,407 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Source Files">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    <Filter Include="Core">
+      <UniqueIdentifier>{1A2B3C4D-5E6F-7A8B-9C0D-1E2F3A4B5C6D}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    <Filter Include="Game">
+      <UniqueIdentifier>{2B3C4D5E-6F7A-8B9C-0D1E-2F3A4B5C6D7E}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Graphics">
+      <UniqueIdentifier>{3C4D5E6F-7A8B-9C0D-1E2F-3A4B5C6D7E8F}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Network">
+      <UniqueIdentifier>{4D5E6F7A-8B9C-0D1E-2F3A-4B5C6D7E8F9A}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders">
+      <UniqueIdentifier>{5E6F7A8B-9C0D-1E2F-3A4B-5C6D7E8F9A0B}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ThirdParty">
+      <UniqueIdentifier>{6F7A8B9C-0D1E-2F3A-4B5C-6D7E8F9A0B1C}</UniqueIdentifier>
     </Filter>
     <Filter Include="Resource Files">
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
-      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms;mp3;ogg</Extensions>
-    </Filter>
-    <Filter Include="Shader Files">
-      <UniqueIdentifier>{ba958b34-6b71-4a0b-a175-cf2ecf2e33d8}</UniqueIdentifier>
-      <Extensions>hlsl;</Extensions>
     </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Core</Filter>
     </ClCompile>
     <ClCompile Include="Core\debug_ostream.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Core</Filter>
     </ClCompile>
     <ClCompile Include="Core\game_window.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Core</Filter>
     </ClCompile>
     <ClCompile Include="Core\direct3d.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Graphics\polygon.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Graphics\shader.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Graphics\sprite.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Graphics\texture.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Graphics\sprite_anime.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Core</Filter>
     </ClCompile>
     <ClCompile Include="Core\system_timer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Graphics\WICTextureLoader11.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Core</Filter>
     </ClCompile>
     <ClCompile Include="Core\debug_text.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Core</Filter>
     </ClCompile>
     <ClCompile Include="Core\mouse.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Core</Filter>
     </ClCompile>
     <ClCompile Include="Core\keyboard.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Core</Filter>
     </ClCompile>
     <ClCompile Include="Core\key_logger.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Game\game.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Graphics\effect.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Game\Audio.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Game\score.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Graphics\fade.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Game\scene.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Game\title.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Graphics\cube.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Graphics\shader_3d.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Game\grid.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Graphics\camera.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Graphics\sampler.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Graphics\mesh_field.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Graphics\shader_field.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Graphics\light.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Graphics\model.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Game\player.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Game\player_cam_tps.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Game\map.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Game\infinite_grid.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Graphics\shader_infinite.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Graphics\model_ani.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Graphics\shader_3d_ani.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Game\player_cam_fps.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Game\player_fps.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Game\player_state_mechine.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Graphics\animator.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Core</Filter>
     </ClCompile>
     <ClCompile Include="Core\ms_logger.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Graphics\sky_dome.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Graphics\shader_3d_unlit.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Core</Filter>
     </ClCompile>
     <ClCompile Include="Core\input_producer.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Core</Filter>
     </ClCompile>
-    <ClCompile Include="Network\mock_network.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="Core\font.cpp">
+      <Filter>Core</Filter>
     </ClCompile>
-    <ClCompile Include="Network\mock_server.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="Game\game.cpp">
+      <Filter>Game</Filter>
     </ClCompile>
-    <ClCompile Include="Network\remote_player.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="Game\Audio.cpp">
+      <Filter>Game</Filter>
     </ClCompile>
-    <ClCompile Include="Network\remote_player_state_machine.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="Game\score.cpp">
+      <Filter>Game</Filter>
+    </ClCompile>
+    <ClCompile Include="Game\scene.cpp">
+      <Filter>Game</Filter>
+    </ClCompile>
+    <ClCompile Include="Game\title.cpp">
+      <Filter>Game</Filter>
+    </ClCompile>
+    <ClCompile Include="Game\grid.cpp">
+      <Filter>Game</Filter>
+    </ClCompile>
+    <ClCompile Include="Game\player.cpp">
+      <Filter>Game</Filter>
+    </ClCompile>
+    <ClCompile Include="Game\player_cam_tps.cpp">
+      <Filter>Game</Filter>
+    </ClCompile>
+    <ClCompile Include="Game\map.cpp">
+      <Filter>Game</Filter>
+    </ClCompile>
+    <ClCompile Include="Game\infinite_grid.cpp">
+      <Filter>Game</Filter>
+    </ClCompile>
+    <ClCompile Include="Game\player_cam_fps.cpp">
+      <Filter>Game</Filter>
+    </ClCompile>
+    <ClCompile Include="Game\player_fps.cpp">
+      <Filter>Game</Filter>
+    </ClCompile>
+    <ClCompile Include="Game\player_state_mechine.cpp">
+      <Filter>Game</Filter>
     </ClCompile>
     <ClCompile Include="Game\collision.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Game</Filter>
+    </ClCompile>
+    <ClCompile Include="Game\collision_world.cpp">
+      <Filter>Game</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphics\polygon.cpp">
+      <Filter>Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphics\shader.cpp">
+      <Filter>Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphics\sprite.cpp">
+      <Filter>Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphics\texture.cpp">
+      <Filter>Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphics\sprite_anime.cpp">
+      <Filter>Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphics\WICTextureLoader11.cpp">
+      <Filter>Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphics\effect.cpp">
+      <Filter>Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphics\fade.cpp">
+      <Filter>Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphics\cube.cpp">
+      <Filter>Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphics\shader_3d.cpp">
+      <Filter>Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphics\camera.cpp">
+      <Filter>Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphics\sampler.cpp">
+      <Filter>Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphics\mesh_field.cpp">
+      <Filter>Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphics\shader_field.cpp">
+      <Filter>Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphics\light.cpp">
+      <Filter>Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphics\model.cpp">
+      <Filter>Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphics\shader_infinite.cpp">
+      <Filter>Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphics\model_ani.cpp">
+      <Filter>Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphics\shader_3d_ani.cpp">
+      <Filter>Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphics\animator.cpp">
+      <Filter>Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphics\sky_dome.cpp">
+      <Filter>Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphics\shader_3d_unlit.cpp">
+      <Filter>Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphics\ui_widget.cpp">
+      <Filter>Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Network\mock_network.cpp">
+      <Filter>Network</Filter>
+    </ClCompile>
+    <ClCompile Include="Network\mock_server.cpp">
+      <Filter>Network</Filter>
+    </ClCompile>
+    <ClCompile Include="Network\remote_player.cpp">
+      <Filter>Network</Filter>
+    </ClCompile>
+    <ClCompile Include="Network\remote_player_state_machine.cpp">
+      <Filter>Network</Filter>
+    </ClCompile>
+    <ClCompile Include="Network\enet_client_network.cpp">
+      <Filter>Network</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Core\game_window.h">
-      <Filter>Header Files</Filter>
+      <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="Core\direct3d.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Graphics\shader.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Graphics\polygon.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Graphics\sprite.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Graphics\texture.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Graphics\sprite_anime.h">
-      <Filter>Header Files</Filter>
+      <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="Core\system_timer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Graphics\WICTextureLoader11.h">
-      <Filter>Header Files</Filter>
+      <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="Core\debug_text.h">
-      <Filter>Header Files</Filter>
+      <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="Core\mouse.h">
-      <Filter>Header Files</Filter>
+      <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="Core\keyboard.h">
-      <Filter>Header Files</Filter>
+      <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="Core\key_logger.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Game\game.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Graphics\effect.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Game\Audio.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Game\score.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Game\scene.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Game\title.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Graphics\fade.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Graphics\cube.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Graphics\shader_3d.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Game\grid.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Graphics\camera.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Graphics\sampler.h">
-      <Filter>Header Files</Filter>
+      <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="Core\debug_imgui.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Graphics\mesh_field.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Graphics\shader_field.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Graphics\light.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Graphics\model.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Game\player.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Game\player_cam_tps.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Game\map.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Game\infinite_grid.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Graphics\shader_infinite.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Graphics\model_ani.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Graphics\shader_3d_ani.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Game\player_cam_fps.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Game\player_fps.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Game\player_state_mechine.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Graphics\animator.h">
-      <Filter>Header Files</Filter>
+      <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="Core\ms_logger.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Graphics\sky_dome.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Graphics\shader_3d_unlit.h">
-      <Filter>Header Files</Filter>
+      <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="Core\input_producer.h">
-      <Filter>Header Files</Filter>
+      <Filter>Core</Filter>
     </ClInclude>
-    <ClInclude Include="Network\mock_network.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="Core\font.h">
+      <Filter>Core</Filter>
     </ClInclude>
-    <ClInclude Include="Network\mock_server.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="Game\game.h">
+      <Filter>Game</Filter>
     </ClInclude>
-    <ClInclude Include="Network\net_common.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="Game\Audio.h">
+      <Filter>Game</Filter>
     </ClInclude>
-    <ClInclude Include="Network\remote_player.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="Game\score.h">
+      <Filter>Game</Filter>
     </ClInclude>
-    <ClInclude Include="Network\remote_player_state_machine.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="Game\scene.h">
+      <Filter>Game</Filter>
+    </ClInclude>
+    <ClInclude Include="Game\title.h">
+      <Filter>Game</Filter>
+    </ClInclude>
+    <ClInclude Include="Game\grid.h">
+      <Filter>Game</Filter>
+    </ClInclude>
+    <ClInclude Include="Game\player.h">
+      <Filter>Game</Filter>
+    </ClInclude>
+    <ClInclude Include="Game\player_cam_tps.h">
+      <Filter>Game</Filter>
+    </ClInclude>
+    <ClInclude Include="Game\map.h">
+      <Filter>Game</Filter>
+    </ClInclude>
+    <ClInclude Include="Game\infinite_grid.h">
+      <Filter>Game</Filter>
+    </ClInclude>
+    <ClInclude Include="Game\player_cam_fps.h">
+      <Filter>Game</Filter>
+    </ClInclude>
+    <ClInclude Include="Game\player_fps.h">
+      <Filter>Game</Filter>
+    </ClInclude>
+    <ClInclude Include="Game\player_state_mechine.h">
+      <Filter>Game</Filter>
     </ClInclude>
     <ClInclude Include="Game\collision.h">
-      <Filter>Header Files</Filter>
+      <Filter>Game</Filter>
+    </ClInclude>
+    <ClInclude Include="Game\collision_world.h">
+      <Filter>Game</Filter>
+    </ClInclude>
+    <ClInclude Include="Graphics\shader.h">
+      <Filter>Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Graphics\polygon.h">
+      <Filter>Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Graphics\sprite.h">
+      <Filter>Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Graphics\texture.h">
+      <Filter>Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Graphics\sprite_anime.h">
+      <Filter>Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Graphics\WICTextureLoader11.h">
+      <Filter>Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Graphics\effect.h">
+      <Filter>Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Graphics\fade.h">
+      <Filter>Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Graphics\cube.h">
+      <Filter>Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Graphics\shader_3d.h">
+      <Filter>Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Graphics\camera.h">
+      <Filter>Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Graphics\sampler.h">
+      <Filter>Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Graphics\mesh_field.h">
+      <Filter>Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Graphics\shader_field.h">
+      <Filter>Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Graphics\light.h">
+      <Filter>Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Graphics\model.h">
+      <Filter>Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Graphics\shader_infinite.h">
+      <Filter>Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Graphics\model_ani.h">
+      <Filter>Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Graphics\shader_3d_ani.h">
+      <Filter>Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Graphics\animator.h">
+      <Filter>Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Graphics\sky_dome.h">
+      <Filter>Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Graphics\shader_3d_unlit.h">
+      <Filter>Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Graphics\ui_widget.h">
+      <Filter>Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Network\mock_network.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="Network\mock_server.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="Network\net_common.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="Network\remote_player.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="Network\remote_player_state_machine.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="Network\enet_client_network.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="Network\i_network.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="Network\net_packet.h">
+      <Filter>Network</Filter>
     </ClInclude>
     <ClInclude Include="ThirdParty\enet\include\enet\enet.h">
-      <Filter>Header Files</Filter>
+      <Filter>ThirdParty</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\shader_pixel_2d.hlsl">
-      <Filter>Shader Files</Filter>
+      <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\shader_vertex_2d.hlsl">
-      <Filter>Shader Files</Filter>
+      <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\shader_pixel_3d.hlsl">
-      <Filter>Shader Files</Filter>
+      <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\shader_vertex_3d.hlsl">
-      <Filter>Shader Files</Filter>
+      <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\shader_pixel_field.hlsl">
-      <Filter>Shader Files</Filter>
+      <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\shader_vertex_field.hlsl">
-      <Filter>Shader Files</Filter>
+      <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\infinite_grid_vertex.hlsl">
-      <Filter>Shader Files</Filter>
+      <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\infinite_grid_pixel.hlsl">
-      <Filter>Shader Files</Filter>
+      <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\shader_pixel_3d_ani.hlsl">
-      <Filter>Shader Files</Filter>
+      <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\shader_vertex_3d_ani.hlsl">
-      <Filter>Shader Files</Filter>
+      <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\shader_pixel_3dunlit.hlsl">
-      <Filter>Shader Files</Filter>
+      <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\shader_vertex_3dunlit.hlsl">
-      <Filter>Shader Files</Filter>
+      <Filter>Shaders</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
@@ -399,6 +434,8 @@
     </Media>
   </ItemGroup>
   <ItemGroup>
-    <Library Include="ThirdParty\enet\lib\enet.lib" />
+    <Library Include="ThirdParty\enet\lib\enet.lib">
+      <Filter>ThirdParty</Filter>
+    </Library>
   </ItemGroup>
 </Project>

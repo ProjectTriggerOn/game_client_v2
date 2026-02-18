@@ -66,6 +66,12 @@ public:
 	uint8_t GetHealth() const { return m_Health; }
 	bool IsDead() const { return m_IsDead; }
 
+	int GetAmmo()        const { return m_Ammo; }
+	int GetAmmoReserve() const { return m_AmmoReserve; }
+
+	bool GetInfiniteReserve() const { return m_InfiniteReserve; }
+	void SetInfiniteReserve(bool v) { m_InfiniteReserve = v; }
+
 	//-------------------------------------------------------------------------
 	// Debug info
 	//-------------------------------------------------------------------------
@@ -90,6 +96,7 @@ private:
 	float m_Height;
 	float m_CapsuleRadius;
 	bool m_isJump;
+	bool m_JumpPending;   // buffers jump input across fixed-timestep ticks
 	CollisionWorld* m_pCollisionWorld;
 
 	// Fixed-timestep accumulator (must match server tick rate)
@@ -98,6 +105,12 @@ private:
 	double m_PhysicsAccumulator;
 	DirectX::XMFLOAT3 m_PrevPhysicsPosition;  // Position before accumulator loop (for sub-tick interpolation)
 	float m_PhysicsAlpha;                       // Remainder fraction for render interpolation
+
+	static constexpr int MAG_SIZE    = 30;
+	static constexpr int MAX_RESERVE = 90;
+	int  m_Ammo;
+	int  m_AmmoReserve;
+	bool m_InfiniteReserve;
 
 	double m_WeaponRPM;
 	double m_FireTimer;

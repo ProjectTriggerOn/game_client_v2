@@ -43,7 +43,6 @@ void PlayerCamFps_Initialize()
 	g_cameraYaw = 0.0f;
 	g_cameraPitch = 0.0f;
 	g_CameraFront = { 0.0f, 0.0f, 1.0f };
-#if defined(_DEBUG) || defined(DEBUG)
 
 	g_DebugText = new hal::DebugText(Direct3D_GetDevice(), Direct3D_GetDeviceContext(),
 		L"resource/texture/consolab_ascii_512.png",
@@ -52,12 +51,12 @@ void PlayerCamFps_Initialize()
 		0, 0,
 		0.0f, 16.0f
 	);
-
-#endif // _DEBUG || DEBUG
 }
 
 void PlayerCamFps_Finalize()
 {
+	delete g_DebugText;
+	g_DebugText = nullptr;
 }
 
 void PlayerCamFps_Update(double elapsed_time)
@@ -287,7 +286,7 @@ const DirectX::XMFLOAT4X4& PlayerCamFps_GetProjectMatrix()
 
 void PlayerCamFps_Debug(const Player_Fps& pf)
 {
-#if defined(_DEBUG) || defined(DEBUG)
+	if (!g_DebugText) return;
 
 	// Access global NetworkDebugInfo (populated from received snapshots)
 	extern NetworkDebugInfo g_NetDebugInfo;
@@ -379,7 +378,5 @@ void PlayerCamFps_Debug(const Player_Fps& pf)
 	g_DebugText->SetText(ss.str().c_str());
 	g_DebugText->Draw();
 	g_DebugText->Clear();
-
-#endif
 }
 

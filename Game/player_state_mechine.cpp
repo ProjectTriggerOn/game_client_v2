@@ -68,8 +68,9 @@ void PlayerStateMachine::BuildTables()
 	//                                                progress  nextState            requireNotBlending
 	m_AutoTransitions[WeaponState::ADS_IN]       = { 0.3f,     WeaponState::ADS,     false };
 	m_AutoTransitions[WeaponState::ADS_OUT]      = { 0.3f,     WeaponState::HIP,     false };
-	m_AutoTransitions[WeaponState::RELOADING]    = { 0.9f,     WeaponState::HIP,     false };
-	m_AutoTransitions[WeaponState::TAKING_OUT]   = { 0.8f,     WeaponState::HIP,     false };
+	m_AutoTransitions[WeaponState::RELOADING]              = { 0.9f, WeaponState::HIP, false };
+	m_AutoTransitions[WeaponState::RELOADING_OUT_OF_AMMO]  = { 0.9f, WeaponState::HIP, false };
+	m_AutoTransitions[WeaponState::TAKING_OUT]             = { 0.8f, WeaponState::HIP, false };
 	m_AutoTransitions[WeaponState::HIP_FIRING]   = { 0.70f,    WeaponState::HIP,     true  };
 }
 
