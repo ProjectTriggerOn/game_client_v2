@@ -39,7 +39,7 @@ Player_Fps::Player_Fps()
 	, m_TeamId(PlayerTeam::RED)
 	, m_Health(200)
 	, m_IsDead(false)
-	, m_WasDead(false)
+	, m_WasDead(true)   // treat first connection as respawn so yaw is initialized
 {
 }
 
@@ -61,6 +61,7 @@ void Player_Fps::Initialize(const DirectX::XMFLOAT3& position, const DirectX::XM
 	m_PhysicsAccumulator = 0.0;
 	m_PrevPhysicsPosition = position;
 	m_PhysicsAlpha = 0.0f;
+	m_WasDead = true;   // first snapshot will set yaw toward world center
 
 	XMStoreFloat3(&m_MoveDir, XMVector3Normalize(XMLoadFloat3(&front)));
 	XMStoreFloat3(&m_ModelFront, XMVector3Normalize(XMLoadFloat3(&front)));

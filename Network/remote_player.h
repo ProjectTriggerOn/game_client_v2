@@ -63,6 +63,7 @@ public:
     float GetYaw() const { return m_Yaw; }
     float GetPitch() const { return m_Pitch; }
     bool IsActive() const { return m_IsActive; }
+    bool IsDead() const { return (m_StateFlags & NetStateFlags::IS_DEAD) != 0; }
     float GetHeight() const { return m_Height; }
     
     DirectX::XMFLOAT3 GetEyePosition() const;

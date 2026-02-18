@@ -404,6 +404,7 @@ void RemotePlayer::ExtrapolateFrom(const RemoteSnapshot& latest, double dt)
 void RemotePlayer::Draw()
 {
     if (!m_IsActive || !m_Model) return;
+    if (m_StateFlags & NetStateFlags::IS_DEAD) return;
 
     XMMATRIX rotation = XMMatrixRotationY(m_Yaw + XM_PI);
     XMMATRIX translation = XMMatrixTranslation(

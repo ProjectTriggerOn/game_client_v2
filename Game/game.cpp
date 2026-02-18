@@ -130,15 +130,26 @@ void Game_Update(double elapsed_time)
 		}
 
 		// Dispatch remote players from snapshot
+		bool seenThisSnap[MAX_PLAYERS] = {};
 		for (uint8_t i = 0; i < snap.remotePlayerCount; i++)
 		{
 			uint8_t rid = snap.remotePlayers[i].playerId;
 			if (rid < MAX_PLAYERS)
 			{
+				seenThisSnap[rid] = true;
 				g_RemotePlayerActive[rid] = true;
 				g_RemotePlayers[rid].SetActive(true);
 				g_RemotePlayers[rid].SetTeam(snap.remotePlayers[i].teamId);
 				g_RemotePlayers[rid].PushSnapshot(snap.remotePlayers[i].state, clientClock);
+			}
+		}
+		// Deactivate players absent from this snapshot (disconnected)
+		for (int i = 0; i < MAX_PLAYERS; i++)
+		{
+			if (g_RemotePlayerActive[i] && !seenThisSnap[i])
+			{
+				g_RemotePlayerActive[i] = false;
+				g_RemotePlayers[i].SetActive(false);
 			}
 		}
 
@@ -277,7 +288,7 @@ void Game_Draw()
 		// Draw remote player capsules (red)
 		for (int i = 0; i < MAX_PLAYERS; i++)
 		{
-			if (g_RemotePlayerActive[i])
+			if (g_RemotePlayerActive[i] && !g_RemotePlayers[i].IsDead())
 			{
 				XMFLOAT3 rpos = g_RemotePlayers[i].GetRenderPosition();
 				float height = g_RemotePlayers[i].GetHeight();
