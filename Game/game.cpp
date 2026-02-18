@@ -359,6 +359,8 @@ void Game_Draw()
 
 		// Restore 2D ortho projection after debug draw overwrote CB0
 		Sprite_Begin();
+
+		PlayerCamFps_Debug(*g_PlayerFps);
 	}
 
 	float sw = (float)Direct3D_GetBackBufferWidth();
@@ -368,8 +370,6 @@ void Game_Draw()
 	float y = (sh - 120.0f) / 2.0f;
 
 	Sprite_Draw(g_CrossHairTexId, x, y, 120.0f, 120.0f);
-
-	PlayerCamFps_Debug(*g_PlayerFps);
 
 	Direct3D_SetDepthEnable(false);
 
