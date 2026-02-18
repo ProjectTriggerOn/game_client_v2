@@ -25,6 +25,7 @@ Player_Fps::Player_Fps()
 	, m_Height(1.6f)
 	, m_CapsuleRadius(0.3f)
 	, m_isJump(false)
+	, m_JumpPending(false)
 	, m_pCollisionWorld(nullptr)
 	, m_PhysicsAccumulator(0.0)
 	, m_PrevPhysicsPosition({ 0,0,0 })
@@ -32,6 +33,9 @@ Player_Fps::Player_Fps()
 	, m_Model(nullptr)
 	, m_Animator(nullptr)
 	, m_StateMachine(nullptr)
+	, m_Ammo(MAG_SIZE)
+	, m_AmmoReserve(MAX_RESERVE)
+	, m_InfiniteReserve(true)
 	, m_WeaponRPM(600.0)
 	, m_FireTimer(0.0)
 	, m_FireCounter(0)
@@ -62,6 +66,8 @@ void Player_Fps::Initialize(const DirectX::XMFLOAT3& position, const DirectX::XM
 	m_PrevPhysicsPosition = position;
 	m_PhysicsAlpha = 0.0f;
 	m_WasDead = true;   // first snapshot will set yaw toward world center
+	m_Ammo        = MAG_SIZE;
+	m_AmmoReserve = MAX_RESERVE;
 
 	XMStoreFloat3(&m_MoveDir, XMVector3Normalize(XMLoadFloat3(&front)));
 	XMStoreFloat3(&m_ModelFront, XMVector3Normalize(XMLoadFloat3(&front)));
@@ -177,7 +183,7 @@ void Player_Fps::Update(double elapsed_time)
 	if (inputMag > 1.0f) { inputX /= inputMag; inputZ /= inputMag; inputMag = 1.0f; }
 
 	bool tryRunning = KeyLogger_IsPressed(KK_LEFTSHIFT);
-	bool tryJump = KeyLogger_IsTrigger(KK_SPACE);
+	if (KeyLogger_IsTrigger(KK_SPACE)) m_JumpPending = true;
 
 	// ========================================================================
 	// CS:GO / Valorant Style Movement Parameters (match server)
@@ -218,12 +224,12 @@ void Player_Fps::Update(double elapsed_time)
 			else
 				m_Velocity.z += (diffZ > 0 ? accelStep : -accelStep);
 
-			// Jump (consume once)
-			if (tryJump)
+			// Jump (consume pending input)
+			if (m_JumpPending)
 			{
 				m_Velocity.y = JUMP_VELOCITY;
 				m_isJump = true;
-				tryJump = false;  // Consume jump so it doesn't trigger again
+				m_JumpPending = false;
 			}
 		}
 		else  // Airborne
@@ -304,9 +310,11 @@ void Player_Fps::Update(double elapsed_time)
 	bool isPressingLeft = isButtonDown(MBT_LEFT);
 	bool isPressingRight = isButtonDown(MBT_RIGHT);
 	
-	if (isPressingRight && 
-		m_StateMachine->GetWeaponState() != WeaponState::ADS && 
-		m_StateMachine->GetWeaponState() != WeaponState::ADS_FIRING)
+	if (isPressingRight &&
+		m_StateMachine->GetWeaponState() != WeaponState::ADS &&
+		m_StateMachine->GetWeaponState() != WeaponState::ADS_FIRING &&
+		m_StateMachine->GetWeaponState() != WeaponState::RELOADING &&
+		m_StateMachine->GetWeaponState() != WeaponState::RELOADING_OUT_OF_AMMO)
 	{
 		m_StateMachine->SetWeaponState(WeaponState::ADS_IN);
 	}
@@ -331,18 +339,14 @@ void Player_Fps::Update(double elapsed_time)
 				// First shot
 				m_TransitionFiring = true;
 				m_FireTimer = 0.0;
-				if (Game_GetState() == PLAY) {
-					m_FireCounter++;
-				}
+				if (m_Ammo > 0) { m_Ammo--; m_FireCounter++; }
 			} else {
 				// Full-auto at RPM interval
 				m_FireTimer += frameDt;
 				const double fireInterval = 60.0 / m_WeaponRPM;
 				if (m_FireTimer >= fireInterval) {
 					m_FireTimer -= fireInterval;
-					if (Game_GetState() == PLAY) {
-						m_FireCounter++;
-					}
+					if (m_Ammo > 0) { m_Ammo--; m_FireCounter++; }
 				}
 			}
 		}
@@ -355,11 +359,13 @@ void Player_Fps::Update(double elapsed_time)
 	// ---- ADS FIRE: click to start, hold for full-auto ----
 	if (isPressingLeft && m_StateMachine->GetWeaponState() == WeaponState::ADS)
 	{
-		// First shot on press
-		m_StateMachine->SetWeaponState(WeaponState::ADS_FIRING);
-		m_FireTimer = 0.0;
-		if (Game_GetState() == PLAY) {
-			m_FireCounter++;
+		if (m_Ammo > 0) {
+			// First shot on press
+			m_StateMachine->SetWeaponState(WeaponState::ADS_FIRING);
+			m_FireTimer = 0.0;
+			m_Ammo--; m_FireCounter++;
+		} else if ((m_InfiniteReserve || m_AmmoReserve > 0)) {
+			m_StateMachine->SetWeaponState(WeaponState::RELOADING_OUT_OF_AMMO);
 		}
 	}
 
@@ -377,8 +383,9 @@ void Player_Fps::Update(double elapsed_time)
 			if (m_FireTimer >= fireInterval) {
 				m_FireTimer -= fireInterval;
 				m_Animator->SetSameAniOverlapAllow(true);
-				if (Game_GetState() == PLAY) {
-					m_FireCounter++;
+				if (m_Ammo > 0) { m_Ammo--; m_FireCounter++; }
+				else if ((m_InfiniteReserve || m_AmmoReserve > 0)) {
+					m_StateMachine->SetWeaponState(WeaponState::RELOADING_OUT_OF_AMMO);
 				}
 			}
 		}
@@ -386,11 +393,13 @@ void Player_Fps::Update(double elapsed_time)
 
 	// ---- HIP FIRE: click to start, hold for full-auto ----
 	if (isPressingLeft && m_StateMachine->GetWeaponState() == WeaponState::HIP) {
-		// First shot on press
-		m_StateMachine->SetWeaponState(WeaponState::HIP_FIRING);
-		m_FireTimer = 0.0;
-		if (Game_GetState() == PLAY) {
-			m_FireCounter++;
+		if (m_Ammo > 0) {
+			// First shot on press
+			m_StateMachine->SetWeaponState(WeaponState::HIP_FIRING);
+			m_FireTimer = 0.0;
+			m_Ammo--; m_FireCounter++;
+		} else if ((m_InfiniteReserve || m_AmmoReserve > 0)) {
+			m_StateMachine->SetWeaponState(WeaponState::RELOADING_OUT_OF_AMMO);
 		}
 	}
 
@@ -402,8 +411,9 @@ void Player_Fps::Update(double elapsed_time)
 			if (m_FireTimer >= fireInterval) {
 				m_FireTimer -= fireInterval;
 				m_Animator->SetSameAniOverlapAllow(true);
-				if (Game_GetState() == PLAY) {
-					m_FireCounter++;
+				if (m_Ammo > 0) { m_Ammo--; m_FireCounter++; }
+				else if ((m_InfiniteReserve || m_AmmoReserve > 0)) {
+					m_StateMachine->SetWeaponState(WeaponState::RELOADING_OUT_OF_AMMO);
 				}
 			}
 		}
@@ -411,7 +421,16 @@ void Player_Fps::Update(double elapsed_time)
 
 	if (KeyLogger_IsTrigger(KK_R))
 	{
-		m_StateMachine->SetWeaponState(WeaponState::RELOADING);
+		WeaponState rws = m_StateMachine->GetWeaponState();
+		bool alreadyReloading = (rws == WeaponState::RELOADING ||
+		                         rws == WeaponState::RELOADING_OUT_OF_AMMO);
+		if (!alreadyReloading && m_Ammo < MAG_SIZE && (m_InfiniteReserve || m_AmmoReserve > 0))
+		{
+			WeaponState nextReload = (m_Ammo == 0)
+				? WeaponState::RELOADING_OUT_OF_AMMO
+				: WeaponState::RELOADING;
+			m_StateMachine->SetWeaponState(nextReload);
+		}
 	}
 
 	if (KeyLogger_IsTrigger(KK_E))
@@ -419,10 +438,38 @@ void Player_Fps::Update(double elapsed_time)
 		m_StateMachine->SetWeaponState(WeaponState::INSPECTING);
 	}
 
+	// INSPECTING exits on any movement or action input
+	if (m_StateMachine->GetWeaponState() == WeaponState::INSPECTING)
+	{
+		bool anyInput = isPressingLeft || isPressingRight ||
+		                KeyLogger_IsPressed(KK_W) || KeyLogger_IsPressed(KK_A) ||
+		                KeyLogger_IsPressed(KK_S) || KeyLogger_IsPressed(KK_D) ||
+		                KeyLogger_IsTrigger(KK_R);
+		if (anyInput)
+			m_StateMachine->SetWeaponState(WeaponState::HIP);
+	}
+
 	// Update Model Animation
 	if (m_Model && m_Animator)
 	{
+		WeaponState prevWs = m_StateMachine->GetWeaponState();
 		m_StateMachine->Update(elapsed_time, m_Animator);
+		WeaponState curWs = m_StateMachine->GetWeaponState();
+
+		// Reload complete: refill magazine from reserve
+		if (curWs == WeaponState::HIP &&
+		    (prevWs == WeaponState::RELOADING ||
+		     prevWs == WeaponState::RELOADING_OUT_OF_AMMO))
+		{
+			int needed = MAG_SIZE - m_Ammo;
+			if (m_InfiniteReserve) {
+				m_Ammo = MAG_SIZE;
+			} else {
+				int refill    = (m_AmmoReserve >= needed) ? needed : m_AmmoReserve;
+				m_Ammo       += refill;
+				m_AmmoReserve -= refill;
+			}
+		}
 
 		// Override additive layer: fire animation during ADS transition
 		if (m_TransitionFiring)
@@ -601,6 +648,11 @@ void Player_Fps::ApplyServerCorrection(const NetPlayerState& serverState)
 		float yaw = atan2f(dx, dz);
 		PlayerCamFps_SetYaw(yaw);
 		PlayerCamFps_SetPitch(0.0f);
+
+		// Reset ammo and weapon state on respawn
+		m_Ammo        = MAG_SIZE;
+		m_AmmoReserve = MAX_RESERVE;
+		m_StateMachine->SetWeaponState(WeaponState::HIP);
 	}
 	m_WasDead = isDead;
 }

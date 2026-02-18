@@ -105,7 +105,7 @@ bool Widget_DrawButton(float x, float y, float w, float h,
     bool hovered = (mx >= (int)x && mx < (int)(x + w) &&
                     my >= (int)y && my < (int)(y + h));
     bool pressed  = hovered && MSLogger_IsPressedUI(MBT_LEFT);
-    bool clicked  = hovered && MSLogger_IsTriggerUI(MBT_LEFT);
+    bool clicked  = hovered && MSLogger_IsReleasedUI(MBT_LEFT);
 
     const XMFLOAT4& bg = pressed  ? BTN_PRESSED
                        : hovered  ? BTN_HOVERED

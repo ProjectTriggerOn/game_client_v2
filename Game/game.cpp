@@ -397,9 +397,11 @@ void Game_Draw()
 		swprintf_s(hpBuf, L"HP  %d / 200", (int)g_PlayerFps->GetHealth());
 		Widget_DrawPanel(hudX, hudY, HUD_W, HUD_H, hpBuf, HUD_BG);
 
-		// Ammo (placeholder)
+		// Ammo
 		hudY += HUD_H + 8.0f;
-		Widget_DrawPanel(hudX, hudY, HUD_W, HUD_H, L"30 / 90", HUD_BG);
+		wchar_t ammoBuf[32];
+		swprintf_s(ammoBuf, L"%d / %d", g_PlayerFps->GetAmmo(), g_PlayerFps->GetAmmoReserve());
+		Widget_DrawPanel(hudX, hudY, HUD_W, HUD_H, ammoBuf, HUD_BG);
 	}
 
 	// ========================================================================
@@ -419,8 +421,14 @@ void Game_Draw()
 		float px = (sw - PW) * 0.5f;
 		float py = (sh - PH) * 0.5f;
 
-		Widget_DrawPanel(px, py, PW, PH, L"SETTINGS",
+		// Panel background only (no centered title — would overlap buttons)
+		Widget_DrawPanel(px, py, PW, PH, nullptr,
 			{ 0.10f, 0.10f, 0.16f, 0.92f });
+
+		// Title pinned to top of panel
+		const wchar_t* title = L"SETTINGS";
+		float titleX = px + (PW - Font_MeasureWidth(title)) * 0.5f;
+		Font_Draw(title, titleX, py + 16.0f, { 1.0f, 1.0f, 1.0f, 1.0f });
 
 		// Sensitivity slider — long and thick, upper quarter of screen
 		constexpr float SW = 1000.0f;
@@ -431,19 +439,18 @@ void Game_Draw()
 			PlayerCamFps_GetSensitivity(), 0.001f, 0.010f, L"Sensitivity");
 		PlayerCamFps_SetSensitivity(newSens);
 
-		// Resume button
+		// Resume button / Infinite Reserve toggle / Exit
 		constexpr float BW = 260.0f;
 		constexpr float BH = 52.0f;
 		float bx = (sw - BW) * 0.5f;
 
-		if (Widget_DrawButton(bx, py + 220.0f, BW, BH, L"Resume"))
-		{
-			g_GameState = PLAY;
-			Mouse_SetMode(MOUSE_POSITION_MODE_RELATIVE);
-			MSLogger_SetUIMode(false);
-		}
+		// Infinite reserve toggle
+		bool infRes = g_PlayerFps->GetInfiniteReserve();
+		const wchar_t* infLabel = infRes ? L"Inf Ammo: ON" : L"Inf Ammo: OFF";
+		if (Widget_DrawButton(bx, py + 150.0f, BW, BH, infLabel))
+			g_PlayerFps->SetInfiniteReserve(!infRes);
 
-		if (Widget_DrawButton(bx, py + 290.0f, BW, BH, L"Exit Game"))
+		if (Widget_DrawButton(bx, py + 220.0f, BW, BH, L"Exit Game"))
 		{
 			PostQuitMessage(0);
 		}
