@@ -23,8 +23,10 @@ namespace {
 
 	constexpr int NUM_VERTEX = 24; // 頂点数
 	constexpr int NUM_INDEX = 36;
-	ID3D11Buffer* g_pVertexBuffer = nullptr; // 頂点バッファ
-	ID3D11Buffer* g_pIndexBuffer = nullptr; // 頂点バッファ
+	ID3D11Buffer* g_pVertexBufferAtlas = nullptr;   // Atlas UV vertex buffer
+	ID3D11Buffer* g_pVertexBufferPerFace = nullptr; // Per-face UV vertex buffer
+	ID3D11Buffer* g_pIndexBuffer = nullptr;
+	CubeUVMode g_UVMode = CUBE_UV_ATLAS;
 
 	// 注意！初期化で外部から設定されるもの。Release不要。
 	ID3D11Device* g_pDevice = nullptr;
@@ -72,6 +74,41 @@ namespace {
 		{{ 0.5f,-0.5f,-0.5f},{0.0f,-1.0f,0.0f}, {1.0f,1.0f,1.0f,1.0f},{0.75f, 0.5f}},
 		{{ 0.5f,-0.5f, 0.5f},{0.0f,-1.0f,0.0f}, {1.0f,1.0f,1.0f,1.0f},{0.75f, 1.0f}},
 	};
+	// Per-face UV: every face maps full [0,0]-[1,1]
+	Vertex3D g_CubeVertexPerFace[]
+	{
+		// 前面 (z=-0.5f)
+		{{-0.5f,-0.5f,-0.5f},{0.0f,0.0f,-1.0f}, {1.0f,1.0f,1.0f,1.0f}, {0.0f, 1.0f}},
+		{{-0.5f, 0.5f,-0.5f},{0.0f,0.0f,-1.0f}, {1.0f,1.0f,1.0f,1.0f}, {0.0f, 0.0f}},
+		{{ 0.5f, 0.5f,-0.5f},{0.0f,0.0f,-1.0f}, {1.0f,1.0f,1.0f,1.0f}, {1.0f, 0.0f}},
+		{{ 0.5f,-0.5f,-0.5f},{0.0f,0.0f,-1.0f}, {1.0f,1.0f,1.0f,1.0f}, {1.0f, 1.0f}},
+		// 后面 (z=0.5f)
+		{{-0.5f, 0.5f, 0.5f},{0.0f,0.0f,1.0f}, {1.0f,1.0f,1.0f,1.0f}, {1.0f, 0.0f}},
+		{{-0.5f,-0.5f, 0.5f},{0.0f,0.0f,1.0f}, {1.0f,1.0f,1.0f,1.0f}, {1.0f, 1.0f}},
+		{{ 0.5f,-0.5f, 0.5f},{0.0f,0.0f,1.0f}, {1.0f,1.0f,1.0f,1.0f}, {0.0f, 1.0f}},
+		{{ 0.5f, 0.5f, 0.5f},{0.0f,0.0f,1.0f}, {1.0f,1.0f,1.0f,1.0f}, {0.0f, 0.0f}},
+		// 左面 (x=-0.5f)
+		{{-0.5f, 0.5f, 0.5f},{-1.0f,0.0f,0.0f}, {1.0f,1.0f,1.0f,1.0f}, {0.0f, 0.0f}},
+		{{-0.5f, 0.5f,-0.5f},{-1.0f,0.0f,0.0f}, {1.0f,1.0f,1.0f,1.0f}, {1.0f, 0.0f}},
+		{{-0.5f,-0.5f,-0.5f},{-1.0f,0.0f,0.0f}, {1.0f,1.0f,1.0f,1.0f}, {1.0f, 1.0f}},
+		{{-0.5f,-0.5f, 0.5f},{-1.0f,0.0f,0.0f}, {1.0f,1.0f,1.0f,1.0f}, {0.0f, 1.0f}},
+		// 右面 (x=0.5f)
+		{{ 0.5f, 0.5f,-0.5f},{1.0f,0.0f,0.0f}, {1.0f,1.0f,1.0f,1.0f}, {0.0f, 0.0f}},
+		{{ 0.5f, 0.5f, 0.5f},{1.0f,0.0f,0.0f}, {1.0f,1.0f,1.0f,1.0f}, {1.0f, 0.0f}},
+		{{ 0.5f,-0.5f, 0.5f},{1.0f,0.0f,0.0f}, {1.0f,1.0f,1.0f,1.0f}, {1.0f, 1.0f}},
+		{{ 0.5f,-0.5f,-0.5f},{1.0f,0.0f,0.0f}, {1.0f,1.0f,1.0f,1.0f}, {0.0f, 1.0f}},
+		// 上面 (y=0.5f)
+		{{-0.5f, 0.5f,-0.5f},{0.0f,1.0f,0.0f}, {1.0f,1.0f,1.0f,1.0f}, {0.0f, 0.0f}},
+		{{-0.5f, 0.5f, 0.5f},{0.0f,1.0f,0.0f}, {1.0f,1.0f,1.0f,1.0f}, {0.0f, 1.0f}},
+		{{ 0.5f, 0.5f, 0.5f},{0.0f,1.0f,0.0f}, {1.0f,1.0f,1.0f,1.0f}, {1.0f, 1.0f}},
+		{{ 0.5f, 0.5f,-0.5f},{0.0f,1.0f,0.0f}, {1.0f,1.0f,1.0f,1.0f}, {1.0f, 0.0f}},
+		// 下面 (y=-0.5f)
+		{{-0.5f,-0.5f, 0.5f},{0.0f,-1.0f,0.0f}, {1.0f,1.0f,1.0f,1.0f}, {0.0f, 0.0f}},
+		{{-0.5f,-0.5f,-0.5f},{0.0f,-1.0f,0.0f}, {1.0f,1.0f,1.0f,1.0f}, {0.0f, 1.0f}},
+		{{ 0.5f,-0.5f,-0.5f},{0.0f,-1.0f,0.0f}, {1.0f,1.0f,1.0f,1.0f}, {1.0f, 1.0f}},
+		{{ 0.5f,-0.5f, 0.5f},{0.0f,-1.0f,0.0f}, {1.0f,1.0f,1.0f,1.0f}, {1.0f, 0.0f}},
+	};
+
 	unsigned short g_CubeVertexIndex[36]
 	{
 		0,1, 2, 0, 2, 3,       // 前面
@@ -103,9 +140,12 @@ void Cube_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 
 	D3D11_SUBRESOURCE_DATA sd{};
 	sd.pSysMem = g_CubeVertex;
-	g_pDevice->CreateBuffer(&bd, &sd, &g_pVertexBuffer);
+	g_pDevice->CreateBuffer(&bd, &sd, &g_pVertexBufferAtlas);
 
-	bd.Usage = D3D11_USAGE_DEFAULT;// 書き込み不可に設定
+	sd.pSysMem = g_CubeVertexPerFace;
+	g_pDevice->CreateBuffer(&bd, &sd, &g_pVertexBufferPerFace);
+
+	bd.Usage = D3D11_USAGE_DEFAULT;
 	bd.ByteWidth = sizeof(unsigned short) * NUM_INDEX;
 	bd.BindFlags = D3D11_BIND_INDEX_BUFFER;
 
@@ -118,7 +158,9 @@ void Cube_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 
 void Cube_Finalize(void)
 {
-	SAFE_RELEASE(g_pVertexBuffer);
+	SAFE_RELEASE(g_pVertexBufferAtlas);
+	SAFE_RELEASE(g_pVertexBufferPerFace);
+	SAFE_RELEASE(g_pIndexBuffer);
 }
 
 void Cube_Draw(int texID, const XMMATRIX& mtxW)
@@ -133,7 +175,8 @@ void Cube_Draw(int texID, const XMMATRIX& mtxW)
 	// 頂点バッファを描画パイプラインに設定
 	UINT stride = sizeof(Vertex3D);
 	UINT offset = 0;
-	g_pContext->IASetVertexBuffers(0, 1, &g_pVertexBuffer, &stride, &offset);
+	ID3D11Buffer* pVB = (g_UVMode == CUBE_UV_PER_FACE) ? g_pVertexBufferPerFace : g_pVertexBufferAtlas;
+	g_pContext->IASetVertexBuffers(0, 1, &pVB, &stride, &offset);
 	g_pContext->IASetIndexBuffer(g_pIndexBuffer, DXGI_FORMAT_R16_UINT, 0);
 
 	Shader_3D_SetWorldMatrix(mtxW);
@@ -149,6 +192,16 @@ void Cube_Draw(int texID, const XMMATRIX& mtxW)
 void Cube_Update(double)
 {
 
+}
+
+void Cube_SetUVMode(CubeUVMode mode)
+{
+	g_UVMode = mode;
+}
+
+CubeUVMode Cube_GetUVMode()
+{
+	return g_UVMode;
 }
 
 AABB Cube_GetAABB(const DirectX::XMFLOAT3& cubePos)
