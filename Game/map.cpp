@@ -2,8 +2,8 @@
 // map.cpp
 //
 // Map system implementation.
-// Reads collider definitions from map_colliders.h, computes AABBs,
-// renders visual objects, and registers colliders for physics.
+// Generates cube draw positions from MAP_GRID[][],
+// registers merged AABBs from MAP_COLLIDERS[].
 //=============================================================================
 
 #include "map.h"
@@ -16,49 +16,47 @@
 #include "light.h"
 #include "player_cam_fps.h"
 #include <DirectXMath.h>
+#include <vector>
 
 using namespace DirectX;
 
 namespace {
-	// Runtime map objects (built from MAP_COLLIDERS at init)
-	MapObject g_MapObjects[MAP_COLLIDER_COUNT];
+	// Cube draw positions generated from grid
+	struct CubeInstance
+	{
+		XMFLOAT3 position;
+	};
+
+	std::vector<CubeInstance> g_CubeInstances;
 
 	// Cube texture
 	int g_CubeTexId = -1;
 }
 
 //-----------------------------------------------------------------------------
-// Initialize — build runtime objects from shared collider data
+// Initialize — generate cube instances from grid data
 //-----------------------------------------------------------------------------
 void Map_Initialize()
 {
 	g_CubeTexId = Texture_LoadFromFile(L"resource/texture/stone_001.jpg");
 
-	for (int i = 0; i < MAP_COLLIDER_COUNT; i++)
+	// Generate cube instances from grid
+	g_CubeInstances.clear();
+	for (int row = 0; row < MAP_GRID_ROWS; row++)
 	{
-		const MapColliderDef& def = MAP_COLLIDERS[i];
-		MapObject& obj = g_MapObjects[i];
-
-		obj.categoryId = def.category;
-		obj.position = { def.posX, def.posY, def.posZ };
-		obj.isGround = def.isGround;
-
-		switch (def.category)
+		for (int col = 0; col < MAP_GRID_COLS; col++)
 		{
-		case MAP_CUBE:
-			// Cube: compute AABB from position (±0.5 unit cube)
-			obj.aabb = Cube_GetAABB(obj.position);
-			break;
+			if (MAP_GRID[row][col] == 0) continue;
 
-		case MAP_GROUND:
-		case MAP_WALL:
-		default:
-			// Explicit AABB from definition
-			obj.aabb = {
-				{ def.minX, def.minY, def.minZ },
-				{ def.maxX, def.maxY, def.maxZ }
-			};
-			break;
+			float worldX = (float)col + MAP_OFFSET_X + 0.5f;
+			float worldZ = (float)row + MAP_OFFSET_Z + 0.5f;
+
+			// Stack cubes vertically
+			for (int h = 0; h < MAP_BLOCK_HEIGHT; h++)
+			{
+				float worldY = (float)h + 0.5f;
+				g_CubeInstances.push_back({ { worldX, worldY, worldZ } });
+			}
 		}
 	}
 }
@@ -68,69 +66,39 @@ void Map_Initialize()
 //-----------------------------------------------------------------------------
 void Map_Finalize()
 {
-	// Texture cleanup handled by Texture system
+	g_CubeInstances.clear();
 }
 
 //-----------------------------------------------------------------------------
-// Draw — render all visible map objects
+// Draw — render ground + all cube instances
 //-----------------------------------------------------------------------------
 void Map_Draw()
 {
-	for (int i = 0; i < MAP_COLLIDER_COUNT; i++)
+	// Ground
+	XMMATRIX mtxW = XMMatrixTranslation(0.0f, -1.0f, 0.0f);
+	MeshField_Draw(mtxW);
+
+	// Cubes
+	for (const auto& inst : g_CubeInstances)
 	{
-		const MapObject& obj = g_MapObjects[i];
-
-		switch (obj.categoryId)
-		{
-		case MAP_GROUND:
-		{
-			// Ground: rendered as MeshField
-			XMMATRIX mtxW = XMMatrixTranslation(0.0f, -1.0f, 0.0f);
-			MeshField_Draw(mtxW);
-			break;
-		}
-
-		case MAP_CUBE:
-		{
-			// Cube: rendered with Cube_Draw at object position
-			XMMATRIX mtxW = XMMatrixTranslation(
-				obj.position.x, obj.position.y, obj.position.z);
-			Cube_Draw(g_CubeTexId, mtxW);
-			break;
-		}
-
-		case MAP_WALL:
-			// Invisible wall — no rendering
-			break;
-
-		default:
-			break;
-		}
+		mtxW = XMMatrixTranslation(inst.position.x, inst.position.y, inst.position.z);
+		Cube_Draw(g_CubeTexId, mtxW);
 	}
 }
 
 //-----------------------------------------------------------------------------
-// RegisterColliders — push all AABBs into collision world
+// RegisterColliders — push merged AABBs into collision world
 //-----------------------------------------------------------------------------
 void Map_RegisterColliders(CollisionWorld& world)
 {
 	world.Clear();
 	for (int i = 0; i < MAP_COLLIDER_COUNT; i++)
 	{
-		world.AddAABB(g_MapObjects[i].aabb, g_MapObjects[i].isGround);
+		const MapColliderDef& def = MAP_COLLIDERS[i];
+		AABB aabb = {
+			{ def.minX, def.minY, def.minZ },
+			{ def.maxX, def.maxY, def.maxZ }
+		};
+		world.AddAABB(aabb, def.isGround);
 	}
-}
-
-//-----------------------------------------------------------------------------
-// Accessors
-//-----------------------------------------------------------------------------
-int Map_GetObjectCount()
-{
-	return MAP_COLLIDER_COUNT;
-}
-
-const MapObject* Map_GetObject(int index)
-{
-	if (index < 0 || index >= MAP_COLLIDER_COUNT) return nullptr;
-	return &g_MapObjects[index];
 }
