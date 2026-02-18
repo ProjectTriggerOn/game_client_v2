@@ -122,6 +122,15 @@ struct NetworkDebugInfo {
   double lastServerTime = 0.0;
   NetPlayerState lastServerState = {};
   bool hasData = false;
+
+  // Snapshot receive rate tracking
+  uint32_t snapshotsThisSecond = 0;
+  uint32_t snapshotsPerSecond = 0;   // Updated once per second
+  double   snapshotRateTimer = 0.0;
+
+  // Tick delta tracking (gap between consecutive server ticks)
+  uint32_t prevServerTick = 0;
+  uint32_t tickDelta = 0;            // Should be 1 normally; >1 = missed ticks
 };
 
 //-----------------------------------------------------------------------------

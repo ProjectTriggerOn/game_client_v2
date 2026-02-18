@@ -36,4 +36,9 @@ public:
     //-------------------------------------------------------------------------
     virtual uint32_t GetTotalInputsSent() const = 0;
     virtual uint32_t GetTotalSnapshotsSent() const = 0;
+
+    // Network quality (ENet only; mock returns defaults)
+    virtual uint32_t GetRTT() const { return 0; }
+    virtual uint32_t GetPacketLoss() const { return 0; }
+    virtual bool IsConnected() const { return true; }
 };

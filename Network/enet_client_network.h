@@ -47,11 +47,15 @@ public:
     uint32_t GetTotalInputsSent() const override { return m_TotalInputsSent; }
     uint32_t GetTotalSnapshotsSent() const override { return m_TotalSnapshotsReceived; }
 
+    // Network quality
+    uint32_t GetRTT() const override;
+    uint32_t GetPacketLoss() const override;
+    bool IsConnected() const override { return m_IsConnected; }
+
     //-------------------------------------------------------------------------
     // ENet-specific
     //-------------------------------------------------------------------------
     void PollEvents();
-    bool IsConnected() const { return m_IsConnected; }
 
 private:
     ENetHost* m_pClient;

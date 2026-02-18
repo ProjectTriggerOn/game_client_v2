@@ -210,6 +210,23 @@ size_t ENetClientNetwork::GetSnapshotQueueSize() const
 }
 
 //-----------------------------------------------------------------------------
+// Network quality stats from ENet peer
+//-----------------------------------------------------------------------------
+uint32_t ENetClientNetwork::GetRTT() const
+{
+    if (m_pServerPeer && m_IsConnected)
+        return m_pServerPeer->roundTripTime;
+    return 0;
+}
+
+uint32_t ENetClientNetwork::GetPacketLoss() const
+{
+    if (m_pServerPeer && m_IsConnected)
+        return m_pServerPeer->packetLoss;  // ENet: fixed-point, /65536 for fraction
+    return 0;
+}
+
+//-----------------------------------------------------------------------------
 // No-ops on client side
 //-----------------------------------------------------------------------------
 bool ENetClientNetwork::ReceiveInputCmd(InputCmd&) { return false; }
