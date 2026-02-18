@@ -16,6 +16,9 @@ const DirectX::XMFLOAT3& PlayerCamFps_GetPosition();
 void PlayerCamFps_SetPosition(const DirectX::XMFLOAT3& position);
 void PlayerCamFps_SetFront(const DirectX::XMFLOAT3& front);
 
+void PlayerCamFps_SetYaw(float yaw);
+void PlayerCamFps_SetPitch(float pitch);
+
 void PlayerCamFps_SetInvertY(bool invert = true);
 bool PlayerCamFps_GetInvertY();
 

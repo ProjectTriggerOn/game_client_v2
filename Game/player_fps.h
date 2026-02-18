@@ -91,6 +91,14 @@ private:
 	float m_CapsuleRadius;
 	bool m_isJump;
 	CollisionWorld* m_pCollisionWorld;
+
+	// Fixed-timestep accumulator (must match server tick rate)
+	static constexpr double TICK_RATE = 32.0;
+	static constexpr double TICK_DURATION = 1.0 / TICK_RATE;
+	double m_PhysicsAccumulator;
+	DirectX::XMFLOAT3 m_PrevPhysicsPosition;  // Position before accumulator loop (for sub-tick interpolation)
+	float m_PhysicsAlpha;                       // Remainder fraction for render interpolation
+
 	double m_WeaponRPM;
 	double m_FireTimer;
 	int m_FireCounter;

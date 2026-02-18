@@ -76,7 +76,7 @@ void Game_Initialize()
 
 	SkyDome_Initialize();
 	g_PlayerFps = new Player_Fps();
-	g_PlayerFps->Initialize({ 0.0f,0.0f,-20.0f }, { 0.0f,0.0f,1.0f }, &g_CollisionWorld);
+	g_PlayerFps->Initialize({ -7.0f, 0.0f, -7.0f }, { 0.0f, 0.0f, 1.0f }, &g_CollisionWorld);
 
 	Camera_Initialize();
 	PlayerCamTps_Initialize();
@@ -143,10 +143,22 @@ void Game_Update(double elapsed_time)
 		}
 
 		// Cache for debug display
+		g_NetDebugInfo.tickDelta = snap.tickId - g_NetDebugInfo.prevServerTick;
+		g_NetDebugInfo.prevServerTick = snap.tickId;
 		g_NetDebugInfo.lastServerTick = snap.tickId;
 		g_NetDebugInfo.lastServerTime = snap.serverTime;
 		g_NetDebugInfo.lastServerState = snap.localPlayer;
 		g_NetDebugInfo.hasData = true;
+		g_NetDebugInfo.snapshotsThisSecond++;
+	}
+
+	// Update snapshot receive rate (once per second)
+	g_NetDebugInfo.snapshotRateTimer += elapsed_time;
+	if (g_NetDebugInfo.snapshotRateTimer >= 1.0)
+	{
+		g_NetDebugInfo.snapshotsPerSecond = g_NetDebugInfo.snapshotsThisSecond;
+		g_NetDebugInfo.snapshotsThisSecond = 0;
+		g_NetDebugInfo.snapshotRateTimer -= 1.0;
 	}
 
 	// Update debug info from player correction
@@ -247,11 +259,15 @@ void Game_Draw()
 			g_RemotePlayers[i].Draw();
 	}
 
+	Cube_SetUVMode(CUBE_UV_PER_FACE);
 	Map_Draw();
 
 	// Debug draw: collision shapes (F3 toggle)
 	if (isDebugCollision)
 	{
+		// Disable depth test so outlines are visible through map objects
+		Direct3D_SetDepthEnable(false);
+
 		Collision_DebugSetViewProj(view * proj);
 
 		// Draw local player capsule (green)
@@ -293,6 +309,9 @@ void Game_Draw()
 			eyePos.z + fwd.z * rayLen
 		};
 		Collision_DebugDrawLine(eyePos, rayEnd, { 1.0f, 1.0f, 0.0f, 1.0f });
+
+		// Restore depth test
+		Direct3D_SetDepthEnable(true);
 
 		// Restore 2D ortho projection after debug draw overwrote CB0
 		Sprite_Begin();

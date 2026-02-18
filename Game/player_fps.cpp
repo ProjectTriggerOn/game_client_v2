@@ -26,6 +26,9 @@ Player_Fps::Player_Fps()
 	, m_CapsuleRadius(0.3f)
 	, m_isJump(false)
 	, m_pCollisionWorld(nullptr)
+	, m_PhysicsAccumulator(0.0)
+	, m_PrevPhysicsPosition({ 0,0,0 })
+	, m_PhysicsAlpha(0.0f)
 	, m_Model(nullptr)
 	, m_Animator(nullptr)
 	, m_StateMachine(nullptr)
@@ -55,6 +58,9 @@ void Player_Fps::Initialize(const DirectX::XMFLOAT3& position, const DirectX::XM
 	m_CorrectionMode = "NONE";
 	m_CorrectionError = 0.0f;
 	m_LastServerTick = 0;
+	m_PhysicsAccumulator = 0.0;
+	m_PrevPhysicsPosition = position;
+	m_PhysicsAlpha = 0.0f;
 
 	XMStoreFloat3(&m_MoveDir, XMVector3Normalize(XMLoadFloat3(&front)));
 	XMStoreFloat3(&m_ModelFront, XMVector3Normalize(XMLoadFloat3(&front)));
@@ -118,14 +124,14 @@ void Player_Fps::SetTeam(uint8_t teamId)
 
 void Player_Fps::Update(double elapsed_time)
 {
-	const float dt = static_cast<float>(elapsed_time);
-	
+	const float frameDt = static_cast<float>(elapsed_time);
+
 	// ========================================================================
-	// Render Offset Decay (for smooth server correction)
+	// Render Offset Decay (for smooth server correction) — runs at FRAME RATE
 	// Decays visual offset toward zero over ~100ms
 	// ========================================================================
-	constexpr float OFFSET_DECAY_RATE = 10.0f;  // Higher = faster decay
-	float decayFactor = 1.0f - OFFSET_DECAY_RATE * dt;
+	constexpr float OFFSET_DECAY_RATE = 20.0f;  // Faster decay = less visible correction
+	float decayFactor = 1.0f - OFFSET_DECAY_RATE * frameDt;
 	if (decayFactor < 0.0f) decayFactor = 0.0f;
 	m_RenderOffset.x *= decayFactor;
 	m_RenderOffset.y *= decayFactor;
@@ -138,9 +144,42 @@ void Player_Fps::Update(double elapsed_time)
 	{
 		return;
 	}
-	
+
 	// ========================================================================
-	// CS:GO / Valorant Style Movement Parameters (match mock_server.cpp)
+	// FIXED-TIMESTEP PHYSICS (must match server 32Hz tick rate)
+	// Accumulator pattern: step physics at exactly TICK_DURATION intervals
+	// This eliminates prediction divergence from frame-rate dependent dt
+	// ========================================================================
+	const double maxDelta = TICK_DURATION * 4.0;  // Max 4 ticks per frame
+	double clampedDelta = (elapsed_time > maxDelta) ? maxDelta : elapsed_time;
+	m_PhysicsAccumulator += clampedDelta;
+
+	// Sample input ONCE per frame (used by all physics ticks this frame)
+	XMFLOAT3 camFront = PlayerCamFps_GetFront();
+	m_ModelFront = camFront;
+
+	float frontX = camFront.x;
+	float frontZ = camFront.z;
+	float frontMag = sqrtf(frontX * frontX + frontZ * frontZ);
+	if (frontMag > 0.001f) { frontX /= frontMag; frontZ /= frontMag; }
+
+	float rightX = frontZ;
+	float rightZ = -frontX;
+
+	float inputX = 0.0f, inputZ = 0.0f;
+	if (KeyLogger_IsPressed(KK_W)) { inputX += frontX; inputZ += frontZ; }
+	if (KeyLogger_IsPressed(KK_S)) { inputX -= frontX; inputZ -= frontZ; }
+	if (KeyLogger_IsPressed(KK_D)) { inputX += rightX; inputZ += rightZ; }
+	if (KeyLogger_IsPressed(KK_A)) { inputX -= rightX; inputZ -= rightZ; }
+
+	float inputMag = sqrtf(inputX * inputX + inputZ * inputZ);
+	if (inputMag > 1.0f) { inputX /= inputMag; inputZ /= inputMag; inputMag = 1.0f; }
+
+	bool tryRunning = KeyLogger_IsPressed(KK_LEFTSHIFT);
+	bool tryJump = KeyLogger_IsTrigger(KK_SPACE);
+
+	// ========================================================================
+	// CS:GO / Valorant Style Movement Parameters (match server)
 	// ========================================================================
 	constexpr float MAX_WALK_SPEED = 5.0f;
 	constexpr float MAX_RUN_SPEED  = 8.0f;
@@ -148,128 +187,105 @@ void Player_Fps::Update(double elapsed_time)
 	constexpr float AIR_ACCEL      = 2.0f;
 	constexpr float GRAVITY        = 20.0f;
 	constexpr float JUMP_VELOCITY  = 8.0f;
-	
-	// ========================================================================
-	// Calculate Target Velocity from Input
-	// ========================================================================
-	XMFLOAT3 camFront = PlayerCamFps_GetFront();
-	m_ModelFront = camFront;  // FPS Arms look where camera looks
-	
-	// Flatten camera front for movement
-	float frontX = camFront.x;
-	float frontZ = camFront.z;
-	float frontMag = sqrtf(frontX * frontX + frontZ * frontZ);
-	if (frontMag > 0.001f) { frontX /= frontMag; frontZ /= frontMag; }
-	
-	float rightX = frontZ;
-	float rightZ = -frontX;
-	
-	// Input direction
-	float inputX = 0.0f, inputZ = 0.0f;
-	if (KeyLogger_IsPressed(KK_W)) { inputX += frontX; inputZ += frontZ; }
-	if (KeyLogger_IsPressed(KK_S)) { inputX -= frontX; inputZ -= frontZ; }
-	if (KeyLogger_IsPressed(KK_D)) { inputX += rightX; inputZ += rightZ; }
-	if (KeyLogger_IsPressed(KK_A)) { inputX -= rightX; inputZ -= rightZ; }
-	
-	// Normalize diagonal
-	float inputMag = sqrtf(inputX * inputX + inputZ * inputZ);
-	if (inputMag > 1.0f) { inputX /= inputMag; inputZ /= inputMag; inputMag = 1.0f; }
-	
-	bool tryRunning = KeyLogger_IsPressed(KK_LEFTSHIFT);
-	float maxSpeed = tryRunning ? MAX_RUN_SPEED : MAX_WALK_SPEED;
-	
-	float targetVelX = inputX * maxSpeed;
-	float targetVelZ = inputZ * maxSpeed;
-	
-	// ========================================================================
-	// Ground vs Air Movement
-	// ========================================================================
-	if (!m_isJump)  // Grounded
+
+	while (m_PhysicsAccumulator >= TICK_DURATION)
 	{
-		// GROUND: Snappy, high acceleration, instant stop
-		float accelStep = GROUND_ACCEL * dt;
-		
-		float diffX = targetVelX - m_Velocity.x;
-		if (fabsf(diffX) <= accelStep)
-			m_Velocity.x = targetVelX;
-		else
-			m_Velocity.x += (diffX > 0 ? accelStep : -accelStep);
-		
-		float diffZ = targetVelZ - m_Velocity.z;
-		if (fabsf(diffZ) <= accelStep)
-			m_Velocity.z = targetVelZ;
-		else
-			m_Velocity.z += (diffZ > 0 ? accelStep : -accelStep);
-		
-		// Jump
-		if (KeyLogger_IsTrigger(KK_SPACE))
+		// Save position before this tick (for sub-tick interpolation between frames)
+		m_PrevPhysicsPosition = m_Position;
+		const float dt = static_cast<float>(TICK_DURATION);
+
+		float maxSpeed = tryRunning ? MAX_RUN_SPEED : MAX_WALK_SPEED;
+		float targetVelX = inputX * maxSpeed;
+		float targetVelZ = inputZ * maxSpeed;
+
+		// ====================================================================
+		// Ground vs Air Movement
+		// ====================================================================
+		if (!m_isJump)  // Grounded
 		{
-			m_Velocity.y = JUMP_VELOCITY;
-			m_isJump = true;
-		}
-	}
-	else  // Airborne
-	{
-		// AIR: Limited control, momentum preserved
-		float airStep = AIR_ACCEL * dt;
-		
-		if (inputMag > 0.01f)
-		{
-			m_Velocity.x += inputX * airStep;
-			m_Velocity.z += inputZ * airStep;
-			
-			// Cap speed
-			float horizSpeed = sqrtf(m_Velocity.x * m_Velocity.x + m_Velocity.z * m_Velocity.z);
-			if (horizSpeed > maxSpeed * 1.2f)
+			float accelStep = GROUND_ACCEL * dt;
+
+			float diffX = targetVelX - m_Velocity.x;
+			if (fabsf(diffX) <= accelStep)
+				m_Velocity.x = targetVelX;
+			else
+				m_Velocity.x += (diffX > 0 ? accelStep : -accelStep);
+
+			float diffZ = targetVelZ - m_Velocity.z;
+			if (fabsf(diffZ) <= accelStep)
+				m_Velocity.z = targetVelZ;
+			else
+				m_Velocity.z += (diffZ > 0 ? accelStep : -accelStep);
+
+			// Jump (consume once)
+			if (tryJump)
 			{
-				float scale = (maxSpeed * 1.2f) / horizSpeed;
-				m_Velocity.x *= scale;
-				m_Velocity.z *= scale;
+				m_Velocity.y = JUMP_VELOCITY;
+				m_isJump = true;
+				tryJump = false;  // Consume jump so it doesn't trigger again
 			}
 		}
-		
-		// Gravity
-		m_Velocity.y -= GRAVITY * dt;
-	}
-	
-	// ========================================================================
-	// Apply Velocity to Position
-	// ========================================================================
-	m_Position.x += m_Velocity.x * dt;
-	m_Position.z += m_Velocity.z * dt;
-	m_Position.y += m_Velocity.y * dt;
-	
-	// ========================================================================
-	// Collision Detection (Capsule vs World AABBs)
-	// ========================================================================
-	if (m_pCollisionWorld)
-	{
-		auto result = m_pCollisionWorld->ResolveCapsule(
-			m_Position, m_Height, m_CapsuleRadius, m_Velocity);
-		m_Position = result.position;
-		m_Velocity = result.velocity;
-		if (result.isGrounded)
+		else  // Airborne
 		{
-			m_isJump = false;
+			float airStep = AIR_ACCEL * dt;
+
+			if (inputMag > 0.01f)
+			{
+				m_Velocity.x += inputX * airStep;
+				m_Velocity.z += inputZ * airStep;
+
+				float horizSpeed = sqrtf(m_Velocity.x * m_Velocity.x + m_Velocity.z * m_Velocity.z);
+				if (horizSpeed > maxSpeed * 1.2f)
+				{
+					float scale = (maxSpeed * 1.2f) / horizSpeed;
+					m_Velocity.x *= scale;
+					m_Velocity.z *= scale;
+				}
+			}
+
+			// Gravity
+			m_Velocity.y -= GRAVITY * dt;
+		}
+
+		// ====================================================================
+		// Apply Velocity to Position
+		// ====================================================================
+		m_Position.x += m_Velocity.x * dt;
+		m_Position.z += m_Velocity.z * dt;
+		m_Position.y += m_Velocity.y * dt;
+
+		// ====================================================================
+		// Collision Detection (Capsule vs World AABBs)
+		// ====================================================================
+		if (m_pCollisionWorld)
+		{
+			auto result = m_pCollisionWorld->ResolveCapsule(
+				m_Position, m_Height, m_CapsuleRadius, m_Velocity);
+			m_Position = result.position;
+			m_Velocity = result.velocity;
+			if (result.isGrounded)
+				m_isJump = false;
+			else
+				m_isJump = true;
 		}
 		else
 		{
-			m_isJump = true;
+			if (m_Position.y <= 0.0f)
+			{
+				m_Position.y = 0.0f;
+				m_Velocity.y = 0.0f;
+				m_isJump = false;
+			}
 		}
+
+		m_PhysicsAccumulator -= TICK_DURATION;
 	}
-	else
-	{
-		// Fallback: simple floor at y=0
-		if (m_Position.y <= 0.0f)
-		{
-			m_Position.y = 0.0f;
-			m_Velocity.y = 0.0f;
-			m_isJump = false;
-		}
-	}
-	
+
+	// Sub-tick interpolation alpha (0.0 = at last tick, 1.0 = at next tick)
+	m_PhysicsAlpha = static_cast<float>(m_PhysicsAccumulator / TICK_DURATION);
+
 	// ========================================================================
-	// Update Player State for Animations
+	// Update Player State for Animations — runs at FRAME RATE
 	// ========================================================================
 	if (inputMag > 0.01f)
 	{
@@ -280,7 +296,7 @@ void Player_Fps::Update(double elapsed_time)
 	{
 		m_StateMachine->SetPlayerState(PlayerState::IDLE);
 	}
-	
+
 	// ========================================================================
 	// Weapon State Machine (unchanged)
 	// ========================================================================
@@ -319,7 +335,7 @@ void Player_Fps::Update(double elapsed_time)
 				}
 			} else {
 				// Full-auto at RPM interval
-				m_FireTimer += dt;
+				m_FireTimer += frameDt;
 				const double fireInterval = 60.0 / m_WeaponRPM;
 				if (m_FireTimer >= fireInterval) {
 					m_FireTimer -= fireInterval;
@@ -355,7 +371,7 @@ void Player_Fps::Update(double elapsed_time)
 	{
 		if (isPressingLeft) {
 			// Full-auto: accumulate timer and fire at RPM interval
-			m_FireTimer += dt;
+			m_FireTimer += frameDt;
 			const double fireInterval = 60.0 / m_WeaponRPM;
 			if (m_FireTimer >= fireInterval) {
 				m_FireTimer -= fireInterval;
@@ -380,7 +396,7 @@ void Player_Fps::Update(double elapsed_time)
 	if (m_StateMachine->GetWeaponState() == WeaponState::HIP_FIRING) {
 		if (isPressingLeft) {
 			// Full-auto: accumulate timer and fire at RPM interval
-			m_FireTimer += dt;
+			m_FireTimer += frameDt;
 			const double fireInterval = 60.0 / m_WeaponRPM;
 			if (m_FireTimer >= fireInterval) {
 				m_FireTimer -= fireInterval;
@@ -485,14 +501,17 @@ void Player_Fps::SetVelocity(const DirectX::XMFLOAT3& velocity)
 }
 
 //-----------------------------------------------------------------------------
-// GetRenderPosition - Logic position + visual offset (for smooth correction)
+// GetRenderPosition - Sub-tick interpolated position + server correction offset
+//   Lerp between previous and current physics position using accumulator remainder
+//   Then add server correction render offset on top
 //-----------------------------------------------------------------------------
 DirectX::XMFLOAT3 Player_Fps::GetRenderPosition() const
 {
+	float a = m_PhysicsAlpha;
 	return {
-		m_Position.x + m_RenderOffset.x,
-		m_Position.y + m_RenderOffset.y,
-		m_Position.z + m_RenderOffset.z
+		m_PrevPhysicsPosition.x + (m_Position.x - m_PrevPhysicsPosition.x) * a + m_RenderOffset.x,
+		m_PrevPhysicsPosition.y + (m_Position.y - m_PrevPhysicsPosition.y) * a + m_RenderOffset.y,
+		m_PrevPhysicsPosition.z + (m_Position.z - m_PrevPhysicsPosition.z) * a + m_RenderOffset.z
 	};
 }
 
@@ -511,47 +530,46 @@ void Player_Fps::ApplyServerCorrection(const NetPlayerState& serverState)
 	m_LastServerTick = serverState.tickId;
 	
 	// Correction thresholds
-	constexpr float SOFT_CORRECTION_THRESHOLD = 0.5f;  // < 0.5m -> soft correction
-	constexpr float HARD_SNAP_THRESHOLD = 3.0f;         // > 3.0m -> hard snap
-	
+	// With 100ms RTT and 5m/s walk speed, expected systematic error ≈ 0.5m.
+	// SOFT threshold is intentionally high to avoid snapping on normal RTT error.
+	// HARD snap only for true divergence (collision bug, teleport, respawn).
+	constexpr float SOFT_CORRECTION_THRESHOLD = 0.8f;  // visual-only offset
+	constexpr float HARD_SNAP_THRESHOLD = 4.0f;         // full teleport
+
 	// Calculate error between predicted and server position
 	float dx = m_Position.x - serverState.position.x;
 	float dy = m_Position.y - serverState.position.y;
 	float dz = m_Position.z - serverState.position.z;
 	float error = sqrtf(dx * dx + dy * dy + dz * dz);
-	
+
 	m_CorrectionError = error;
-	
+
 	if (error > HARD_SNAP_THRESHOLD)
 	{
 		// ===== HARD SNAP =====
-		// Error too large, teleport immediately
+		// True divergence (bug / respawn): teleport immediately
 		m_CorrectionMode = "SNAP";
 		m_Position = serverState.position;
+		m_PrevPhysicsPosition = serverState.position;
 		m_Velocity = serverState.velocity;
 		m_RenderOffset = { 0.0f, 0.0f, 0.0f };
 	}
 	else if (error > SOFT_CORRECTION_THRESHOLD)
 	{
 		// ===== SOFT CORRECTION =====
-		// Medium error: snap logic position, add visual offset
+		// DO NOT snap m_Position or m_Velocity — that interrupts prediction
+		// and causes rubber-banding when server velocity lags behind client.
+		// Instead, only push the visual render offset; physics prediction continues
+		// uninterrupted from its current state.
 		m_CorrectionMode = "SOFT";
-		
-		// Calculate visual offset = where we WERE - where we SHOULD BE
 		m_RenderOffset.x += m_Position.x - serverState.position.x;
 		m_RenderOffset.y += m_Position.y - serverState.position.y;
 		m_RenderOffset.z += m_Position.z - serverState.position.z;
-		
-		// Snap logic position to server
-		m_Position = serverState.position;
-		m_Velocity = serverState.velocity;
 	}
 	else
 	{
 		// ===== NO CORRECTION =====
-		// Error small enough, prediction is accurate
 		m_CorrectionMode = "OK";
-		// Keep m_Position as-is (client prediction is good)
 	}
 
 	// ========================================================================
@@ -572,8 +590,16 @@ void Player_Fps::ApplyServerCorrection(const NetPlayerState& serverState)
 		Fade_Start(0.5, false, { 0.0f, 0.0f, 0.0f });
 		m_IsDead = false;
 		m_Position = serverState.position;
+		m_PrevPhysicsPosition = serverState.position;
 		m_Velocity = serverState.velocity;
 		m_RenderOffset = { 0.0f, 0.0f, 0.0f };
+
+		// Face toward world center (0, 0, 0)
+		float dx = 0.0f - serverState.position.x;
+		float dz = 0.0f - serverState.position.z;
+		float yaw = atan2f(dx, dz);
+		PlayerCamFps_SetYaw(yaw);
+		PlayerCamFps_SetPitch(0.0f);
 	}
 	m_WasDead = isDead;
 }
@@ -607,9 +633,12 @@ float Player_Fps::GetHeight() const
 
 DirectX::XMFLOAT3 Player_Fps::GetEyePosition() const
 {
-	// Calculate eye position based on height
-	DirectX::XMFLOAT3 eyePos = m_Position;
-	eyePos.y = m_Position.y + 1.5f;
+	// Use interpolated position for smooth camera
+	float a = m_PhysicsAlpha;
+	DirectX::XMFLOAT3 eyePos;
+	eyePos.x = m_PrevPhysicsPosition.x + (m_Position.x - m_PrevPhysicsPosition.x) * a;
+	eyePos.y = m_PrevPhysicsPosition.y + (m_Position.y - m_PrevPhysicsPosition.y) * a + 1.5f;
+	eyePos.z = m_PrevPhysicsPosition.z + (m_Position.z - m_PrevPhysicsPosition.z) * a;
 	return eyePos;
 }
 

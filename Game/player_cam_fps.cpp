@@ -14,6 +14,7 @@
 
 #include "ms_logger.h"
 #include "net_common.h"
+#include "i_network.h"
 #include "input_producer.h"
 #include "remote_player.h"
 #include "game.h"
@@ -241,6 +242,19 @@ void PlayerCamFps_SetFront(const DirectX::XMFLOAT3& front)
 	g_CameraFront = front;
 }
 
+void PlayerCamFps_SetYaw(float yaw)
+{
+	g_cameraYaw = yaw;
+}
+
+void PlayerCamFps_SetPitch(float pitch)
+{
+	constexpr float PITCH_LIMIT = DirectX::XM_PIDIV2 - 0.01f;
+	if (pitch > PITCH_LIMIT)  pitch = PITCH_LIMIT;
+	if (pitch < -PITCH_LIMIT) pitch = -PITCH_LIMIT;
+	g_cameraPitch = pitch;
+}
+
 void PlayerCamFps_SetInvertY(bool invert)
 {
 	g_invertY = invert;
@@ -267,18 +281,33 @@ void PlayerCamFps_Debug(const Player_Fps& pf)
 
 	// Access global NetworkDebugInfo (populated from received snapshots)
 	extern NetworkDebugInfo g_NetDebugInfo;
+	extern INetwork* g_pNetwork;
 
 	std::stringstream ss;
 
-	// Server Info Section
-	ss << "=== Server (32Hz) ===\n";
+	// ---- Network Quality ----
+	ss << "=== Network ===\n";
+	if (g_pNetwork)
+	{
+		ss << "Connected: " << (g_pNetwork->IsConnected() ? "YES" : "NO") << "\n";
+		ss << "RTT: " << g_pNetwork->GetRTT() << "ms\n";
+		// ENet packetLoss is fixed-point (value / 65536 = fraction)
+		float lossPercent = g_pNetwork->GetPacketLoss() * 100.0f / 65536.0f;
+		ss << "PacketLoss: " << std::fixed << std::setprecision(1) << lossPercent << "%\n";
+		ss << "InputsSent: " << g_pNetwork->GetTotalInputsSent() << "\n";
+		ss << "SnapQueue: " << g_pNetwork->GetSnapshotQueueSize() << "\n";
+	}
+	ss << "SnapRate: " << g_NetDebugInfo.snapshotsPerSecond << "/s (expect 32)\n";
+	ss << "TickDelta: " << g_NetDebugInfo.tickDelta << " (expect 1)\n";
+
+	// ---- Server Info ----
+	ss << "\n=== Server (32Hz) ===\n";
 	if (g_NetDebugInfo.hasData)
 	{
 		ss << "ServerTick: " << g_NetDebugInfo.lastServerTick << "\n";
 		ss << "ServerTime: " << std::fixed << std::setprecision(1)
 		   << g_NetDebugInfo.lastServerTime << "s\n";
 
-		// Server authoritative position
 		const NetPlayerState& srvState = g_NetDebugInfo.lastServerState;
 		ss << "ServerPos: " << std::fixed << std::setprecision(1)
 		   << srvState.position.x << ", "
@@ -289,18 +318,19 @@ void PlayerCamFps_Debug(const Player_Fps& pf)
 	{
 		ss << "Server: NO DATA\n";
 	}
-	
-	// Correction Info
+
+	// ---- Correction ----
 	ss << "\n=== Correction ===\n";
 	ss << "Mode: " << Game_GetCorrectionMode() << "\n";
 	ss << "Error: " << std::fixed << std::setprecision(3) << Game_GetCorrectionError() << "m\n";
-	
+
+	// ---- Input ----
 	ss << "\n=== Input (C->S) ===\n";
 	extern InputProducer* g_pInputProducer;
 	if (g_pInputProducer)
 	{
 		const InputCmd& cmd = g_pInputProducer->GetLastInputCmd();
-		ss << "MoveAxis: " << std::fixed << std::setprecision(1) 
+		ss << "MoveAxis: " << std::fixed << std::setprecision(1)
 		   << cmd.moveAxisX << ", " << cmd.moveAxisY << "\n";
 		ss << "Buttons: ";
 		if (cmd.buttons & InputButtons::FIRE) ss << "FIRE ";
@@ -310,18 +340,16 @@ void PlayerCamFps_Debug(const Player_Fps& pf)
 		if (cmd.buttons == InputButtons::NONE) ss << "NONE";
 		ss << "\n";
 	}
-	
+
+	// ---- Player ----
 	ss << "\n=== Player ===\n";
 	ss << "Team: " << (pf.GetTeam() == PlayerTeam::RED ? "RED" : "BLUE") << "\n";
 	ss << "Health: " << (int)pf.GetHealth() << "/200" << (pf.IsDead() ? " [DEAD]" : "") << "\n";
 	ss << "PlayerState: " << pf.GetPlayerState() << "\n";
 	ss << "WeaponState: " << pf.GetWeaponState() << "\n";
-	ss << "CurrentAnimation: " << pf.GetCurrentAniName() << "\n";
 	ss << "FireCounter: " << pf.GetFireCounter() << " (Srv: " << g_NetDebugInfo.lastServerState.fireCounter << ")\n";
-	ss << "AniDuration: " << std::fixed << std::setprecision(2) << pf.GetCurrentAniDuration() << "s\n";
-	ss << "AniProgress: " << std::fixed << std::setprecision(2) << pf.GetCurrentAniProgress() * 100.0f << "%\n";
-	
-	// RemotePlayer Debug (show all active remote players)
+
+	// ---- Remote Players ----
 	extern RemotePlayer g_RemotePlayers[];
 	extern bool g_RemotePlayerActive[];
 	for (int rpi = 0; rpi < MAX_PLAYERS; rpi++)
@@ -336,10 +364,6 @@ void PlayerCamFps_Debug(const Player_Fps& pf)
 		ss << "Buffer: " << rp.GetBufferSize() << " snapshots\n";
 		ss << "LerpT: " << std::fixed << std::setprecision(3) << rp.GetLerpFactor() << "\n";
 		ss << "InterpDelay: " << std::fixed << std::setprecision(1) << (rp.GetInterpolationDelay() * 1000.0) << "ms\n";
-		ss << "RenderTime: " << std::fixed << std::setprecision(2) << rp.GetLastRenderTime() << "s\n";
-		ss << "SnapTimes: " << std::fixed << std::setprecision(2)
-		   << rp.GetOldestSnapshotTime() << " - "
-		   << rp.GetNewestSnapshotTime() << "\n";
 	}
 
 	g_DebugText->SetText(ss.str().c_str());
