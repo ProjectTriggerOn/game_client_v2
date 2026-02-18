@@ -3,6 +3,7 @@
 #ifndef GAME_H
 #define GAME_H
 #include "mouse.h"
+#include "collision_world.h"
 
 
 enum GameState
@@ -31,6 +32,9 @@ GameState Game_GetState();
 // Correction debug info
 const char* Game_GetCorrectionMode();
 float Game_GetCorrectionError();
+
+// Collision world accessor (for MockServer initialization)
+CollisionWorld* Game_GetCollisionWorld();
 
 
 

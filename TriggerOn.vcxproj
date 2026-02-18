@@ -160,7 +160,9 @@
     </FxCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Core\font.cpp" />
     <ClCompile Include="Game\collision.cpp" />
+    <ClCompile Include="Game\collision_world.cpp" />
     <ClCompile Include="Graphics\animator.cpp" />
     <ClCompile Include="Game\Audio.cpp" />
     <ClCompile Include="Graphics\camera.cpp" />
@@ -210,11 +212,14 @@
     <ClCompile Include="Graphics\sprite_anime.cpp" />
     <ClCompile Include="Core\system_timer.cpp" />
     <ClCompile Include="Graphics\texture.cpp" />
+    <ClCompile Include="Graphics\ui_widget.cpp" />
     <ClCompile Include="Game\title.cpp" />
     <ClCompile Include="Graphics\WICTextureLoader11.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Core\font.h" />
     <ClInclude Include="Game\collision.h" />
+    <ClInclude Include="Game\collision_world.h" />
     <ClInclude Include="Graphics\animator.h" />
     <ClInclude Include="Game\Audio.h" />
     <ClInclude Include="Graphics\camera.h" />
@@ -266,6 +271,7 @@
     <ClInclude Include="Graphics\sprite_anime.h" />
     <ClInclude Include="Core\system_timer.h" />
     <ClInclude Include="Graphics\texture.h" />
+    <ClInclude Include="Graphics\ui_widget.h" />
     <ClInclude Include="Game\title.h" />
     <ClInclude Include="Graphics\WICTextureLoader11.h" />
     <ClInclude Include="ThirdParty\enet\include\enet\enet.h" />
@@ -337,6 +343,7 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
+    <None Include="config.toml" />
     <None Include="TriggerOn.sln" />
     <None Include="resource\model\sky.fbx" />
   </ItemGroup>

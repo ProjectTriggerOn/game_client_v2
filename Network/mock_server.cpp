@@ -24,20 +24,24 @@ MockServer::~MockServer()
     Finalize();
 }
 
-void MockServer::Initialize(INetwork* pNetwork)
+void MockServer::Initialize(INetwork* pNetwork, CollisionWorld* pCollisionWorld)
 {
     m_pNetwork = pNetwork;
+    m_pCollisionWorld = pCollisionWorld;
     m_Accumulator = 0.0;
     m_ServerTime = 0.0;
     m_CurrentTick = 0;
 
     // Initialize player state (match Player_Fps spawn in Game_Initialize)
     m_PlayerState.tickId = 0;
-    m_PlayerState.position = { 0.0f, 0.0f, -20.0f };  // Same as game.cpp
+    m_PlayerState.position = { -7.0f, 0.0f, -7.0f };  // Corner spawn
     m_PlayerState.velocity = { 0.0f, 0.0f, 0.0f };
     m_PlayerState.yaw = 0.0f;
     m_PlayerState.pitch = 0.0f;
     m_PlayerState.stateFlags = NetStateFlags::IS_GROUNDED;
+    m_PlayerState.health = 200;
+    m_PlayerState.hitByPlayerId = 0xFF;
+    m_PlayerState.fireCounter = 0;
 
     // Initialize last input
     m_LastInputCmd = {};
@@ -185,6 +189,7 @@ void MockServer::SimulatePhysics()
     constexpr float JUMP_VELOCITY  = 8.0f;    // Jump impulse
     
     bool isGrounded = (m_PlayerState.stateFlags & NetStateFlags::IS_GROUNDED) != 0;
+    bool wasGroundedAtStart = isGrounded;
     
     // ========================================================================
     // STEP 1: Calculate Target Velocity from Input
@@ -284,7 +289,7 @@ void MockServer::SimulatePhysics()
     // ========================================================================
     // STEP 3: Gravity (always applies, even briefly on ground for stability)
     // ========================================================================
-    if (!isGrounded)
+    if (!wasGroundedAtStart)
     {
         m_PlayerState.velocity.y -= GRAVITY * dt;
     }
@@ -297,14 +302,35 @@ void MockServer::SimulatePhysics()
     m_PlayerState.position.y += m_PlayerState.velocity.y * dt;
     
     // ========================================================================
-    // STEP 5: Floor Collision (y = 0)
+    // STEP 5: Collision Detection (Capsule vs World AABBs)
     // ========================================================================
-    if (m_PlayerState.position.y <= 0.0f)
+    if (m_pCollisionWorld)
     {
-        m_PlayerState.position.y = 0.0f;
-        m_PlayerState.velocity.y = 0.0f;
-        m_PlayerState.stateFlags |= NetStateFlags::IS_GROUNDED;
-        m_PlayerState.stateFlags &= ~NetStateFlags::IS_JUMPING;
+        auto result = m_pCollisionWorld->ResolveCapsule(
+            m_PlayerState.position, PLAYER_HEIGHT, CAPSULE_RADIUS,
+            m_PlayerState.velocity);
+        m_PlayerState.position = result.position;
+        m_PlayerState.velocity = result.velocity;
+        if (result.isGrounded)
+        {
+            m_PlayerState.stateFlags |= NetStateFlags::IS_GROUNDED;
+            m_PlayerState.stateFlags &= ~NetStateFlags::IS_JUMPING;
+        }
+        else
+        {
+            m_PlayerState.stateFlags &= ~NetStateFlags::IS_GROUNDED;
+        }
+    }
+    else
+    {
+        // Fallback: simple floor at y=0
+        if (m_PlayerState.position.y <= 0.0f)
+        {
+            m_PlayerState.position.y = 0.0f;
+            m_PlayerState.velocity.y = 0.0f;
+            m_PlayerState.stateFlags |= NetStateFlags::IS_GROUNDED;
+            m_PlayerState.stateFlags &= ~NetStateFlags::IS_JUMPING;
+        }
     }
 }
 

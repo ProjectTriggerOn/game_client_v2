@@ -44,6 +44,13 @@ struct Hit
 	DirectX::XMFLOAT3 normal;
 };
 
+struct Capsule
+{
+	DirectX::XMFLOAT3 pointA; // 线段端点A（底部球心）
+	DirectX::XMFLOAT3 pointB; // 线段端点B（顶部球心）
+	float radius;             // 半径
+};
+
 struct Ray
 {
 	DirectX::XMFLOAT3 origin;    // 光线起点
@@ -63,12 +70,22 @@ bool Collision_isHitRayOnSphere(const Ray& ray, const Sphere& sphere, float* out
 
 bool Collision_OverlapSphere(const Sphere& sphereA, const Sphere& sphereB);
 
+// Capsule
+bool Collision_OverlapCapsuleCapsule(const Capsule& a, const Capsule& b);
+bool Collision_OverlapCapsuleSphere(const Capsule& capsule, const Sphere& sphere);
+bool Collision_OverlapCapsuleAABB(const Capsule& capsule, const AABB& aabb);
+bool Collision_isHitRayOnCapsule(const Ray& ray, const Capsule& capsule, float* outDistance = nullptr);
+Hit Collision_IsHitCapsuleCapsule(const Capsule& a, const Capsule& b);
+
+void Collision_DebugSetViewProj(const DirectX::XMMATRIX& viewProj);
 void Collision_DebugInitialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext);
 void Collision_DebugFinalize();
 void Collision_DebugDraw(const Circle& circle, const DirectX::XMFLOAT4& color = { 1.0f,1.0f,0.0f,1.0f });
 void Collision_DebugDraw(const Box& box, const DirectX::XMFLOAT4& color = { 1.0f,1.0f,0.0f,1.0f });
 
 void Collision_DebugDraw(const AABB& aabb, const DirectX::XMFLOAT4& color);
+void Collision_DebugDraw(const Capsule& capsule, const DirectX::XMFLOAT4& color = { 0.0f,1.0f,0.0f,1.0f });
+void Collision_DebugDrawLine(const DirectX::XMFLOAT3& start, const DirectX::XMFLOAT3& end, const DirectX::XMFLOAT4& color);
 
 
 #endif // COLLISION_H

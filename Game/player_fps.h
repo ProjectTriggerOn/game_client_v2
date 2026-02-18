@@ -12,6 +12,7 @@
 
 #include <DirectXMath.h>
 #include "collision.h"
+#include "collision_world.h"
 #include "model_ani.h"
 #include "mouse.h"
 #include "player_state_mechine.h"
@@ -23,7 +24,8 @@ public:
 	Player_Fps();
 	~Player_Fps();
 
-	void Initialize(const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3& front);
+	void Initialize(const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3& front,
+	                CollisionWorld* pCollisionWorld = nullptr);
 	void Finalize();
 	void Update(double elapsed_time);
 	void Draw();
@@ -43,7 +45,8 @@ public:
 	void ApplyServerCorrection(const NetPlayerState& serverState);
 	
 	AABB GetAABB() const;
-	
+	Capsule GetCapsule() const;
+
 	void SetHeight(float height);
 	float GetHeight() const;
 	
@@ -59,6 +62,9 @@ public:
 
 	void SetTeam(uint8_t teamId);
 	uint8_t GetTeam() const { return m_TeamId; }
+
+	uint8_t GetHealth() const { return m_Health; }
+	bool IsDead() const { return m_IsDead; }
 
 	//-------------------------------------------------------------------------
 	// Debug info
@@ -82,12 +88,25 @@ private:
 	DirectX::XMFLOAT3 m_MoveDir;
 	DirectX::XMFLOAT3 m_CamRelativePos;
 	float m_Height;
+	float m_CapsuleRadius;
 	bool m_isJump;
+	CollisionWorld* m_pCollisionWorld;
+
+	// Fixed-timestep accumulator (must match server tick rate)
+	static constexpr double TICK_RATE = 32.0;
+	static constexpr double TICK_DURATION = 1.0 / TICK_RATE;
+	double m_PhysicsAccumulator;
+	DirectX::XMFLOAT3 m_PrevPhysicsPosition;  // Position before accumulator loop (for sub-tick interpolation)
+	float m_PhysicsAlpha;                       // Remainder fraction for render interpolation
+
 	double m_WeaponRPM;
 	double m_FireTimer;
 	int m_FireCounter;
 	bool m_TransitionFiring;
 	uint8_t m_TeamId;
+	uint8_t m_Health;
+	bool m_IsDead;
+	bool m_WasDead;
 	MODEL_ANI* m_Model;
 	Animator* m_Animator;
 	PlayerStateMachine* m_StateMachine;

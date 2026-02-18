@@ -48,6 +48,7 @@
 #include "remote_player.h"
 #include "i_network.h"
 #include "config.h"
+#include "game.h"
 
 
 //Window procedure prototype claim
@@ -142,7 +143,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR lpC
 	{
 		// Mock mode: local in-process server (default)
 		g_MockNetwork.Initialize();
-		g_MockServer.Initialize(&g_MockNetwork);
+		g_MockServer.Initialize(&g_MockNetwork, Game_GetCollisionWorld());
 		g_pNetwork = &g_MockNetwork;
 		g_pMockServer = &g_MockServer;
 	}

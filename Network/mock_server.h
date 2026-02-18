@@ -13,6 +13,7 @@
 //=============================================================================
 
 #include "net_common.h"
+#include "collision_world.h"
 
 class INetwork;
 
@@ -28,7 +29,7 @@ public:
     MockServer();
     ~MockServer();
 
-    void Initialize(INetwork* pNetwork);
+    void Initialize(INetwork* pNetwork, CollisionWorld* pCollisionWorld = nullptr);
     void Finalize();
 
     //-------------------------------------------------------------------------
@@ -80,4 +81,11 @@ private:
     // Reload latch timer — keeps IS_RELOADING active for full animation duration
     static constexpr double RELOAD_DURATION = 10.0;  // seconds
     double m_ReloadTimer = 0.0;
+
+    // Collision world for gravity
+    CollisionWorld* m_pCollisionWorld = nullptr;
+
+    // Player collision parameters (must match Player_Fps)
+    static constexpr float PLAYER_HEIGHT = 1.6f;
+    static constexpr float CAPSULE_RADIUS = 0.3f;
 };
