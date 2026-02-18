@@ -9,7 +9,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 //Window info
 static constexpr char WINDOW_CLASS[] = "GameWindow";//メインウインドウクラス名
-static constexpr char TITLE[] = "ウィンドウ表示"; //タイトルバ一のテキスト
+static constexpr char TITLE[] = "Trigger On"; //タイトルバ一のテキスト
 
 HWND GameWindow_Generate(HINSTANCE hInstance)
 {
@@ -89,9 +89,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	         Mouse_ProcessMessage(message, wParam, lParam);
 	         break;
     case WM_KEYDOWN:
-		if (wParam == VK_ESCAPE) {
-			SendMessage(hWnd, WM_CLOSE, 0, 0);
-		}
+        // ESC is handled by the game loop (toggles settings menu)
      case WM_SYSKEYDOWN:
      case WM_KEYUP:
      case WM_SYSKEYUP:

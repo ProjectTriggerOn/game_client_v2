@@ -22,6 +22,9 @@ void PlayerCamFps_SetPitch(float pitch);
 void PlayerCamFps_SetInvertY(bool invert = true);
 bool PlayerCamFps_GetInvertY();
 
+void PlayerCamFps_SetSensitivity(float s);
+float PlayerCamFps_GetSensitivity();
+
 
 const DirectX::XMFLOAT4X4& PlayerCamFps_GetViewMatrix();
 const DirectX::XMFLOAT4X4& PlayerCamFps_GetProjectMatrix();

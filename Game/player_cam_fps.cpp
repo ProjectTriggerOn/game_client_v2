@@ -35,7 +35,7 @@ namespace
 	hal::DebugText* g_DebugText = nullptr;
 
 	// Mouse sensitivity
-	constexpr float SENSITIVITY = 0.002f;
+	float g_Sensitivity = 0.002f;
 }
 
 void PlayerCamFps_Initialize()
@@ -97,14 +97,14 @@ void PlayerCamFps_Update(double elapsed_time)
 	}
 
 	// Apply rotation
-	g_cameraYaw += dx * SENSITIVITY;
+	g_cameraYaw += dx * g_Sensitivity;
 	if (g_invertY)
 	{
-		g_cameraPitch -= dy * SENSITIVITY;
+		g_cameraPitch -= dy * g_Sensitivity;
 	}
 	else
 	{
-		g_cameraPitch += dy * SENSITIVITY;
+		g_cameraPitch += dy * g_Sensitivity;
 	}
 
 	// Clamp pitch to avoid flipping
@@ -177,14 +177,14 @@ void PlayerCamFps_Update(double elapsed_time, const DirectX::XMFLOAT3& position)
 	}
 
 	// Apply rotation
-	g_cameraYaw += dx * SENSITIVITY;
+	g_cameraYaw += dx * g_Sensitivity;
 	if (g_invertY)
 	{
-		g_cameraPitch -= dy * SENSITIVITY;
+		g_cameraPitch -= dy * g_Sensitivity;
 	}
 	else
 	{
-		g_cameraPitch += dy * SENSITIVITY;
+		g_cameraPitch += dy * g_Sensitivity;
 	}
 
 	// Clamp pitch to avoid flipping
@@ -263,6 +263,16 @@ void PlayerCamFps_SetInvertY(bool invert)
 bool PlayerCamFps_GetInvertY()
 {
 	return g_invertY;
+}
+
+void PlayerCamFps_SetSensitivity(float s)
+{
+	g_Sensitivity = s;
+}
+
+float PlayerCamFps_GetSensitivity()
+{
+	return g_Sensitivity;
 }
 
 const DirectX::XMFLOAT4X4& PlayerCamFps_GetViewMatrix()

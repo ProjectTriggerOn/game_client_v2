@@ -26,6 +26,10 @@
 #include "sprite.h"
 #include "texture.h"
 #include "fade.h"
+#include "font.h"
+#include "ui_widget.h"
+#include "mouse.h"
+#include <cwchar>
 using namespace DirectX;
 
 namespace{
@@ -35,6 +39,7 @@ namespace{
 	MODEL_ANI* g_pModel0 = nullptr;
 	int g_CrossHairTexId = -1;
 	int g_CursorTexId = -1;
+	int g_OverlayTexId = -1;  // white texture used for the settings dim overlay
 	bool isDebugCam = false;
 	bool isDebugCollision = false;
 	Player_Fps* g_PlayerFps;
@@ -66,7 +71,10 @@ void Game_Initialize()
 	g_GameState = TITLE;
 
 	g_CrossHairTexId = Texture_LoadFromFile(L"resource/texture/arr.png");
-	g_CursorTexId = Texture_LoadFromFile(L"resource/texture/cursor.png");
+	g_CursorTexId    = Texture_LoadFromFile(L"resource/texture/cursor.png");
+	g_OverlayTexId   = Texture_LoadFromFile(L"resource/texture/white.png");
+	Font_Initialize();
+	Widget_Initialize();
 	//ModelAni_SetAnimation(g_pModel0, 0);
 	//g_pModel0 = ModelLoad("resource/model/(Legacy)arms_assault_rifle_01.fbx", 10.0f);
 	//Player_Initialize({ 0.0f,0.0f,0.0f }, { 0.0f,0.0f,1.0f });
@@ -88,6 +96,31 @@ void Game_Initialize()
 
 void Game_Update(double elapsed_time)
 {
+	// ========================================================================
+	// ESC: toggle settings screen
+	// ========================================================================
+	if (KeyLogger_IsTrigger(KK_ESCAPE))
+	{
+		if (g_GameState != SETTING)
+		{
+			g_GameState = SETTING;
+			Mouse_SetMode(MOUSE_POSITION_MODE_ABSOLUTE);
+			MSLogger_SetUIMode(true);
+		}
+		else
+		{
+			g_GameState = PLAY;
+			Mouse_SetMode(MOUSE_POSITION_MODE_RELATIVE);
+			MSLogger_SetUIMode(false);
+		}
+	}
+
+	// In settings screen: show cursor, skip all gameplay update
+	if (g_GameState == SETTING)
+	{
+		Mouse_SetVisible(true);
+		return;
+	}
 
 	Mouse_SetVisible(false);
 
@@ -346,6 +379,76 @@ void Game_Draw()
 		Sprite_Draw(g_CursorTexId, (float)mouse_x, (float)mouse_y, 32.0f, 32.0f);
 	}
 
+	// ========================================================================
+	// HUD — bottom-right (hidden during settings screen)
+	// ========================================================================
+	if (g_GameState != SETTING)
+	{
+		constexpr float HUD_W  = 260.0f;
+		constexpr float HUD_H  = 52.0f;
+		constexpr float HUD_PAD = 20.0f;
+		const XMFLOAT4  HUD_BG  = { 0.06f, 0.06f, 0.10f, 0.78f };
+
+		float hudX = sw - HUD_W - HUD_PAD;
+		float hudY = sh - HUD_H * 2.0f - HUD_PAD - 8.0f;
+
+		// HP
+		wchar_t hpBuf[32];
+		swprintf_s(hpBuf, L"HP  %d / 200", (int)g_PlayerFps->GetHealth());
+		Widget_DrawPanel(hudX, hudY, HUD_W, HUD_H, hpBuf, HUD_BG);
+
+		// Ammo (placeholder)
+		hudY += HUD_H + 8.0f;
+		Widget_DrawPanel(hudX, hudY, HUD_W, HUD_H, L"30 / 90", HUD_BG);
+	}
+
+	// ========================================================================
+	// Settings overlay (drawn when in SETTING state)
+	// ========================================================================
+	if (g_GameState == SETTING)
+	{
+		float sw = static_cast<float>(Direct3D_GetBackBufferWidth());
+		float sh = static_cast<float>(Direct3D_GetBackBufferHeight());
+
+		// Full-screen dim
+		//Sprite_Draw(g_OverlayTexId, 0.0f, 0.0f, sw, sh, { 0.04f, 0.04f, 0.06f, 0.72f });
+
+		// Settings panel — centered
+		constexpr float PW = 420.0f;
+		constexpr float PH = 360.0f;
+		float px = (sw - PW) * 0.5f;
+		float py = (sh - PH) * 0.5f;
+
+		Widget_DrawPanel(px, py, PW, PH, L"SETTINGS",
+			{ 0.10f, 0.10f, 0.16f, 0.92f });
+
+		// Sensitivity slider — long and thick, upper quarter of screen
+		constexpr float SW = 1000.0f;
+		constexpr float SH = 72.0f;
+		float sx = (sw - SW) * 0.5f;
+		float sy = sh * 0.22f;
+		float newSens = Widget_DrawSlider(sx, sy, SW, SH,
+			PlayerCamFps_GetSensitivity(), 0.001f, 0.010f, L"Sensitivity");
+		PlayerCamFps_SetSensitivity(newSens);
+
+		// Resume button
+		constexpr float BW = 260.0f;
+		constexpr float BH = 52.0f;
+		float bx = (sw - BW) * 0.5f;
+
+		if (Widget_DrawButton(bx, py + 220.0f, BW, BH, L"Resume"))
+		{
+			g_GameState = PLAY;
+			Mouse_SetMode(MOUSE_POSITION_MODE_RELATIVE);
+			MSLogger_SetUIMode(false);
+		}
+
+		if (Widget_DrawButton(bx, py + 290.0f, BW, BH, L"Exit Game"))
+		{
+			PostQuitMessage(0);
+		}
+	}
+
 	// Fade overlay (depth off so it covers everything including crosshair)
 	Fade_Draw();
 
@@ -361,6 +464,8 @@ void Game_Finalize()
 	g_PlayerFps->Finalize();
 	ModelAni_Release(g_pModel0);
 	Map_Finalize();
+	Font_Finalize();
+	Widget_Finalize();
 	Fade_Finalize();
 }
 
