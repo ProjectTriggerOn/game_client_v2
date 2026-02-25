@@ -69,6 +69,9 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR lpC
 
 	SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 
+	// Load global config early so window size settings are available
+	Config::GetInstance().Load("config.toml");
+
 	HWND hWnd = GameWindow_Generate(hInstance);
 
 	SystemTimer_Initialize();
@@ -118,8 +121,6 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR lpC
 	//   "remote" — ENet to remote server
 	// ========================================================================
 
-	// Load global config
-	Config::GetInstance().Load("config.toml");
 	g_NetworkMode = Config::GetInstance().GetString("network", "mode", "mock");
 
 	static MockNetwork g_MockNetwork;
