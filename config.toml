@@ -16,5 +16,5 @@ local_host  = "127.0.0.1"
 remote_host = "127.0.0.1"
 
 [client]
-window_width  = 1280
-window_height = 720
+window_width  = 1920
+window_height = 1080
