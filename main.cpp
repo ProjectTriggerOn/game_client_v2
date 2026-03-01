@@ -177,6 +177,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR lpC
 
 	Grid_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
 
+	Collision_DebugInitialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
+
 #if defined(_DEBUG) || defined(DEBUG)
 
 	hal::DebugText dt(Direct3D_GetDevice(), Direct3D_GetDeviceContext(),
@@ -186,8 +188,6 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR lpC
 		0, 0,
 		0.0f, 16.0f
 	);
-
-	Collision_DebugInitialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
 
 #endif // _DEBUG || DEBUG
 

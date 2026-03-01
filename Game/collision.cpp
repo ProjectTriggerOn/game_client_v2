@@ -681,12 +681,12 @@ void Collision_DebugDraw(const Capsule& capsule, const DirectX::XMFLOAT4& color)
 	}
 
 	// 绘制两端半球弧线
-	// 底端半球（朝下）: right平面弧和forward平面弧
+	// 底端半球（朝下）: 从赤道经底极到赤道 (π → 2π)
 	for (int plane = 0; plane < 2; ++plane) {
 		XMVECTOR planeDir = (plane == 0) ? right : forward;
 		for (int i = 0; i < arcSegments; ++i) {
-			float angle0 = XM_PI * 0.5f + XM_PI * i / arcSegments;
-			float angle1 = XM_PI * 0.5f + XM_PI * (i + 1) / arcSegments;
+			float angle0 = XM_PI + XM_PI * i / arcSegments;
+			float angle1 = XM_PI + XM_PI * (i + 1) / arcSegments;
 
 			XMVECTOR p0 = a + planeDir * (cosf(angle0) * capsule.radius) + up * (sinf(angle0) * capsule.radius);
 			XMVECTOR p1 = a + planeDir * (cosf(angle1) * capsule.radius) + up * (sinf(angle1) * capsule.radius);
@@ -694,12 +694,12 @@ void Collision_DebugDraw(const Capsule& capsule, const DirectX::XMFLOAT4& color)
 		}
 	}
 
-	// 顶端半球（朝上）
+	// 顶端半球（朝上）: 从赤道经顶极到赤道 (0 → π)
 	for (int plane = 0; plane < 2; ++plane) {
 		XMVECTOR planeDir = (plane == 0) ? right : forward;
 		for (int i = 0; i < arcSegments; ++i) {
-			float angle0 = -XM_PI * 0.5f + XM_PI * i / arcSegments;
-			float angle1 = -XM_PI * 0.5f + XM_PI * (i + 1) / arcSegments;
+			float angle0 = XM_PI * i / arcSegments;
+			float angle1 = XM_PI * (i + 1) / arcSegments;
 
 			XMVECTOR p0 = b + planeDir * (cosf(angle0) * capsule.radius) + up * (sinf(angle0) * capsule.radius);
 			XMVECTOR p1 = b + planeDir * (cosf(angle1) * capsule.radius) + up * (sinf(angle1) * capsule.radius);
