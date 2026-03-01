@@ -7,7 +7,7 @@
 #   mock   — in-process mock server (no real networking)
 #   local  — ENet connection to local machine (127.0.0.1)
 #   remote — ENet connection to remote server
-mode = "remote"
+mode = "mock"
 
 server_port = 7777
 

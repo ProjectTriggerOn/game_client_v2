@@ -128,7 +128,7 @@ void Game_Update(double elapsed_time)
 	if (KeyLogger_IsTrigger(KK_C)) {
 		isDebugCam = !isDebugCam;
 	}
-	if (KeyLogger_IsTrigger(KK_F3)) {
+	if (KeyLogger_IsTrigger(KK_F1)) {
 		isDebugCollision = !isDebugCollision;
 	}
 
