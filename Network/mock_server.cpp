@@ -45,6 +45,22 @@ void MockServer::Initialize(INetwork* pNetwork, CollisionWorld* pCollisionWorld)
 
     // Initialize last input
     m_LastInputCmd = {};
+
+    // Spawn remote bot player at a different corner
+    m_RemotePlayerState = {};
+    m_RemotePlayerState.tickId = 0;
+    m_RemotePlayerState.position = { 7.0f, 0.0f, 7.0f };
+    m_RemotePlayerState.velocity = { 0.0f, 0.0f, 0.0f };
+    m_RemotePlayerState.yaw = 0.0f;
+    m_RemotePlayerState.pitch = 0.0f;
+    m_RemotePlayerState.stateFlags = NetStateFlags::IS_GROUNDED;
+    m_RemotePlayerState.health = MAX_HEALTH;
+    m_RemotePlayerState.hitByPlayerId = 0xFF;
+    m_RemotePlayerState.fireCounter = 0;
+    m_RemoteHealth = MAX_HEALTH;
+    m_RemoteRespawnTimer = 0.0;
+    m_FireTimer = 0.0;
+    m_FireCounter = 0;
 }
 
 void MockServer::Finalize()
@@ -96,7 +112,6 @@ void MockServer::Tick()
     m_ServerTime += TICK_DURATION;
 
     // 1. Consume all pending input commands
-    //    In a real server, we'd buffer and process inputs properly
     InputCmd cmd;
     while (m_pNetwork->ReceiveInputCmd(cmd))
     {
@@ -106,10 +121,36 @@ void MockServer::Tick()
     // 2. Simulate physics for this tick
     SimulatePhysics();
 
-    // 3. Update tick ID in state
-    m_PlayerState.tickId = m_CurrentTick;
+    // 3. Clear hit marker, then process combat
+    m_PlayerState.hitByPlayerId = 0xFF;
+    m_RemotePlayerState.hitByPlayerId = 0xFF;
 
-    // 4. Broadcast snapshot to client
+    if (m_RemotePlayerState.stateFlags & NetStateFlags::IS_DEAD)
+    {
+        // Respawn timer
+        m_RemoteRespawnTimer -= TICK_DURATION;
+        if (m_RemoteRespawnTimer <= 0.0)
+        {
+            m_RemoteHealth = MAX_HEALTH;
+            m_RemotePlayerState.stateFlags &= ~NetStateFlags::IS_DEAD;
+            m_RemotePlayerState.stateFlags |= NetStateFlags::IS_GROUNDED;
+            m_RemotePlayerState.position = { 7.0f, 0.0f, 7.0f };
+            m_RemotePlayerState.velocity = { 0.0f, 0.0f, 0.0f };
+            m_RemoteRespawnTimer = 0.0;
+        }
+    }
+    else
+    {
+        ProcessFiring();
+    }
+
+    m_RemotePlayerState.health = m_RemoteHealth;
+
+    // 4. Update tick ID in states
+    m_PlayerState.tickId = m_CurrentTick;
+    m_PlayerState.fireCounter = m_FireCounter;
+
+    // 5. Broadcast snapshot to client
     BroadcastSnapshot();
 }
 
@@ -335,6 +376,229 @@ void MockServer::SimulatePhysics()
 }
 
 //-----------------------------------------------------------------------------
+// Ray-Sphere intersection helper (returns entry distance)
+//-----------------------------------------------------------------------------
+static bool RaySphere(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT3& dir,
+                      const DirectX::XMFLOAT3& center, float radius, float& outT)
+{
+    float ocx = origin.x - center.x;
+    float ocy = origin.y - center.y;
+    float ocz = origin.z - center.z;
+    float a = dir.x * dir.x + dir.y * dir.y + dir.z * dir.z;
+    float h = ocx * dir.x + ocy * dir.y + ocz * dir.z;
+    float c = ocx * ocx + ocy * ocy + ocz * ocz - radius * radius;
+    float disc = h * h - a * c;
+    if (disc < 0.0f) return false;
+    float sqrtDisc = sqrtf(disc);
+    float t = (-h - sqrtDisc) / a;
+    if (t < 0.0f) t = (-h + sqrtDisc) / a;
+    if (t < 0.0f) return false;
+    outT = t;
+    return true;
+}
+
+//-----------------------------------------------------------------------------
+// Ray-Capsule intersection (cylinder + two hemispheres)
+//-----------------------------------------------------------------------------
+static bool RayCapsule(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT3& dir,
+                       const DirectX::XMFLOAT3& capBottom, float capHeight, float capRadius,
+                       float& outT)
+{
+    constexpr float MAX_RANGE = 200.0f;
+
+    // Segment endpoints (sphere centers)
+    DirectX::XMFLOAT3 segA = { capBottom.x, capBottom.y + capRadius, capBottom.z };
+    DirectX::XMFLOAT3 segB = { capBottom.x, capBottom.y + capHeight - capRadius, capBottom.z };
+    float segDirY = segB.y - segA.y;
+    float segLenSq = segDirY * segDirY; // axis is vertical
+
+    float bestT = MAX_RANGE + 1.0f;
+    bool hasHit = false;
+
+    // 1. Infinite cylinder clamped to segment extent (vertical axis)
+    if (segLenSq > 1e-8f)
+    {
+        float segLen = sqrtf(segLenSq);
+        // Axis is (0, 1, 0) since capsule is vertical
+        float dDotAxis = dir.y;
+        float ocx = origin.x - segA.x;
+        float ocy = origin.y - segA.y;
+        float ocz = origin.z - segA.z;
+        float ocDotAxis = ocy;
+
+        // Project out axis component
+        float dPerpX = dir.x, dPerpY = dir.y - dDotAxis, dPerpZ = dir.z;
+        float ocPerpX = ocx, ocPerpY = ocy - ocDotAxis, ocPerpZ = ocz;
+
+        float a = dPerpX * dPerpX + dPerpY * dPerpY + dPerpZ * dPerpZ;
+        float b = dPerpX * ocPerpX + dPerpY * ocPerpY + dPerpZ * ocPerpZ;
+        float c = ocPerpX * ocPerpX + ocPerpY * ocPerpY + ocPerpZ * ocPerpZ - capRadius * capRadius;
+
+        float disc = b * b - a * c;
+        if (disc >= 0.0f && a > 1e-8f)
+        {
+            float sqrtDisc = sqrtf(disc);
+            float t = (-b - sqrtDisc) / a;
+            if (t < 0.0f) t = (-b + sqrtDisc) / a;
+            if (t >= 0.0f && t <= MAX_RANGE)
+            {
+                float hitOnAxis = ocDotAxis + t * dDotAxis;
+                if (hitOnAxis >= 0.0f && hitOnAxis <= segLen)
+                {
+                    bestT = t;
+                    hasHit = true;
+                }
+            }
+        }
+    }
+
+    // 2. Bottom hemisphere
+    float tSphere;
+    if (RaySphere(origin, dir, segA, capRadius, tSphere))
+    {
+        if (tSphere <= MAX_RANGE && tSphere < bestT)
+        {
+            bestT = tSphere;
+            hasHit = true;
+        }
+    }
+
+    // 3. Top hemisphere
+    if (RaySphere(origin, dir, segB, capRadius, tSphere))
+    {
+        if (tSphere <= MAX_RANGE && tSphere < bestT)
+        {
+            bestT = tSphere;
+            hasHit = true;
+        }
+    }
+
+    if (hasHit) { outT = bestT; return true; }
+    return false;
+}
+
+//-----------------------------------------------------------------------------
+// Ray-AABB intersection (slab method)
+//-----------------------------------------------------------------------------
+static bool RayAABB(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT3& dir,
+                    const DirectX::XMFLOAT3& aabbMin, const DirectX::XMFLOAT3& aabbMax,
+                    float& outT)
+{
+    constexpr float MAX_RANGE = 200.0f;
+    float tMin = 0.0f;
+    float tMax = MAX_RANGE;
+
+    auto slabTest = [&](float o, float d, float lo, float hi) -> bool {
+        if (fabsf(d) < 1e-8f)
+            return (o >= lo && o <= hi);
+        float inv = 1.0f / d;
+        float t1 = (lo - o) * inv;
+        float t2 = (hi - o) * inv;
+        if (t1 > t2) { float tmp = t1; t1 = t2; t2 = tmp; }
+        if (t1 > tMin) tMin = t1;
+        if (t2 < tMax) tMax = t2;
+        return tMin <= tMax;
+    };
+
+    if (!slabTest(origin.x, dir.x, aabbMin.x, aabbMax.x)) return false;
+    if (!slabTest(origin.y, dir.y, aabbMin.y, aabbMax.y)) return false;
+    if (!slabTest(origin.z, dir.z, aabbMin.z, aabbMax.z)) return false;
+
+    outT = tMin;
+    return true;
+}
+
+//-----------------------------------------------------------------------------
+// ProcessFiring - Fire-rate gating + hitscan against remote bot
+//-----------------------------------------------------------------------------
+void MockServer::ProcessFiring()
+{
+    bool isFiring = (m_LastInputCmd.buttons & InputButtons::FIRE) != 0;
+
+    if (!isFiring)
+    {
+        m_FireTimer = 0.0;
+        return;
+    }
+
+    double fireInterval = 60.0 / RED_RPM;
+
+    bool shouldFire = false;
+    if (m_FireTimer <= 0.0)
+    {
+        shouldFire = true;
+        m_FireTimer = fireInterval;
+    }
+    else
+    {
+        m_FireTimer -= TICK_DURATION;
+        if (m_FireTimer <= 0.0)
+        {
+            shouldFire = true;
+            m_FireTimer += fireInterval;
+        }
+    }
+
+    if (!shouldFire) return;
+
+    m_FireCounter++;
+
+    // Eye position
+    DirectX::XMFLOAT3 eyePos = {
+        m_PlayerState.position.x,
+        m_PlayerState.position.y + 1.5f,
+        m_PlayerState.position.z
+    };
+
+    // Ray direction from yaw/pitch
+    float cosPitch = cosf(m_PlayerState.pitch);
+    DirectX::XMFLOAT3 rayDir = {
+        sinf(m_PlayerState.yaw) * cosPitch,
+        sinf(m_PlayerState.pitch),
+        cosf(m_PlayerState.yaw) * cosPitch
+    };
+
+    // Test against remote bot capsule
+    float hitDist = 0.0f;
+    if (RayCapsule(eyePos, rayDir, m_RemotePlayerState.position,
+                   PLAYER_HEIGHT, CAPSULE_RADIUS, hitDist))
+    {
+        // Check if a wall is closer than the player hit
+        float wallDist = 99999.0f;
+        if (m_pCollisionWorld)
+        {
+            for (const auto& col : m_pCollisionWorld->GetColliders())
+            {
+                float t = 0.0f;
+                if (RayAABB(eyePos, rayDir, col.aabb.min, col.aabb.max, t))
+                {
+                    if (t < wallDist) wallDist = t;
+                }
+            }
+        }
+
+        // Only damage if player is closer than the nearest wall
+        if (hitDist < wallDist)
+        {
+            if (m_RemoteHealth > RED_DAMAGE)
+            {
+                m_RemoteHealth -= RED_DAMAGE;
+            }
+            else
+            {
+                m_RemoteHealth = 0;
+                m_RemotePlayerState.stateFlags |= NetStateFlags::IS_DEAD;
+                m_RemoteRespawnTimer = RESPAWN_TIME;
+                m_RemotePlayerState.velocity = { 0.0f, 0.0f, 0.0f };
+            }
+
+            // Hit marker for local player
+            m_PlayerState.hitByPlayerId = 1;
+        }
+    }
+}
+
+//-----------------------------------------------------------------------------
 // BroadcastSnapshot - Send authoritative state to client
 //-----------------------------------------------------------------------------
 void MockServer::BroadcastSnapshot()
@@ -348,13 +612,11 @@ void MockServer::BroadcastSnapshot()
     snapshot.localPlayerId = 0;
     snapshot.localPlayerTeam = PlayerTeam::RED;
 
-    // Mirror local player as remote player for TP model debug (offset 3m forward)
+    // Include remote bot player
+    m_RemotePlayerState.tickId = m_CurrentTick;
     snapshot.remotePlayers[0].playerId = 1;
-    snapshot.remotePlayers[0].teamId = PlayerTeam::RED;
-    snapshot.remotePlayers[0].state = m_PlayerState;
-    snapshot.remotePlayers[0].state.position.x += sinf(m_PlayerState.yaw) * 3.0f;
-    snapshot.remotePlayers[0].state.position.z += cosf(m_PlayerState.yaw) * 3.0f;
-    snapshot.remotePlayers[0].state.yaw += DirectX::XM_PI/2;  // Face opposite direction
+    snapshot.remotePlayers[0].teamId = PlayerTeam::BLUE;
+    snapshot.remotePlayers[0].state = m_RemotePlayerState;
     snapshot.remotePlayerCount = 1;
 
     m_pNetwork->SendSnapshot(snapshot);
