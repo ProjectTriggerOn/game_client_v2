@@ -18,6 +18,20 @@
 #include "player_state_mechine.h"
 #include "net_common.h"
 
+//=============================================================================
+// InputHistoryEntry - Stores one tick of input + resulting physics state
+// Used for client-side prediction reconciliation (re-simulation)
+//=============================================================================
+struct InputHistoryEntry
+{
+	InputCmd cmd;                      // The input command sent to server
+	float worldInputX;                 // World-space input X (for replay)
+	float worldInputZ;                 // World-space input Z (for replay)
+	DirectX::XMFLOAT3 position;        // Resulting position after physics
+	DirectX::XMFLOAT3 velocity;        // Resulting velocity after physics
+	uint32_t stateFlags;               // State flags (grounded, jumping, etc.)
+};
+
 class Player_Fps
 {
 public:
@@ -88,6 +102,13 @@ private:
 	const char* m_CorrectionMode;
 	float m_CorrectionError;
 	uint32_t m_LastServerTick;
+
+	// Input History for Reconciliation (Re-simulation)
+	static constexpr int INPUT_HISTORY_SIZE = 10;  // 312.5ms @ 32Hz
+	InputHistoryEntry m_InputHistory[INPUT_HISTORY_SIZE];
+	int m_InputHistoryHead;            // Next write index (circular buffer)
+	int m_InputHistoryCount;           // Current number of valid entries
+	uint32_t m_CurrentClientTick;      // Client-side tick counter (synced with server)
 	
 	// Other members
 	DirectX::XMFLOAT3 m_ModelFront;
@@ -123,4 +144,14 @@ private:
 	MODEL_ANI* m_Model;
 	Animator* m_Animator;
 	PlayerStateMachine* m_StateMachine;
+
+	//-------------------------------------------------------------------------
+	// Client-Side Prediction Reconciliation (Input History & Re-simulation)
+	//-------------------------------------------------------------------------
+	void RecordInputHistory(const InputCmd& cmd, float worldInputX, float worldInputZ);
+	InputHistoryEntry* FindHistoryEntry(uint32_t tickId);
+	void ClearInputHistory();
+	uint32_t GetStateFlags() const;
+	void ApplyPhysicsTick(float worldInputX, float worldInputZ, uint32_t buttons, float dt);
+	void ResimulateFromTick(uint32_t serverTick);
 };
