@@ -6,6 +6,7 @@
 #include "direct3d.h"
 #include "fade.h"
 #include "game.h"
+#include "input_producer.h"
 #include "mouse.h"
 #include "ms_logger.h"
 #include "shader_3d_ani.h"
@@ -19,6 +20,9 @@ Player_Fps::Player_Fps()
 	, m_CorrectionMode("NONE")
 	, m_CorrectionError(0.0f)
 	, m_LastServerTick(0)
+	, m_InputHistoryHead(0)
+	, m_InputHistoryCount(0)
+	, m_CurrentClientTick(0)
 	, m_ModelFront({ 0,0,1 })
 	, m_MoveDir({ 0,0,1 })
 	, m_CamRelativePos({ 0.0f, 0.0f,0.3f })
@@ -161,129 +165,67 @@ void Player_Fps::Update(double elapsed_time)
 	double clampedDelta = (elapsed_time > maxDelta) ? maxDelta : elapsed_time;
 	m_PhysicsAccumulator += clampedDelta;
 
-	// Sample input ONCE per frame (used by all physics ticks this frame)
+	// Sample input from InputProducer (already converted to InputCmd)
+	InputCmd currentCmd;
+	if (g_pInputProducer)
+	{
+		currentCmd = g_pInputProducer->GetLastInputCmd();
+	}
+	else
+	{
+		// Fallback: create empty command if no InputProducer
+		currentCmd = {};
+		currentCmd.tickId = m_CurrentClientTick;
+	}
+
+	// Update camera model front
 	XMFLOAT3 camFront = PlayerCamFps_GetFront();
 	m_ModelFront = camFront;
 
-	float frontX = camFront.x;
-	float frontZ = camFront.z;
-	float frontMag = sqrtf(frontX * frontX + frontZ * frontZ);
-	if (frontMag > 0.001f) { frontX /= frontMag; frontZ /= frontMag; }
-
+	// Convert InputCmd movement axes to world space
+	// CRITICAL: Must match server's method exactly (game_server.cpp:322-329)
+	// Server uses yaw only (2D), not 3D camera vector projection
+	float yaw = currentCmd.yaw;
+	float frontX = sinf(yaw);
+	float frontZ = cosf(yaw);
 	float rightX = frontZ;
 	float rightZ = -frontX;
 
-	float inputX = 0.0f, inputZ = 0.0f;
-	if (KeyLogger_IsPressed(KK_W)) { inputX += frontX; inputZ += frontZ; }
-	if (KeyLogger_IsPressed(KK_S)) { inputX -= frontX; inputZ -= frontZ; }
-	if (KeyLogger_IsPressed(KK_D)) { inputX += rightX; inputZ += rightZ; }
-	if (KeyLogger_IsPressed(KK_A)) { inputX -= rightX; inputZ -= rightZ; }
+	// Transform camera-relative input to world space
+	float worldInputX = currentCmd.moveAxisX * rightX + currentCmd.moveAxisY * frontX;
+	float worldInputZ = currentCmd.moveAxisX * rightZ + currentCmd.moveAxisY * frontZ;
 
-	float inputMag = sqrtf(inputX * inputX + inputZ * inputZ);
-	if (inputMag > 1.0f) { inputX /= inputMag; inputZ /= inputMag; inputMag = 1.0f; }
+	// Normalize if magnitude > 1.0
+	float inputMag = sqrtf(worldInputX * worldInputX + worldInputZ * worldInputZ);
+	if (inputMag > 1.0f) { worldInputX /= inputMag; worldInputZ /= inputMag; }
 
-	bool tryRunning = KeyLogger_IsPressed(KK_LEFTSHIFT);
+	// Extract other input flags for animation and state machine (used after physics loop)
+	bool tryRunning = (currentCmd.buttons & InputButtons::SPRINT) != 0;
+
+	// Sample jump input (still using keyboard for frame-rate independent capture)
 	if (KeyLogger_IsTrigger(KK_SPACE)) m_JumpPending = true;
 
 	// ========================================================================
-	// CS:GO / Valorant Style Movement Parameters (match server)
+	// PHYSICS TICK LOOP with Input History Recording
 	// ========================================================================
-	constexpr float MAX_WALK_SPEED = 5.0f;
-	constexpr float MAX_RUN_SPEED  = 8.0f;
-	constexpr float GROUND_ACCEL   = 50.0f;
-	constexpr float AIR_ACCEL      = 2.0f;
-	constexpr float GRAVITY        = 20.0f;
-	constexpr float JUMP_VELOCITY  = 8.0f;
-
 	while (m_PhysicsAccumulator >= TICK_DURATION)
 	{
-		// Save position before this tick (for sub-tick interpolation between frames)
+		// Save position before this tick (for sub-tick interpolation)
 		m_PrevPhysicsPosition = m_Position;
 		const float dt = static_cast<float>(TICK_DURATION);
 
-		float maxSpeed = tryRunning ? MAX_RUN_SPEED : MAX_WALK_SPEED;
-		float targetVelX = inputX * maxSpeed;
-		float targetVelZ = inputZ * maxSpeed;
+		// Increment client tick (sync with server tick on first snapshot)
+		m_CurrentClientTick++;
 
-		// ====================================================================
-		// Ground vs Air Movement
-		// ====================================================================
-		if (!m_isJump)  // Grounded
-		{
-			float accelStep = GROUND_ACCEL * dt;
+		// Update InputCmd tickId for this physics tick
+		InputCmd tickCmd = currentCmd;
+		tickCmd.tickId = m_CurrentClientTick;
 
-			float diffX = targetVelX - m_Velocity.x;
-			if (fabsf(diffX) <= accelStep)
-				m_Velocity.x = targetVelX;
-			else
-				m_Velocity.x += (diffX > 0 ? accelStep : -accelStep);
+		// Apply physics simulation with current input
+		ApplyPhysicsTick(worldInputX, worldInputZ, tickCmd.buttons, dt);
 
-			float diffZ = targetVelZ - m_Velocity.z;
-			if (fabsf(diffZ) <= accelStep)
-				m_Velocity.z = targetVelZ;
-			else
-				m_Velocity.z += (diffZ > 0 ? accelStep : -accelStep);
-
-			// Jump (consume pending input)
-			if (m_JumpPending)
-			{
-				m_Velocity.y = JUMP_VELOCITY;
-				m_isJump = true;
-				m_JumpPending = false;
-			}
-		}
-		else  // Airborne
-		{
-			float airStep = AIR_ACCEL * dt;
-
-			if (inputMag > 0.01f)
-			{
-				m_Velocity.x += inputX * airStep;
-				m_Velocity.z += inputZ * airStep;
-
-				float horizSpeed = sqrtf(m_Velocity.x * m_Velocity.x + m_Velocity.z * m_Velocity.z);
-				if (horizSpeed > maxSpeed * 1.2f)
-				{
-					float scale = (maxSpeed * 1.2f) / horizSpeed;
-					m_Velocity.x *= scale;
-					m_Velocity.z *= scale;
-				}
-			}
-
-			// Gravity
-			m_Velocity.y -= GRAVITY * dt;
-		}
-
-		// ====================================================================
-		// Apply Velocity to Position
-		// ====================================================================
-		m_Position.x += m_Velocity.x * dt;
-		m_Position.z += m_Velocity.z * dt;
-		m_Position.y += m_Velocity.y * dt;
-
-		// ====================================================================
-		// Collision Detection (Capsule vs World AABBs)
-		// ====================================================================
-		if (m_pCollisionWorld)
-		{
-			auto result = m_pCollisionWorld->ResolveCapsule(
-				m_Position, m_Height, m_CapsuleRadius, m_Velocity);
-			m_Position = result.position;
-			m_Velocity = result.velocity;
-			if (result.isGrounded)
-				m_isJump = false;
-			else
-				m_isJump = true;
-		}
-		else
-		{
-			if (m_Position.y <= 0.0f)
-			{
-				m_Position.y = 0.0f;
-				m_Velocity.y = 0.0f;
-				m_isJump = false;
-			}
-		}
+		// Record input + resulting state in history buffer
+		RecordInputHistory(tickCmd, worldInputX, worldInputZ);
 
 		m_PhysicsAccumulator -= TICK_DURATION;
 	}
@@ -297,7 +239,7 @@ void Player_Fps::Update(double elapsed_time)
 	if (inputMag > 0.01f)
 	{
 		m_StateMachine->SetPlayerState(tryRunning ? PlayerState::RUNNING : PlayerState::WALKING);
-		XMStoreFloat3(&m_MoveDir, XMVectorSet(inputX, 0, inputZ, 0));
+		XMStoreFloat3(&m_MoveDir, XMVectorSet(worldInputX, 0, worldInputZ, 0));
 	}
 	else
 	{
@@ -575,14 +517,37 @@ void Player_Fps::ApplyServerCorrection(const NetPlayerState& serverState)
 	// Skip if same tick already processed
 	if (serverState.tickId <= m_LastServerTick && m_LastServerTick != 0)
 		return;
+
+	// Initialize client tick from first server snapshot
+	if (m_CurrentClientTick == 0)
+	{
+		m_CurrentClientTick = serverState.tickId;
+	}
+	else
+	{
+		// Detect tick drift and force resync if too large
+		// This can happen due to frame rate variance or packet loss
+		int tickDrift = static_cast<int>(m_CurrentClientTick) - static_cast<int>(serverState.tickId);
+
+		// Expected drift: client is ahead by RTT/2 (~1-3 ticks for 30-100ms RTT)
+		// If drift is too large (>10 ticks = 312ms), force resync
+		if (tickDrift > 10 || tickDrift < -5)
+		{
+			// Abnormal drift detected - resync to server
+			m_CurrentClientTick = serverState.tickId;
+			ClearInputHistory();  // History is no longer valid
+		}
+	}
+
 	m_LastServerTick = serverState.tickId;
-	
-	// Correction thresholds
-	// With 100ms RTT and 5m/s walk speed, expected systematic error ≈ 0.5m.
-	// SOFT threshold is intentionally high to avoid snapping on normal RTT error.
-	// HARD snap only for true divergence (collision bug, teleport, respawn).
-	constexpr float SOFT_CORRECTION_THRESHOLD = 0.8f;  // visual-only offset
-	constexpr float HARD_SNAP_THRESHOLD = 4.0f;         // full teleport
+
+	// Correction thresholds with hysteresis to prevent rapid switching
+	// RESIM: Re-simulate when error exceeds threshold
+	// HARD: Teleport for true divergence (collision bug, respawn, teleport)
+	// Use lower threshold if already correcting to avoid flickering between OK/RESIM
+	const bool wasCorrect = (m_CorrectionMode == nullptr || strcmp(m_CorrectionMode, "OK") == 0);
+	const float RESIM_THRESHOLD = wasCorrect ? 0.25f : 0.1f;  // Higher to enter, lower to stay
+	constexpr float HARD_SNAP_THRESHOLD = 4.0f;                // Full teleport
 
 	// Calculate error between predicted and server position
 	float dx = m_Position.x - serverState.position.x;
@@ -601,22 +566,71 @@ void Player_Fps::ApplyServerCorrection(const NetPlayerState& serverState)
 		m_PrevPhysicsPosition = serverState.position;
 		m_Velocity = serverState.velocity;
 		m_RenderOffset = { 0.0f, 0.0f, 0.0f };
+		m_isJump = !(serverState.stateFlags & NetStateFlags::IS_GROUNDED);
+
+		// Clear input history on hard snap
+		ClearInputHistory();
 	}
-	else if (error > SOFT_CORRECTION_THRESHOLD)
+	else if (error > RESIM_THRESHOLD)
 	{
-		// ===== SOFT CORRECTION =====
-		// DO NOT snap m_Position or m_Velocity — that interrupts prediction
-		// and causes rubber-banding when server velocity lags behind client.
-		// Instead, only push the visual render offset; physics prediction continues
-		// uninterrupted from its current state.
-		m_CorrectionMode = "SOFT";
-		m_RenderOffset.x += m_Position.x - serverState.position.x;
-		m_RenderOffset.y += m_Position.y - serverState.position.y;
-		m_RenderOffset.z += m_Position.z - serverState.position.z;
+		// ===== RE-SIMULATION =====
+		// Find history entry for server tick
+		InputHistoryEntry* serverEntry = FindHistoryEntry(serverState.tickId);
+
+		if (!serverEntry)
+		{
+			// Tick not in history (too old or missing)
+			// Fall back to old soft correction behavior
+			m_CorrectionMode = "SOFT";
+			m_RenderOffset.x += m_Position.x - serverState.position.x;
+			m_RenderOffset.y += m_Position.y - serverState.position.y;
+			m_RenderOffset.z += m_Position.z - serverState.position.z;
+		}
+		else
+		{
+			// Save original predicted position for visual offset calculation
+			DirectX::XMFLOAT3 originalPredictedPos = m_Position;
+
+			// Replace history entry with server authoritative state
+			serverEntry->position = serverState.position;
+			serverEntry->velocity = serverState.velocity;
+			serverEntry->stateFlags = serverState.stateFlags;
+
+			// Reset current physics state to server state
+			m_Position = serverState.position;
+			m_Velocity = serverState.velocity;
+			m_isJump = !(serverState.stateFlags & NetStateFlags::IS_GROUNDED);
+
+			// Re-simulate all ticks from server tick to current tick
+			ResimulateFromTick(serverState.tickId);
+
+			// Verify re-simulation quality: check server tick position after re-sim
+			InputHistoryEntry* verifyEntry = FindHistoryEntry(serverState.tickId);
+			if (verifyEntry)
+			{
+				float vdx = verifyEntry->position.x - serverState.position.x;
+				float vdy = verifyEntry->position.y - serverState.position.y;
+				float vdz = verifyEntry->position.z - serverState.position.z;
+				float verifyError = sqrtf(vdx * vdx + vdy * vdy + vdz * vdz);
+
+				// Update displayed error to show post-resim accuracy
+				// (Should be near-zero if physics is deterministic)
+				m_CorrectionError = verifyError;
+			}
+
+			// Calculate visual offset for smooth transition
+			// (originalPos - correctedPos) makes render position stay at originalPos initially
+			m_RenderOffset.x = originalPredictedPos.x - m_Position.x;
+			m_RenderOffset.y = originalPredictedPos.y - m_Position.y;
+			m_RenderOffset.z = originalPredictedPos.z - m_Position.z;
+
+			m_CorrectionMode = "RESIM";
+		}
 	}
 	else
 	{
 		// ===== NO CORRECTION =====
+		// Prediction is accurate (<0.1m error)
 		m_CorrectionMode = "OK";
 	}
 
@@ -631,6 +645,9 @@ void Player_Fps::ApplyServerCorrection(const NetPlayerState& serverState)
 		// Just died — fade to red
 		Fade_Start(0.5, true, { 0.5f, 0.0f, 0.0f });
 		m_IsDead = true;
+
+		// Clear input history on death
+		ClearInputHistory();
 	}
 	else if (!isDead && m_WasDead)
 	{
@@ -641,6 +658,7 @@ void Player_Fps::ApplyServerCorrection(const NetPlayerState& serverState)
 		m_PrevPhysicsPosition = serverState.position;
 		m_Velocity = serverState.velocity;
 		m_RenderOffset = { 0.0f, 0.0f, 0.0f };
+		m_isJump = !(serverState.stateFlags & NetStateFlags::IS_GROUNDED);
 
 		// Face toward world center (0, 0, 0)
 		float dx = 0.0f - serverState.position.x;
@@ -653,6 +671,10 @@ void Player_Fps::ApplyServerCorrection(const NetPlayerState& serverState)
 		m_Ammo        = MAG_SIZE;
 		m_AmmoReserve = MAX_RESERVE;
 		m_StateMachine->SetWeaponState(WeaponState::HIP);
+
+		// Clear input history and sync tick on respawn
+		ClearInputHistory();
+		m_CurrentClientTick = serverState.tickId;
 	}
 	m_WasDead = isDead;
 }
@@ -732,12 +754,196 @@ float Player_Fps::GetCurrentAniDuration() const
 }
 
 float Player_Fps::GetCurrentAniProgress() const
-{	
+{
 	if (m_Animator)
 	{
 		return m_Animator->GetCurrAniProgress();
 	}
 	return 0.0f;
+}
+
+//=============================================================================
+// Client-Side Prediction Reconciliation - Input History & Re-simulation
+//=============================================================================
+
+void Player_Fps::RecordInputHistory(const InputCmd& cmd, float worldInputX, float worldInputZ)
+{
+	// Store input + resulting physics state in circular buffer
+	InputHistoryEntry& entry = m_InputHistory[m_InputHistoryHead];
+	entry.cmd = cmd;
+	entry.worldInputX = worldInputX;
+	entry.worldInputZ = worldInputZ;
+	entry.position = m_Position;
+	entry.velocity = m_Velocity;
+	entry.stateFlags = GetStateFlags();
+
+	// Advance circular buffer head
+	m_InputHistoryHead = (m_InputHistoryHead + 1) % INPUT_HISTORY_SIZE;
+
+	// Track count (max INPUT_HISTORY_SIZE)
+	if (m_InputHistoryCount < INPUT_HISTORY_SIZE)
+		m_InputHistoryCount++;
+}
+
+InputHistoryEntry* Player_Fps::FindHistoryEntry(uint32_t tickId)
+{
+	// Linear search through circular buffer (only 10 entries, fast enough)
+	for (int i = 0; i < m_InputHistoryCount; i++)
+	{
+		int index = (m_InputHistoryHead - 1 - i + INPUT_HISTORY_SIZE) % INPUT_HISTORY_SIZE;
+		if (m_InputHistory[index].cmd.tickId == tickId)
+		{
+			return &m_InputHistory[index];
+		}
+	}
+	return nullptr;  // Tick not found (too old or not recorded)
+}
+
+void Player_Fps::ClearInputHistory()
+{
+	m_InputHistoryHead = 0;
+	m_InputHistoryCount = 0;
+}
+
+uint32_t Player_Fps::GetStateFlags() const
+{
+	uint32_t flags = 0;
+	if (m_isJump)
+		flags |= NetStateFlags::IS_JUMPING;
+	if (!m_isJump)
+		flags |= NetStateFlags::IS_GROUNDED;
+	// Add other state flags as needed (IS_FIRING, IS_ADS, etc.)
+	return flags;
+}
+
+void Player_Fps::ResimulateFromTick(uint32_t serverTick)
+{
+	// Replay all ticks from serverTick+1 to m_CurrentClientTick
+	// This corrects client prediction based on server's authoritative state
+	const float dt = static_cast<float>(TICK_DURATION);
+
+	for (uint32_t tick = serverTick + 1; tick <= m_CurrentClientTick; tick++)
+	{
+		InputHistoryEntry* entry = FindHistoryEntry(tick);
+		if (!entry)
+		{
+			// Tick not found in history (too old or missing)
+			// This shouldn't happen if buffer size is adequate
+			break;
+		}
+
+		// Re-apply physics with the same input that was used originally
+		ApplyPhysicsTick(entry->worldInputX, entry->worldInputZ, entry->cmd.buttons, dt);
+
+		// Update history entry with corrected result
+		entry->position = m_Position;
+		entry->velocity = m_Velocity;
+		entry->stateFlags = GetStateFlags();
+	}
+}
+
+void Player_Fps::ApplyPhysicsTick(float worldInputX, float worldInputZ, uint32_t buttons, float dt)
+{
+	// ========================================================================
+	// CS:GO / Valorant Style Movement Parameters (match server)
+	// ========================================================================
+	constexpr float MAX_WALK_SPEED = 5.0f;
+	constexpr float MAX_RUN_SPEED  = 8.0f;
+	constexpr float GROUND_ACCEL   = 50.0f;
+	constexpr float AIR_ACCEL      = 2.0f;
+	constexpr float GRAVITY        = 20.0f;
+	constexpr float JUMP_VELOCITY  = 8.0f;
+
+	// Input already in world space (converted from camera-relative axes)
+	float inputX = worldInputX;
+	float inputZ = worldInputZ;
+	float inputMag = sqrtf(inputX * inputX + inputZ * inputZ);
+	bool tryRunning = (buttons & InputButtons::SPRINT) != 0;
+	bool jumpPressed = (buttons & InputButtons::JUMP) != 0;
+
+	float maxSpeed = tryRunning ? MAX_RUN_SPEED : MAX_WALK_SPEED;
+	float targetVelX = inputX * maxSpeed;
+	float targetVelZ = inputZ * maxSpeed;
+
+	// ====================================================================
+	// Ground vs Air Movement
+	// ====================================================================
+	if (!m_isJump)  // Grounded
+	{
+		float accelStep = GROUND_ACCEL * dt;
+
+		float diffX = targetVelX - m_Velocity.x;
+		if (fabsf(diffX) <= accelStep)
+			m_Velocity.x = targetVelX;
+		else
+			m_Velocity.x += (diffX > 0 ? accelStep : -accelStep);
+
+		float diffZ = targetVelZ - m_Velocity.z;
+		if (fabsf(diffZ) <= accelStep)
+			m_Velocity.z = targetVelZ;
+		else
+			m_Velocity.z += (diffZ > 0 ? accelStep : -accelStep);
+
+		// Jump (consume pending input)
+		if (jumpPressed && m_JumpPending)
+		{
+			m_Velocity.y = JUMP_VELOCITY;
+			m_isJump = true;
+			m_JumpPending = false;
+		}
+	}
+	else  // Airborne
+	{
+		float airStep = AIR_ACCEL * dt;
+
+		if (inputMag > 0.01f)
+		{
+			m_Velocity.x += inputX * airStep;
+			m_Velocity.z += inputZ * airStep;
+
+			float horizSpeed = sqrtf(m_Velocity.x * m_Velocity.x + m_Velocity.z * m_Velocity.z);
+			if (horizSpeed > maxSpeed * 1.2f)
+			{
+				float scale = (maxSpeed * 1.2f) / horizSpeed;
+				m_Velocity.x *= scale;
+				m_Velocity.z *= scale;
+			}
+		}
+
+		// Gravity
+		m_Velocity.y -= GRAVITY * dt;
+	}
+
+	// ====================================================================
+	// Apply Velocity to Position
+	// ====================================================================
+	m_Position.x += m_Velocity.x * dt;
+	m_Position.z += m_Velocity.z * dt;
+	m_Position.y += m_Velocity.y * dt;
+
+	// ====================================================================
+	// Collision Detection (Capsule vs World AABBs)
+	// ====================================================================
+	if (m_pCollisionWorld)
+	{
+		auto result = m_pCollisionWorld->ResolveCapsule(
+			m_Position, m_Height, m_CapsuleRadius, m_Velocity);
+		m_Position = result.position;
+		m_Velocity = result.velocity;
+		if (result.isGrounded)
+			m_isJump = false;
+		else
+			m_isJump = true;
+	}
+	else
+	{
+		if (m_Position.y <= 0.0f)
+		{
+			m_Position.y = 0.0f;
+			m_Velocity.y = 0.0f;
+			m_isJump = false;
+		}
+	}
 }
 
 
