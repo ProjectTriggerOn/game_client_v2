@@ -204,6 +204,19 @@ void MockServer::ProcessInputCmd(const InputCmd& cmd)
         flags &= ~NetStateFlags::IS_RELOADING;
     }
 
+    // Inspect: set when INSPECT pressed, clear on any action input
+    bool hasActionInput = (cmd.buttons & (InputButtons::FIRE | InputButtons::ADS | InputButtons::RELOAD | InputButtons::JUMP | InputButtons::SPRINT)) != 0
+        || fabsf(cmd.moveAxisX) > 0.01f || fabsf(cmd.moveAxisY) > 0.01f;
+
+    if (cmd.buttons & InputButtons::INSPECT)
+    {
+        flags |= NetStateFlags::IS_INSPECTING;
+    }
+    else if ((flags & NetStateFlags::IS_INSPECTING) && hasActionInput)
+    {
+        flags &= ~NetStateFlags::IS_INSPECTING;
+    }
+
     m_PlayerState.stateFlags = flags;
 }
 
@@ -513,6 +526,13 @@ static bool RayAABB(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT3& di
 //-----------------------------------------------------------------------------
 void MockServer::ProcessFiring()
 {
+    // Block firing while reloading or inspecting
+    if (m_PlayerState.stateFlags & (NetStateFlags::IS_RELOADING | NetStateFlags::IS_INSPECTING))
+    {
+        m_FireTimer = 0.0;
+        return;
+    }
+
     bool isFiring = (m_LastInputCmd.buttons & InputButtons::FIRE) != 0;
 
     if (!isFiring)
