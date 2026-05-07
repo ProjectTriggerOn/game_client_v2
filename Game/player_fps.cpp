@@ -37,9 +37,8 @@ Player_Fps::Player_Fps()
 	, m_Model(nullptr)
 	, m_Animator(nullptr)
 	, m_StateMachine(nullptr)
-	, m_Ammo(MAG_SIZE)
-	, m_AmmoReserve(MAX_RESERVE)
-	, m_InfiniteReserve(true)
+	, m_Ammo(WeaponConfig::MAG_SIZE)
+	, m_AmmoReserve(WeaponConfig::MAX_RESERVE)
 	, m_WeaponRPM(600.0)
 	, m_FireTimer(0.0)
 	, m_FireCounter(0)
@@ -70,8 +69,8 @@ void Player_Fps::Initialize(const DirectX::XMFLOAT3& position, const DirectX::XM
 	m_PrevPhysicsPosition = position;
 	m_PhysicsAlpha = 0.0f;
 	m_WasDead = true;   // first snapshot will set yaw toward world center
-	m_Ammo        = MAG_SIZE;
-	m_AmmoReserve = MAX_RESERVE;
+	m_Ammo        = WeaponConfig::MAG_SIZE;
+	m_AmmoReserve = WeaponConfig::MAX_RESERVE;
 
 	XMStoreFloat3(&m_MoveDir, XMVector3Normalize(XMLoadFloat3(&front)));
 	XMStoreFloat3(&m_ModelFront, XMVector3Normalize(XMLoadFloat3(&front)));
@@ -306,7 +305,7 @@ void Player_Fps::Update(double elapsed_time)
 			m_StateMachine->SetWeaponState(WeaponState::ADS_FIRING);
 			m_FireTimer = 0.0;
 			m_Ammo--; m_FireCounter++;
-		} else if ((m_InfiniteReserve || m_AmmoReserve > 0)) {
+		} else if (m_AmmoReserve > 0) {
 			m_StateMachine->SetWeaponState(WeaponState::RELOADING_OUT_OF_AMMO);
 		}
 	}
@@ -324,49 +323,49 @@ void Player_Fps::Update(double elapsed_time)
 			const double fireInterval = 60.0 / m_WeaponRPM;
 			if (m_FireTimer >= fireInterval) {
 				m_FireTimer -= fireInterval;
-				m_Animator->SetSameAniOverlapAllow(true);
-				if (m_Ammo > 0) { m_Ammo--; m_FireCounter++; }
-				else if ((m_InfiniteReserve || m_AmmoReserve > 0)) {
-					m_StateMachine->SetWeaponState(WeaponState::RELOADING_OUT_OF_AMMO);
-				}
+			m_Animator->SetSameAniOverlapAllow(true);
+			if (m_Ammo > 0) { m_Ammo--; m_FireCounter++; }
+			else if (m_AmmoReserve > 0) {
+				m_StateMachine->SetWeaponState(WeaponState::RELOADING_OUT_OF_AMMO);
 			}
 		}
 	}
+}
 
-	// ---- HIP FIRE: click to start, hold for full-auto ----
+// ---- HIP FIRE: click to start, hold for full-auto ----
 	if (isPressingLeft && m_StateMachine->GetWeaponState() == WeaponState::HIP) {
 		if (m_Ammo > 0) {
-			// First shot on press
-			m_StateMachine->SetWeaponState(WeaponState::HIP_FIRING);
-			m_FireTimer = 0.0;
-			m_Ammo--; m_FireCounter++;
-		} else if ((m_InfiniteReserve || m_AmmoReserve > 0)) {
-			m_StateMachine->SetWeaponState(WeaponState::RELOADING_OUT_OF_AMMO);
-		}
+		// First shot on press
+		m_StateMachine->SetWeaponState(WeaponState::HIP_FIRING);
+		m_FireTimer = 0.0;
+		m_Ammo--; m_FireCounter++;
+	} else if (m_AmmoReserve > 0) {
+		m_StateMachine->SetWeaponState(WeaponState::RELOADING_OUT_OF_AMMO);
 	}
+}
 
-	if (m_StateMachine->GetWeaponState() == WeaponState::HIP_FIRING) {
+if (m_StateMachine->GetWeaponState() == WeaponState::HIP_FIRING) {
 		if (isPressingLeft) {
 			// Full-auto: accumulate timer and fire at RPM interval
 			m_FireTimer += frameDt;
 			const double fireInterval = 60.0 / m_WeaponRPM;
 			if (m_FireTimer >= fireInterval) {
 				m_FireTimer -= fireInterval;
-				m_Animator->SetSameAniOverlapAllow(true);
-				if (m_Ammo > 0) { m_Ammo--; m_FireCounter++; }
-				else if ((m_InfiniteReserve || m_AmmoReserve > 0)) {
-					m_StateMachine->SetWeaponState(WeaponState::RELOADING_OUT_OF_AMMO);
-				}
+			m_Animator->SetSameAniOverlapAllow(true);
+			if (m_Ammo > 0) { m_Ammo--; m_FireCounter++; }
+			else if (m_AmmoReserve > 0) {
+				m_StateMachine->SetWeaponState(WeaponState::RELOADING_OUT_OF_AMMO);
 			}
 		}
 	}
+}
 
-	if (KeyLogger_IsTrigger(KK_R))
+if (KeyLogger_IsTrigger(KK_R))
 	{
 		WeaponState rws = m_StateMachine->GetWeaponState();
-		bool alreadyReloading = (rws == WeaponState::RELOADING ||
-		                         rws == WeaponState::RELOADING_OUT_OF_AMMO);
-		if (!alreadyReloading && m_Ammo < MAG_SIZE && (m_InfiniteReserve || m_AmmoReserve > 0))
+	bool alreadyReloading = (rws == WeaponState::RELOADING ||
+	                         rws == WeaponState::RELOADING_OUT_OF_AMMO);
+	if (!alreadyReloading && m_Ammo < WeaponConfig::MAG_SIZE && m_AmmoReserve > 0)
 		{
 			WeaponState nextReload = (m_Ammo == 0)
 				? WeaponState::RELOADING_OUT_OF_AMMO
@@ -403,14 +402,10 @@ void Player_Fps::Update(double elapsed_time)
 		    (prevWs == WeaponState::RELOADING ||
 		     prevWs == WeaponState::RELOADING_OUT_OF_AMMO))
 		{
-			int needed = MAG_SIZE - m_Ammo;
-			if (m_InfiniteReserve) {
-				m_Ammo = MAG_SIZE;
-			} else {
-				int refill    = (m_AmmoReserve >= needed) ? needed : m_AmmoReserve;
-				m_Ammo       += refill;
-				m_AmmoReserve -= refill;
-			}
+		int needed = WeaponConfig::MAG_SIZE - m_Ammo;
+		int refill    = (m_AmmoReserve >= needed) ? needed : m_AmmoReserve;
+		m_Ammo       += refill;
+		m_AmmoReserve -= refill;
 		}
 
 		// Override additive layer: fire animation during ADS transition
@@ -667,16 +662,26 @@ void Player_Fps::ApplyServerCorrection(const NetPlayerState& serverState)
 		PlayerCamFps_SetYaw(yaw);
 		PlayerCamFps_SetPitch(0.0f);
 
-		// Reset ammo and weapon state on respawn
-		m_Ammo        = MAG_SIZE;
-		m_AmmoReserve = MAX_RESERVE;
+		// Weapon state reset on respawn
 		m_StateMachine->SetWeaponState(WeaponState::HIP);
 
 		// Clear input history and sync tick on respawn
 		ClearInputHistory();
 		m_CurrentClientTick = serverState.tickId;
 	}
+	bool wasDeadBefore = m_WasDead;
 	m_WasDead = isDead;
+
+	// Sync authoritative ammo only on respawn or large divergence
+	// (avoids HUD flicker from RTT delay during continuous firing)
+	static constexpr int AMMO_SYNC_THRESHOLD = 2;
+	int ammoDiff = abs(static_cast<int>(serverState.ammo) - m_Ammo);
+	int reserveDiff = abs(static_cast<int>(serverState.ammoReserve) - m_AmmoReserve);
+	if ((!isDead && wasDeadBefore) || ammoDiff > AMMO_SYNC_THRESHOLD || reserveDiff > AMMO_SYNC_THRESHOLD)
+	{
+		m_Ammo = serverState.ammo;
+		m_AmmoReserve = serverState.ammoReserve;
+	}
 }
 
 AABB Player_Fps::GetAABB() const

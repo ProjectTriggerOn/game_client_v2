@@ -42,6 +42,8 @@ void MockServer::Initialize(INetwork* pNetwork, CollisionWorld* pCollisionWorld)
     m_PlayerState.health = 200;
     m_PlayerState.hitByPlayerId = 0xFF;
     m_PlayerState.fireCounter = 0;
+    m_Ammo = WeaponConfig::MAG_SIZE;
+    m_AmmoReserve = WeaponConfig::MAX_RESERVE;
 
     // Initialize last input
     m_LastInputCmd = {};
@@ -149,6 +151,8 @@ void MockServer::Tick()
     // 4. Update tick ID in states
     m_PlayerState.tickId = m_CurrentTick;
     m_PlayerState.fireCounter = m_FireCounter;
+    m_PlayerState.ammo = m_Ammo;
+    m_PlayerState.ammoReserve = m_AmmoReserve;
 
     // 5. Broadcast snapshot to client
     BroadcastSnapshot();
@@ -184,10 +188,10 @@ void MockServer::ProcessInputCmd(const InputCmd& cmd)
     if (cmd.buttons & InputButtons::RELOAD)
     {
         // Start reload latch — keep IS_RELOADING active for duration
-        if (m_ReloadTimer <= 0.0)
-            m_ReloadTimer = RELOAD_DURATION;
+        if (m_ReloadTimer <= 0.0 && m_Ammo < WeaponConfig::MAG_SIZE && m_AmmoReserve > 0)
+            m_ReloadTimer = WeaponConfig::RELOAD_DURATION;
     }
-    
+
     // Reload latch timer
     if (m_ReloadTimer > 0.0)
     {
@@ -197,6 +201,12 @@ void MockServer::ProcessInputCmd(const InputCmd& cmd)
         {
             m_ReloadTimer = 0.0;
             flags &= ~NetStateFlags::IS_RELOADING;
+
+            // Refill magazine from reserve
+            int needed = WeaponConfig::MAG_SIZE - m_Ammo;
+            int refill = (m_AmmoReserve >= needed) ? needed : m_AmmoReserve;
+            m_Ammo += static_cast<uint8_t>(refill);
+            m_AmmoReserve -= static_cast<uint8_t>(refill);
         }
     }
     else
@@ -561,6 +571,10 @@ void MockServer::ProcessFiring()
 
     if (!shouldFire) return;
 
+    if (m_Ammo == 0)
+        return;
+
+    m_Ammo--;
     m_FireCounter++;
 
     // Eye position

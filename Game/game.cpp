@@ -444,13 +444,7 @@ void Game_Draw()
 		constexpr float BH = 52.0f;
 		float bx = (sw - BW) * 0.5f;
 
-		// Infinite reserve toggle
-		bool infRes = g_PlayerFps->GetInfiniteReserve();
-		const wchar_t* infLabel = infRes ? L"Inf Ammo: ON" : L"Inf Ammo: OFF";
-		if (Widget_DrawButton(bx, py + 150.0f, BW, BH, infLabel))
-			g_PlayerFps->SetInfiniteReserve(!infRes);
-
-		if (Widget_DrawButton(bx, py + 220.0f, BW, BH, L"Exit Game"))
+		if (Widget_DrawButton(bx, py + 150.0f, BW, BH, L"Exit Game"))
 		{
 			PostQuitMessage(0);
 		}

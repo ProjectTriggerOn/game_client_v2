@@ -83,9 +83,6 @@ public:
 	int GetAmmo()        const { return m_Ammo; }
 	int GetAmmoReserve() const { return m_AmmoReserve; }
 
-	bool GetInfiniteReserve() const { return m_InfiniteReserve; }
-	void SetInfiniteReserve(bool v) { m_InfiniteReserve = v; }
-
 	//-------------------------------------------------------------------------
 	// Debug info
 	//-------------------------------------------------------------------------
@@ -127,11 +124,8 @@ private:
 	DirectX::XMFLOAT3 m_PrevPhysicsPosition;  // Position before accumulator loop (for sub-tick interpolation)
 	float m_PhysicsAlpha;                       // Remainder fraction for render interpolation
 
-	static constexpr int MAG_SIZE    = 30;
-	static constexpr int MAX_RESERVE = 90;
 	int  m_Ammo;
 	int  m_AmmoReserve;
-	bool m_InfiniteReserve;
 
 	double m_WeaponRPM;
 	double m_FireTimer;

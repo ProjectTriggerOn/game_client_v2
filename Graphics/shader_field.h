@@ -1,4 +1,5 @@
 #pragma once
+
 #ifndef SHADER_Field_H
 #define	SHADER_Field_H
 

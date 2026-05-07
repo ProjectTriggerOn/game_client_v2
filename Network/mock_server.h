@@ -84,7 +84,6 @@ private:
     InputCmd m_LastInputCmd;        // Most recent input from client
 
     // Reload latch timer — keeps IS_RELOADING active for full animation duration
-    static constexpr double RELOAD_DURATION = 10.0;  // seconds
     double m_ReloadTimer = 0.0;
 
     // Collision world for gravity
@@ -98,6 +97,10 @@ private:
     // Local player combat state
     double   m_FireTimer = 0.0;
     uint16_t m_FireCounter = 0;
+
+    // Ammo
+    uint8_t m_Ammo = WeaponConfig::MAG_SIZE;
+    uint8_t m_AmmoReserve = WeaponConfig::MAX_RESERVE;
 
     // Player collision parameters (must match Player_Fps)
     static constexpr float PLAYER_HEIGHT = 1.6f;
