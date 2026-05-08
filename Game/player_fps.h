@@ -106,6 +106,7 @@ private:
 	int m_InputHistoryHead;            // Next write index (circular buffer)
 	int m_InputHistoryCount;           // Current number of valid entries
 	uint32_t m_CurrentClientTick;      // Client-side tick counter (synced with server)
+	bool m_InResimulation;             // True while ResimulateFromTick() is replaying — used to suppress noisy debug logs
 	
 	// Other members
 	DirectX::XMFLOAT3 m_ModelFront;

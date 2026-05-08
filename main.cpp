@@ -48,6 +48,7 @@
 #include "remote_player.h"
 #include "i_network.h"
 #include "config.h"
+#include "debug_log.h"
 #include "game.h"
 
 
@@ -71,6 +72,9 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR lpC
 
 	// Load global config early so window size settings are available
 	Config::GetInstance().Load("config.toml");
+
+	// Initialize file-only diagnostic logger (no-op if [debug].enable_log = false)
+	DebugLog_Initialize();
 
 	HWND hWnd = GameWindow_Generate(hInstance);
 
@@ -348,7 +352,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR lpC
 
 	Mouse_Finalize();
 
-
+	DebugLog_Finalize();
 
 	return static_cast<int>(msg.wParam);
 

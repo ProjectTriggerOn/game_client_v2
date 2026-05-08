@@ -18,3 +18,22 @@ remote_host = "127.0.0.1"
 [client]
 window_width  = 1920
 window_height = 1080
+
+# =============================================================================
+# Generic file logger (single-threaded). See Core/debug_log.h.
+# Each startup creates "<root>/<YYYY-MM-DD_HH-MM-SS>/" and writes one file
+# per category lazily (e.g. jump.log, corr.log, phys.log).
+# =============================================================================
+[log]
+enabled = true
+root    = "logs"
+
+# =============================================================================
+# Gameplay diagnostic filters consumed by callers of DebugLog_Printf.
+# =============================================================================
+[debug]
+error_threshold         = 0.5    # CORR rows with err <= this are skipped (unless log_every_correction)
+log_every_correction    = false  # log every server correction (noisy)
+log_jump_events         = true
+log_softmode_state      = true   # log SOFT_FALLBACK + periodic SOFT_PERSIST samples
+softmode_sample_ticks   = 16     # sample period during SOFT (32Hz tick → ~0.5s)

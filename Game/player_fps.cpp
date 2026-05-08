@@ -3,6 +3,7 @@
 #include "animator.h"
 #include "key_logger.h"
 #include "cube.h"
+#include "debug_log.h"
 #include "direct3d.h"
 #include "fade.h"
 #include "game.h"
@@ -23,6 +24,7 @@ Player_Fps::Player_Fps()
 	, m_InputHistoryHead(0)
 	, m_InputHistoryCount(0)
 	, m_CurrentClientTick(0)
+	, m_InResimulation(false)
 	, m_ModelFront({ 0,0,1 })
 	, m_MoveDir({ 0,0,1 })
 	, m_CamRelativePos({ 0.0f, 0.0f,0.3f })
@@ -513,6 +515,31 @@ void Player_Fps::ApplyServerCorrection(const NetPlayerState& serverState)
 	if (serverState.tickId <= m_LastServerTick && m_LastServerTick != 0)
 		return;
 
+	// Capture mode at entry — used for MODE_CHANGE log at the end of this function.
+	const char* prevMode = m_CorrectionMode ? m_CorrectionMode : "NONE";
+
+	// SOFT_PERSIST periodic sample: while we are stuck in SOFT, log state every N server ticks
+	// so we can see whether error / renderOffset is converging or runaway.
+	if (DebugLog_IsEnabled() && DebugLog_LogSoftModeState() &&
+		m_CorrectionMode && strcmp(m_CorrectionMode, "SOFT") == 0)
+	{
+		const int interval = DebugLog_GetSoftStateIntervalTicks();
+		if (interval > 0 && (serverState.tickId % static_cast<uint32_t>(interval)) == 0)
+		{
+			float pdx = m_Position.x - serverState.position.x;
+			float pdy = m_Position.y - serverState.position.y;
+			float pdz = m_Position.z - serverState.position.z;
+			float perr = sqrtf(pdx * pdx + pdy * pdy + pdz * pdz);
+			DebugLog_Printf("CORR",
+				"SOFT_PERSIST cTick=%u sTick=%u err=%.3fm renderOffset=(%.2f,%.2f,%.2f) "
+				"clientIsJump=%d serverGrounded=%d",
+				m_CurrentClientTick, serverState.tickId, perr,
+				m_RenderOffset.x, m_RenderOffset.y, m_RenderOffset.z,
+				(int)m_isJump,
+				(int)((serverState.stateFlags & NetStateFlags::IS_GROUNDED) != 0));
+		}
+	}
+
 	// Initialize client tick from first server snapshot
 	if (m_CurrentClientTick == 0)
 	{
@@ -528,6 +555,9 @@ void Player_Fps::ApplyServerCorrection(const NetPlayerState& serverState)
 		// If drift is too large (>10 ticks = 312ms), force resync
 		if (tickDrift > 10 || tickDrift < -5)
 		{
+			DebugLog_Printf("CORR",
+				"TICK_DRIFT_RESET drift=%d cTick=%u sTick=%u (clearing history)",
+				tickDrift, m_CurrentClientTick, serverState.tickId);
 			// Abnormal drift detected - resync to server
 			m_CurrentClientTick = serverState.tickId;
 			ClearInputHistory();  // History is no longer valid
@@ -574,6 +604,29 @@ void Player_Fps::ApplyServerCorrection(const NetPlayerState& serverState)
 
 		if (!serverEntry)
 		{
+			// Compute history range for diagnostics — captured BEFORE fallback so the
+			// log row reflects the buffer state at the moment FindHistoryEntry failed.
+			uint32_t oldestTick = 0, newestTick = 0;
+			if (m_InputHistoryCount > 0)
+			{
+				oldestTick = newestTick = m_InputHistory[0].cmd.tickId;
+				for (int i = 1; i < m_InputHistoryCount; ++i)
+				{
+					uint32_t t = m_InputHistory[i].cmd.tickId;
+					if (t < oldestTick) oldestTick = t;
+					if (t > newestTick) newestTick = t;
+				}
+			}
+			DebugLog_Printf("CORR",
+				"SOFT_FALLBACK cTick=%u sTick=%u err=%.3fm dx=%.2f dy=%.2f dz=%.2f "
+				"histCount=%d histRange=[%u..%u] requestedTick=%u "
+				"renderOffsetBefore=(%.2f,%.2f,%.2f) clientIsJump=%d serverGrounded=%d",
+				m_CurrentClientTick, serverState.tickId, error, dx, dy, dz,
+				m_InputHistoryCount, oldestTick, newestTick, serverState.tickId,
+				m_RenderOffset.x, m_RenderOffset.y, m_RenderOffset.z,
+				(int)m_isJump,
+				(int)((serverState.stateFlags & NetStateFlags::IS_GROUNDED) != 0));
+
 			// Tick not in history (too old or missing)
 			// Fall back to old soft correction behavior
 			m_CorrectionMode = "SOFT";
@@ -627,6 +680,44 @@ void Player_Fps::ApplyServerCorrection(const NetPlayerState& serverState)
 		// ===== NO CORRECTION =====
 		// Prediction is accurate (<0.1m error)
 		m_CorrectionMode = "OK";
+	}
+
+	// ------------------------------------------------------------------------
+	// Diagnostic logging: mode transitions, threshold-based correction rows,
+	// and client/server grounded-state mismatch.
+	// ------------------------------------------------------------------------
+	if (DebugLog_IsEnabled())
+	{
+		const char* nowMode = m_CorrectionMode ? m_CorrectionMode : "NONE";
+		bool serverGrounded = (serverState.stateFlags & NetStateFlags::IS_GROUNDED) != 0;
+		bool clientAirborne = m_isJump;
+
+		if (strcmp(prevMode, nowMode) != 0)
+		{
+			DebugLog_Printf("CORR",
+				"MODE_CHANGE %s->%s cTick=%u sTick=%u err=%.3fm",
+				prevMode, nowMode, m_CurrentClientTick, serverState.tickId, error);
+		}
+
+		if (DebugLog_LogEveryCorrection() || error > DebugLog_GetErrorThreshold())
+		{
+			DebugLog_Printf("CORR",
+				"%s cTick=%u sTick=%u err=%.3fm dx=%.2f dy=%.2f dz=%.2f "
+				"renderOffset=(%.2f,%.2f,%.2f) clientIsJump=%d serverGrounded=%d",
+				nowMode, m_CurrentClientTick, serverState.tickId, error, dx, dy, dz,
+				m_RenderOffset.x, m_RenderOffset.y, m_RenderOffset.z,
+				(int)clientAirborne, (int)serverGrounded);
+		}
+
+		// Grounded-state mismatch is the primary suspect for "jump fails / lags".
+		// Local prediction needs !m_isJump (grounded) to apply jump impulse;
+		// server needs IS_GROUNDED to accept JUMP bit.
+		if (clientAirborne == serverGrounded)
+		{
+			DebugLog_Printf("CORR",
+				"STATE_MISMATCH client_isJump=%d server_grounded=%d mode=%s err=%.3fm sTick=%u",
+				(int)clientAirborne, (int)serverGrounded, nowMode, error, serverState.tickId);
+		}
 	}
 
 	// ========================================================================
@@ -827,6 +918,7 @@ void Player_Fps::ResimulateFromTick(uint32_t serverTick)
 	// This corrects client prediction based on server's authoritative state
 	const float dt = static_cast<float>(TICK_DURATION);
 
+	m_InResimulation = true;
 	for (uint32_t tick = serverTick + 1; tick <= m_CurrentClientTick; tick++)
 	{
 		InputHistoryEntry* entry = FindHistoryEntry(tick);
@@ -845,6 +937,7 @@ void Player_Fps::ResimulateFromTick(uint32_t serverTick)
 		entry->velocity = m_Velocity;
 		entry->stateFlags = GetStateFlags();
 	}
+	m_InResimulation = false;
 }
 
 void Player_Fps::ApplyPhysicsTick(float worldInputX, float worldInputZ, uint32_t buttons, float dt)
@@ -892,13 +985,34 @@ void Player_Fps::ApplyPhysicsTick(float worldInputX, float worldInputZ, uint32_t
 		// Jump (consume pending input)
 		if (jumpPressed && m_JumpPending)
 		{
+			if (!m_InResimulation && DebugLog_IsEnabled() && DebugLog_LogJumpEvents())
+			{
+				DebugLog_Printf("PHYS", "LOCAL_PREDICT_JUMP cTick=%u", m_CurrentClientTick);
+			}
 			m_Velocity.y = JUMP_VELOCITY;
 			m_isJump = true;
 			m_JumpPending = false;
 		}
+		else if (!m_InResimulation && jumpPressed && DebugLog_IsEnabled() && DebugLog_LogJumpEvents())
+		{
+			// Jump button is set in this physics tick but we did not jump because pending was already cleared.
+			// (Sticky-jump consumed earlier this frame, or never set this tick.)
+			DebugLog_Printf("PHYS", "JUMP_NOT_PENDING cTick=%u (grounded but JumpPending=false)",
+				m_CurrentClientTick);
+		}
 	}
 	else  // Airborne
 	{
+		// Pressed jump while client believes it is airborne — local prediction rejects.
+		// If this fires repeatedly while server reports IS_GROUNDED (see STATE_MISMATCH rows),
+		// it explains "jump fails" — client never applies impulse; server may also reject.
+		if (!m_InResimulation && jumpPressed && DebugLog_IsEnabled() && DebugLog_LogJumpEvents())
+		{
+			DebugLog_Printf("PHYS",
+				"LOCAL_REJECT_AIRBORNE cTick=%u m_isJump=1 (client thinks airborne)",
+				m_CurrentClientTick);
+		}
+
 		float airStep = AIR_ACCEL * dt;
 
 		if (inputMag > 0.01f)

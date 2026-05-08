@@ -167,6 +167,7 @@
     <ClCompile Include="Game\Audio.cpp" />
     <ClCompile Include="Graphics\camera.cpp" />
     <ClCompile Include="Graphics\cube.cpp" />
+    <ClCompile Include="Core\debug_log.cpp" />
     <ClCompile Include="Core\debug_ostream.cpp" />
     <ClCompile Include="Core\debug_text.cpp" />
     <ClCompile Include="Core\direct3d.cpp" />
@@ -225,6 +226,7 @@
     <ClInclude Include="Graphics\camera.h" />
     <ClInclude Include="Graphics\cube.h" />
     <ClInclude Include="Core\debug_imgui.h" />
+    <ClInclude Include="Core\debug_log.h" />
     <ClInclude Include="Core\debug_text.h" />
     <ClInclude Include="Core\direct3d.h" />
     <ClInclude Include="Graphics\effect.h" />
