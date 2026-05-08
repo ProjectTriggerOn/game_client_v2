@@ -8,7 +8,6 @@
 
 void PlayerCamFps_Initialize();
 void PlayerCamFps_Finalize();
-void PlayerCamFps_Update(double elapsed_time);
 void PlayerCamFps_Update(double elapsed_time, const DirectX::XMFLOAT3& camera_position);
 
 const DirectX::XMFLOAT3& PlayerCamFps_GetFront();

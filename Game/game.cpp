@@ -127,6 +127,8 @@ void Game_Update(double elapsed_time)
 
 	if (KeyLogger_IsTrigger(KK_C)) {
 		isDebugCam = !isDebugCam;
+		Mouse_SetMode(isDebugCam ? MOUSE_POSITION_MODE_ABSOLUTE : MOUSE_POSITION_MODE_RELATIVE);
+		Mouse_SetVisible(isDebugCam);
 	}
 	if (KeyLogger_IsTrigger(KK_F1)) {
 		isDebugCollision = !isDebugCollision;

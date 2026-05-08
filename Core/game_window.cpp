@@ -89,6 +89,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_MOUSEHOVER:
 	         Mouse_ProcessMessage(message, wParam, lParam);
 	         break;
+	case WM_WINDOWPOSCHANGED:
+	case WM_DISPLAYCHANGE:
+		Mouse_RefreshClipRect();
+		return DefWindowProc(hWnd, message, wParam, lParam);
     case WM_KEYDOWN:
         // ESC is handled by the game loop (toggles settings menu)
      case WM_SYSKEYDOWN:

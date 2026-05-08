@@ -184,9 +184,6 @@ void PlayerCamTps_Update_Mouse(double elapsed_time)
 // Maya风格摄像机操作
 void PlayerCamTps_Update_Maya(double elapsed_time)
 {
-    Mouse_SetMode(MOUSE_POSITION_MODE_ABSOLUTE);
-	Mouse_SetVisible(true);
-
     // 检查 Alt 键
     bool altDown = KeyLogger_IsPressed(KK_LEFTALT);
     static int lastX = 0, lastY = 0;
