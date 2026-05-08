@@ -84,6 +84,12 @@ public:
 	int GetAmmoReserve() const { return m_AmmoReserve; }
 
 	//-------------------------------------------------------------------------
+	// Tick accessor (used by InputProducer to stamp outgoing cmd.tickId so it
+	// matches the tickId stored in m_InputHistory — required for RESIM lookup)
+	//-------------------------------------------------------------------------
+	uint32_t GetClientTick() const { return m_CurrentClientTick; }
+
+	//-------------------------------------------------------------------------
 	// Debug info
 	//-------------------------------------------------------------------------
 	const char* GetCorrectionMode() const { return m_CorrectionMode; }

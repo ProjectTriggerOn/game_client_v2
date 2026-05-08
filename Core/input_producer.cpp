@@ -8,6 +8,7 @@
 
 #include "input_producer.h"
 #include "debug_log.h"
+#include "game.h"
 #include "i_network.h"
 #include "key_logger.h"
 #include "ms_logger.h"
@@ -173,7 +174,11 @@ void InputProducer::SampleInput()
 InputCmd InputProducer::BuildInputCmd() const
 {
     InputCmd cmd;
-    cmd.tickId = m_TargetTick;
+    // Stamp with player_fps's m_CurrentClientTick so the cmd.tickId we send is
+    // in the same domain as Player_Fps::m_InputHistory.cmd.tickId. The server
+    // echoes this value back as NetPlayerState.lastProcessedInputTick so the
+    // client can find the matching history entry for RESIM.
+    cmd.tickId = Game_GetClientTick();
     cmd.moveAxisX = m_MoveAxisX;
     cmd.moveAxisY = m_MoveAxisY;
     cmd.yaw = m_Yaw;

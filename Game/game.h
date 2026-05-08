@@ -36,6 +36,11 @@ float Game_GetCorrectionError();
 // Collision world accessor (for MockServer initialization)
 CollisionWorld* Game_GetCollisionWorld();
 
+// Local-player client-tick accessor (used by InputProducer to stamp cmd.tickId
+// in the same domain as Player_Fps::m_InputHistory, so server's
+// lastProcessedInputTick ack can be looked up)
+uint32_t Game_GetClientTick();
+
 
 
 

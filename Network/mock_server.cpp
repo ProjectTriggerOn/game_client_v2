@@ -148,8 +148,9 @@ void MockServer::Tick()
 
     m_RemotePlayerState.health = m_RemoteHealth;
 
-    // 4. Update tick ID in states
+    // 4. Update tick ID in states (and ack of last processed input — see GameServer)
     m_PlayerState.tickId = m_CurrentTick;
+    m_PlayerState.lastProcessedInputTick = m_LastInputCmd.tickId;
     m_PlayerState.fireCounter = m_FireCounter;
     m_PlayerState.ammo = m_Ammo;
     m_PlayerState.ammoReserve = m_AmmoReserve;

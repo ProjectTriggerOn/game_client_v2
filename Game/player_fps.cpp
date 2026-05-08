@@ -544,6 +544,12 @@ void Player_Fps::ApplyServerCorrection(const NetPlayerState& serverState)
 	if (m_CurrentClientTick == 0)
 	{
 		m_CurrentClientTick = serverState.tickId;
+		// Any history entries built before the first server snapshot used the
+		// pre-sync local tick domain (counted up from 0). Server's
+		// lastProcessedInputTick acks will be in the new (server-aligned) domain
+		// after sync, so the old entries can never match — drop them to avoid
+		// stale FindHistoryEntry hits.
+		ClearInputHistory();
 	}
 	else
 	{
@@ -599,8 +605,11 @@ void Player_Fps::ApplyServerCorrection(const NetPlayerState& serverState)
 	else if (error > RESIM_THRESHOLD)
 	{
 		// ===== RE-SIMULATION =====
-		// Find history entry for server tick
-		InputHistoryEntry* serverEntry = FindHistoryEntry(serverState.tickId);
+		// Look up the history entry for the cmd the server most-recently processed.
+		// (serverState.tickId is the server's own tick counter; serverState.lastProcessedInputTick
+		//  is in the same domain as our InputHistoryEntry.cmd.tickId — the only one that can match.)
+		const uint32_t ackTick = serverState.lastProcessedInputTick;
+		InputHistoryEntry* serverEntry = (ackTick != 0) ? FindHistoryEntry(ackTick) : nullptr;
 
 		if (!serverEntry)
 		{
@@ -622,17 +631,23 @@ void Player_Fps::ApplyServerCorrection(const NetPlayerState& serverState)
 				"histCount=%d histRange=[%u..%u] requestedTick=%u "
 				"renderOffsetBefore=(%.2f,%.2f,%.2f) clientIsJump=%d serverGrounded=%d",
 				m_CurrentClientTick, serverState.tickId, error, dx, dy, dz,
-				m_InputHistoryCount, oldestTick, newestTick, serverState.tickId,
+				m_InputHistoryCount, oldestTick, newestTick, ackTick,
 				m_RenderOffset.x, m_RenderOffset.y, m_RenderOffset.z,
 				(int)m_isJump,
 				(int)((serverState.stateFlags & NetStateFlags::IS_GROUNDED) != 0));
 
-			// Tick not in history (too old or missing)
-			// Fall back to old soft correction behavior
-			m_CorrectionMode = "SOFT";
-			m_RenderOffset.x += m_Position.x - serverState.position.x;
-			m_RenderOffset.y += m_Position.y - serverState.position.y;
-			m_RenderOffset.z += m_Position.z - serverState.position.z;
+			// History miss (cmd too old, dropped, or first-snapshot edge case):
+			// align to server, smooth via render-offset decay. Same pattern as RESIM tail
+			// (see below) — without the resim step, since we have no anchor entry.
+			DirectX::XMFLOAT3 originalPredictedPos = m_Position;
+			m_Position    = serverState.position;
+			m_Velocity    = serverState.velocity;
+			m_isJump      = !(serverState.stateFlags & NetStateFlags::IS_GROUNDED);
+			// = (not +=) so RenderOffset doesn't unbounded-accumulate across consecutive misses.
+			m_RenderOffset.x = originalPredictedPos.x - m_Position.x;
+			m_RenderOffset.y = originalPredictedPos.y - m_Position.y;
+			m_RenderOffset.z = originalPredictedPos.z - m_Position.z;
+			m_CorrectionMode = "SOFT";  // keep the literal — debug_log filters key off it
 		}
 		else
 		{
@@ -649,11 +664,11 @@ void Player_Fps::ApplyServerCorrection(const NetPlayerState& serverState)
 			m_Velocity = serverState.velocity;
 			m_isJump = !(serverState.stateFlags & NetStateFlags::IS_GROUNDED);
 
-			// Re-simulate all ticks from server tick to current tick
-			ResimulateFromTick(serverState.tickId);
+			// Re-simulate all ticks from acked cmd tick to current tick
+			ResimulateFromTick(ackTick);
 
-			// Verify re-simulation quality: check server tick position after re-sim
-			InputHistoryEntry* verifyEntry = FindHistoryEntry(serverState.tickId);
+			// Verify re-simulation quality: check that re-sim matches server at the ack tick
+			InputHistoryEntry* verifyEntry = FindHistoryEntry(ackTick);
 			if (verifyEntry)
 			{
 				float vdx = verifyEntry->position.x - serverState.position.x;

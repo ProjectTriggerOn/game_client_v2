@@ -497,3 +497,8 @@ CollisionWorld* Game_GetCollisionWorld()
 	return &g_CollisionWorld;
 }
 
+uint32_t Game_GetClientTick()
+{
+	return g_PlayerFps ? g_PlayerFps->GetClientTick() : 0;
+}
+
