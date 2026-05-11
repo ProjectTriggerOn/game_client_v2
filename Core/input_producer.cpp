@@ -7,6 +7,8 @@
 //=============================================================================
 
 #include "input_producer.h"
+#include "debug_log.h"
+#include "game.h"
 #include "i_network.h"
 #include "key_logger.h"
 #include "ms_logger.h"
@@ -68,6 +70,16 @@ void InputProducer::Update()
     // 3. Send to server
     m_pNetwork->SendInputCmd(m_LastCmd);
 
+    // Log every InputCmd that carries the JUMP bit so we can trace the full pipeline:
+    //   SPACE_TRIG  -> SENT (one or more) -> CONSUMED_BY_SERVER -> LOCAL_PREDICT_JUMP
+    if (DebugLog_IsEnabled() && DebugLog_LogJumpEvents() &&
+        (m_LastCmd.buttons & InputButtons::JUMP))
+    {
+        DebugLog_Printf("JUMP",
+            "SENT targetTick=%u cmdTick=%u buttons=0x%02X JumpPending=%d",
+            m_TargetTick, m_LastCmd.tickId, m_LastCmd.buttons, (int)m_JumpPending);
+    }
+
     // 4. Clear sticky jump only when server confirms we're airborne
     //    This ensures jump isn't lost due to frame/tick timing
     if (m_JumpPending && m_HasServerState)
@@ -77,6 +89,12 @@ void InputProducer::Update()
             !(m_LastServerState.stateFlags & NetStateFlags::IS_GROUNDED))
         {
             m_JumpPending = false;
+            if (DebugLog_IsEnabled() && DebugLog_LogJumpEvents())
+            {
+                DebugLog_Printf("JUMP",
+                    "CONSUMED_BY_SERVER targetTick=%u serverFlags=0x%X",
+                    m_TargetTick, m_LastServerState.stateFlags);
+            }
         }
     }
 
@@ -124,6 +142,10 @@ void InputProducer::SampleInput()
     if (KeyLogger_IsTrigger(KK_SPACE))
     {
         m_JumpPending = true;
+        if (DebugLog_IsEnabled() && DebugLog_LogJumpEvents())
+        {
+            DebugLog_Printf("JUMP", "SPACE_TRIG targetTick=%u", m_TargetTick);
+        }
     }
     if (m_JumpPending)
     {
@@ -152,7 +174,11 @@ void InputProducer::SampleInput()
 InputCmd InputProducer::BuildInputCmd() const
 {
     InputCmd cmd;
-    cmd.tickId = m_TargetTick;
+    // Stamp with player_fps's m_CurrentClientTick so the cmd.tickId we send is
+    // in the same domain as PlayerFps::m_InputHistory.cmd.tickId. The server
+    // echoes this value back as NetPlayerState.lastProcessedInputTick so the
+    // client can find the matching history entry for RESIM.
+    cmd.tickId = Game_GetClientTick();
     cmd.moveAxisX = m_MoveAxisX;
     cmd.moveAxisY = m_MoveAxisY;
     cmd.yaw = m_Yaw;

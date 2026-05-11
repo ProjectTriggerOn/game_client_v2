@@ -1,4 +1,5 @@
 #include "collision_world.h"
+#include "net_common.h"
 #include <algorithm>
 #include <cmath>
 
@@ -194,7 +195,7 @@ CollisionWorld::Result CollisionWorld::ResolveCapsule(
 			}
 
 			// Ground check: if normal points mostly upward
-			if (collider.isGround && ny > 0.7f)
+			if (collider.isGround && ny > PhysicsConfig::GROUND_NORMAL_THRESHOLD)
 			{
 				result.isGrounded = true;
 			}

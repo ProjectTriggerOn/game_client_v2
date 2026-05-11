@@ -15,7 +15,6 @@
 #include "model.h"
 #include "model_ani.h"
 #include "ms_logger.h"
-#include "player.h"
 #include "player_cam_tps.h"
 #include "player_cam_fps.h"
 #include "player_fps.h"
@@ -40,9 +39,14 @@ namespace{
 	int g_CrossHairTexId = -1;
 	int g_CursorTexId = -1;
 	int g_OverlayTexId = -1;  // white texture used for the settings dim overlay
+#if defined(_DEBUG)
 	bool isDebugCam = false;
 	bool isDebugCollision = false;
-	Player_Fps* g_PlayerFps;
+#else
+	constexpr bool isDebugCam = false;
+	constexpr bool isDebugCollision = false;
+#endif
+	PlayerFps* g_PlayerFps;
 	GameState g_GameState;
 	
 	// Correction state for debug display
@@ -58,16 +62,6 @@ NetworkDebugInfo g_NetDebugInfo;
 
 void Game_Initialize()
 {
-	
-	//Camera_Initialize(
-	//	{1.0f,2,-2},
-	//	{-0.291f,-0.777f,0.558f},
-	//	{ 0.887f,0,0.462f },
-	//	{-0.359f,0.629f,0.689f}
-	//);
-	//Camera_Initialize();
-	
-	//g_pModel = ModelLoad("resource/model/test.fbx", 0.1f,false);
 	g_GameState = TITLE;
 
 	g_CrossHairTexId = Texture_LoadFromFile(L"resource/texture/arr.png");
@@ -75,15 +69,11 @@ void Game_Initialize()
 	g_OverlayTexId   = Texture_LoadFromFile(L"resource/texture/white.png");
 	Font_Initialize();
 	Widget_Initialize();
-	//ModelAni_SetAnimation(g_pModel0, 0);
-	//g_pModel0 = ModelLoad("resource/model/(Legacy)arms_assault_rifle_01.fbx", 10.0f);
-	//Player_Initialize({ 0.0f,0.0f,0.0f }, { 0.0f,0.0f,1.0f });
-	// Initialize map and register colliders
 	Map_Initialize();
 	Map_RegisterColliders(g_CollisionWorld);
 
 	SkyDome_Initialize();
-	g_PlayerFps = new Player_Fps();
+	g_PlayerFps = new PlayerFps();
 	g_PlayerFps->Initialize({ -7.0f, 0.0f, -7.0f }, { 0.0f, 0.0f, 1.0f }, &g_CollisionWorld);
 
 	Camera_Initialize();
@@ -125,12 +115,16 @@ void Game_Update(double elapsed_time)
 	Mouse_SetVisible(false);
 
 
+#if defined(_DEBUG)
 	if (KeyLogger_IsTrigger(KK_C)) {
 		isDebugCam = !isDebugCam;
+		Mouse_SetMode(isDebugCam ? MOUSE_POSITION_MODE_ABSOLUTE : MOUSE_POSITION_MODE_RELATIVE);
+		Mouse_SetVisible(isDebugCam);
 	}
 	if (KeyLogger_IsTrigger(KK_F1)) {
 		isDebugCollision = !isDebugCollision;
 	}
+#endif
 
 	g_PlayerFps->Update(elapsed_time);
 	
@@ -138,7 +132,7 @@ void Game_Update(double elapsed_time)
 	// Consume Snapshots from Network (works with both Mock and ENet)
 	//
 	// Local player uses client-side prediction - NO interpolation (causes lag).
-	// Correction is handled via render offset inside Player_Fps.
+	// Correction is handled via render offset inside PlayerFps.
 	// ========================================================================
 	extern INetwork* g_pNetwork;
 	extern RemotePlayer g_RemotePlayers[];
@@ -162,9 +156,15 @@ void Game_Update(double elapsed_time)
 			g_pInputProducer->SetLastServerState(snap.localPlayer);
 		}
 
-		// Dispatch remote players from snapshot
+		// Dispatch remote players from snapshot.
+		// Clamp remotePlayerCount to the array bound — a malicious/corrupted
+		// snapshot with count > MAX_PLAYERS-1 would otherwise OOB-read past
+		// the Snapshot struct.
+		const uint8_t remoteCount = (snap.remotePlayerCount < (MAX_PLAYERS - 1))
+			? snap.remotePlayerCount
+			: static_cast<uint8_t>(MAX_PLAYERS - 1);
 		bool seenThisSnap[MAX_PLAYERS] = {};
-		for (uint8_t i = 0; i < snap.remotePlayerCount; i++)
+		for (uint8_t i = 0; i < remoteCount; i++)
 		{
 			uint8_t rid = snap.remotePlayers[i].playerId;
 			if (rid < MAX_PLAYERS)
@@ -213,11 +213,10 @@ void Game_Update(double elapsed_time)
 
 	if (isDebugCam)
 	{
-		PlayerCamTps_Update_Maya(elapsed_time);
+		PlayerCamTps_Update_Maya(elapsed_time, g_PlayerFps->GetPosition());
 	}
 	else {
 		PlayerCamFps_Update(elapsed_time, g_PlayerFps->GetEyePosition());
-
 	}
 
 	if (KeyLogger_IsTrigger(KK_U)) {
@@ -254,17 +253,11 @@ void Game_Draw()
 
 	mtxW = XMMatrixTranslation(0.0f,-1.0f,0.0f)* mtxW;
 
-	//ModelAni_SetAnimation(g_pModel0, 1);
-	//ModelAni_Draw(g_pModel0, mtxW,true);
-	
-
-	XMVECTOR v{ 0.0f,-1.0f,0.0f };
+	XMVECTOR v{ 0.0f, -1.0f, 0.0f };
 	v = XMVector3Normalize(v);
 	XMFLOAT4 dir;
 	XMStoreFloat4(&dir, v);
-	Light_SetDirectionalWorld(dir, { 1.0f,1.0f,1.0f,1.0f });
-	////Light_SetDirectionalWorld({ 0.0f,-1.0f,0.0f,0.0f }, { 1.0f,0.9f,0.7f,1.0f });//方向光
-	////Light_SetDirectionalWorld({ 0.0f,-1.0f,0.0f,0.0f }, { 0.3f,0.25f,0.2f,1.0f });//方向光
+	Light_SetDirectionalWorld(dir, { 1.0f, 1.0f, 1.0f, 1.0f });
 
 	PointLightList list{
 	{
@@ -444,13 +437,7 @@ void Game_Draw()
 		constexpr float BH = 52.0f;
 		float bx = (sw - BW) * 0.5f;
 
-		// Infinite reserve toggle
-		bool infRes = g_PlayerFps->GetInfiniteReserve();
-		const wchar_t* infLabel = infRes ? L"Inf Ammo: ON" : L"Inf Ammo: OFF";
-		if (Widget_DrawButton(bx, py + 150.0f, BW, BH, infLabel))
-			g_PlayerFps->SetInfiniteReserve(!infRes);
-
-		if (Widget_DrawButton(bx, py + 220.0f, BW, BH, L"Exit Game"))
+		if (Widget_DrawButton(bx, py + 150.0f, BW, BH, L"Exit Game"))
 		{
 			PostQuitMessage(0);
 		}
@@ -465,7 +452,6 @@ void Game_Draw()
 void Game_Finalize()
 {
 	Camera_Finalize();
-	//Player_Finalize();
 	PlayerCamTps_Finalize();
 	PlayerCamFps_Finalize();
 	g_PlayerFps->Finalize();
@@ -499,5 +485,10 @@ float Game_GetCorrectionError()
 CollisionWorld* Game_GetCollisionWorld()
 {
 	return &g_CollisionWorld;
+}
+
+uint32_t Game_GetClientTick()
+{
+	return g_PlayerFps ? g_PlayerFps->GetClientTick() : 0;
 }
 

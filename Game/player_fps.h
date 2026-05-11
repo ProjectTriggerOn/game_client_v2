@@ -15,7 +15,7 @@
 #include "collision_world.h"
 #include "model_ani.h"
 #include "mouse.h"
-#include "player_state_mechine.h"
+#include "player_state_machine.h"
 #include "net_common.h"
 
 //=============================================================================
@@ -32,11 +32,11 @@ struct InputHistoryEntry
 	uint32_t stateFlags;               // State flags (grounded, jumping, etc.)
 };
 
-class Player_Fps
+class PlayerFps
 {
 public:
-	Player_Fps();
-	~Player_Fps();
+	PlayerFps();
+	~PlayerFps();
 
 	void Initialize(const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3& front,
 	                CollisionWorld* pCollisionWorld = nullptr);
@@ -50,8 +50,6 @@ public:
 	const DirectX::XMFLOAT3& GetPosition() const;      // Logic position (for gameplay)
 	DirectX::XMFLOAT3 GetRenderPosition() const;        // Logic + Offset (for rendering)
 	const DirectX::XMFLOAT3& GetFront() const;
-	void SetPosition(const DirectX::XMFLOAT3& position);
-	void SetVelocity(const DirectX::XMFLOAT3& velocity);
 
 	//-------------------------------------------------------------------------
 	// Server Reconciliation (Prediction + Correction)
@@ -61,9 +59,6 @@ public:
 	AABB GetAABB() const;
 	Capsule GetCapsule() const;
 
-	void SetHeight(float height);
-	float GetHeight() const;
-	
 	DirectX::XMFLOAT3 GetEyePosition() const;
 
 	std::string GetPlayerState() const;
@@ -83,8 +78,11 @@ public:
 	int GetAmmo()        const { return m_Ammo; }
 	int GetAmmoReserve() const { return m_AmmoReserve; }
 
-	bool GetInfiniteReserve() const { return m_InfiniteReserve; }
-	void SetInfiniteReserve(bool v) { m_InfiniteReserve = v; }
+	//-------------------------------------------------------------------------
+	// Tick accessor (used by InputProducer to stamp outgoing cmd.tickId so it
+	// matches the tickId stored in m_InputHistory — required for RESIM lookup)
+	//-------------------------------------------------------------------------
+	uint32_t GetClientTick() const { return m_CurrentClientTick; }
 
 	//-------------------------------------------------------------------------
 	// Debug info
@@ -109,14 +107,14 @@ private:
 	int m_InputHistoryHead;            // Next write index (circular buffer)
 	int m_InputHistoryCount;           // Current number of valid entries
 	uint32_t m_CurrentClientTick;      // Client-side tick counter (synced with server)
+	bool m_InResimulation;             // True while ResimulateFromTick() is replaying — used to suppress noisy debug logs
 	
 	// Other members
 	DirectX::XMFLOAT3 m_ModelFront;
-	DirectX::XMFLOAT3 m_MoveDir;
 	DirectX::XMFLOAT3 m_CamRelativePos;
 	float m_Height;
 	float m_CapsuleRadius;
-	bool m_isJump;
+	bool m_IsJump;
 	bool m_JumpPending;   // buffers jump input across fixed-timestep ticks
 	CollisionWorld* m_pCollisionWorld;
 
@@ -127,11 +125,8 @@ private:
 	DirectX::XMFLOAT3 m_PrevPhysicsPosition;  // Position before accumulator loop (for sub-tick interpolation)
 	float m_PhysicsAlpha;                       // Remainder fraction for render interpolation
 
-	static constexpr int MAG_SIZE    = 30;
-	static constexpr int MAX_RESERVE = 90;
 	int  m_Ammo;
 	int  m_AmmoReserve;
-	bool m_InfiniteReserve;
 
 	double m_WeaponRPM;
 	double m_FireTimer;

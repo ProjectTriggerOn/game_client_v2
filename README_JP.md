@@ -9,9 +9,9 @@ Direct3D 11 / Win32 ベースのマルチプレイヤー FPS ゲームクライ�
 ## 主な機能
 
 - **Direct3D 11** による描画（ライティング、アンリット、スケルタルアニメーション対応 HLSL シェーダー）
-- **サーバー権威型ネットコード** — クライアント側予測とサーバー補正のスムーズな補間
+- **サーバー権威型ネットコード** — クライアント側予測 + ロールバック方式による再シミュレート補正、リモートプレイヤーはスナップショット補間 / 外挿で滑らかに表示
 - **3 つの接続モード**: mock（オフライン）、local（LAN）、remote（インターネット）
-- **スケルタルアニメーション** — ASSIMP によるモデル読み込み、クロスフェードブレンド対応
+- **スケルタルアニメーション** — ASSIMP によるモデル読み込み、スナップショット式クロスフェード + 加算ブレンディング対応
 
 ## 動作環境
 
@@ -28,7 +28,7 @@ Direct3D 11 / Win32 ベースのマルチプレイヤー FPS ゲームクライ�
 **コマンドライン:**
 
 ```
-msbuild TriggerOn.vcxproj /p:Configuration=Release /p:Platform=x64
+msbuild TriggerOn.sln /p:Configuration=Release /p:Platform=x64
 ```
 
 ビルド時に HLSL シェーダーが `.cso` にコンパイルされ、ポストビルドステップで `resource/shader/` にコピーされます。
@@ -45,8 +45,8 @@ local_host  = "127.0.0.1"
 remote_host = "127.0.0.1"
 
 [client]
-window_width  = 1280
-window_height = 720
+window_width  = 1920
+window_height = 1080
 ```
 
 ### 接続モード

@@ -1,7 +1,6 @@
 #include "player_cam_fps.h"
 #include "key_logger.h"
 #include "direct3d.h"
-#include "player.h"
 #include "shader_3d.h"
 #include "shader_field.h"
 #include "shader_infinite.h"
@@ -59,121 +58,10 @@ void PlayerCamFps_Finalize()
 	g_DebugText = nullptr;
 }
 
-void PlayerCamFps_Update(double elapsed_time)
-{
-	// 1. Update Rotation from Mouse
-	Mouse_State ms;
-	Mouse_GetState(&ms);
-
-	Mouse_SetMode(MOUSE_POSITION_MODE_RELATIVE);
-
-	// Calculate delta mouse movement
-	int dx = 0;
-	int dy = 0;
-
-	if (ms.positionMode == MOUSE_POSITION_MODE_RELATIVE)
-	{
-		dx = MSLogger_GetX();
-		dy = MSLogger_GetY();
-	}
-	else
-	{
-		static int lastMouseX = MSLogger_GetX();
-		static int lastMouseY = MSLogger_GetY();
-		static bool firstMouse = true;
-
-		if (firstMouse)
-		{
-			lastMouseX = MSLogger_GetX();
-			lastMouseY = MSLogger_GetY();
-			firstMouse = false;
-		}
-
-		dx = MSLogger_GetX() - lastMouseX;
-		dy = MSLogger_GetY() - lastMouseY;
-		lastMouseX = MSLogger_GetX();
-		lastMouseY = MSLogger_GetY();
-	}
-
-	// Apply rotation
-	g_cameraYaw += dx * g_Sensitivity;
-	if (g_invertY)
-	{
-		g_cameraPitch -= dy * g_Sensitivity;
-	}
-	else
-	{
-		g_cameraPitch += dy * g_Sensitivity;
-	}
-
-	// Clamp pitch to avoid flipping
-	constexpr float PITCH_LIMIT = XM_PIDIV2 - 0.01f;
-	g_cameraPitch = std::max(-PITCH_LIMIT, std::min(g_cameraPitch, PITCH_LIMIT));
-
-	// 2. Calculate Camera Front Vector
-	// Spherical coordinates to Cartesian coordinates
-	float x = cosf(g_cameraPitch) * sinf(g_cameraYaw);
-	float y = sinf(g_cameraPitch);
-	float z = cosf(g_cameraPitch) * cosf(g_cameraYaw);
-
-	XMVECTOR front = XMVector3Normalize(XMVectorSet(x, y, z, 0.0f));
-	XMStoreFloat3(&g_CameraFront, front);
-
-	// 3. Update Camera Position (Lock to Player Head)
-	XMFLOAT3 playerPos = Player_GetPosition();
-	// Assuming player height is around 2.0 units, eye level at 1.7
-	// Adjust this offset based on your player model scale
-	XMVECTOR eyePos = XMLoadFloat3(&playerPos) + XMVectorSet(0.0f, 1.7f, 0.0f, 0.0f); 
-	XMStoreFloat3(&g_CameraPosition, eyePos);
-
-	// 4. Create View Matrix
-	XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-	XMMATRIX view = XMMatrixLookToLH(eyePos, front, up);
-
-	XMStoreFloat4x4(&g_ViewMatrix, view);
-
-	// 6. Projection Matrix
-	float aspectRatio = static_cast<float>(Direct3D_GetBackBufferWidth()) / static_cast<float>(Direct3D_GetBackBufferHeight());
-	float fov = XM_PIDIV4; // 45 degrees
-	float nearZ = 0.1f;
-	float farZ = 1000.0f;
-	XMMATRIX projection = XMMatrixPerspectiveFovLH(fov, aspectRatio, nearZ, farZ);
-
-	XMStoreFloat4x4(&g_ProjectionMatrix, projection);
-}
-
 void PlayerCamFps_Update(double elapsed_time, const DirectX::XMFLOAT3& position)
 {
-
-	//Mouse_SetMode(MOUSE_POSITION_MODE_RELATIVE);
-
-	// Calculate delta mouse movement
-	int dx = 0;
-	int dy = 0;
-
-	if (MSLogger_GetPositionMode() == MOUSE_POSITION_MODE_RELATIVE)
-	{
-		dx = MSLogger_GetX();
-		dy = MSLogger_GetY();
-	}
-	else
-	{
-		static int lastMouseX = MSLogger_GetX();
-		static int lastMouseY = MSLogger_GetY();
-		static bool firstMouse = true;
-
-		if (firstMouse)
-		{
-			lastMouseX = MSLogger_GetX();
-			lastMouseY = MSLogger_GetY();
-			firstMouse = false;
-		}
-
-		dx = MSLogger_GetX() - lastMouseX;
-		dy = MSLogger_GetY() - lastMouseY;
-		lastMouseX = MSLogger_GetX();
-		lastMouseY = MSLogger_GetY();
-	}
+	int dx = MSLogger_GetX();
+	int dy = MSLogger_GetY();
 
 	// Apply rotation
 	g_cameraYaw += dx * g_Sensitivity;
@@ -201,7 +89,7 @@ void PlayerCamFps_Update(double elapsed_time, const DirectX::XMFLOAT3& position)
 
 	// 3. Update Camera Position
 	// Direct assignment: The input position is now treated as the Eye/Camera position.
-	// The offset logic should be handled by the caller (e.g. Player_Fps class).
+	// The offset logic should be handled by the caller (e.g. PlayerFps class).
 	g_CameraPosition = position;
 	DirectX::XMVECTOR vPos = XMLoadFloat3(&g_CameraPosition);
 
@@ -284,7 +172,7 @@ const DirectX::XMFLOAT4X4& PlayerCamFps_GetProjectMatrix()
 	return g_ProjectionMatrix;
 }
 
-void PlayerCamFps_Debug(const Player_Fps& pf)
+void PlayerCamFps_Debug(const PlayerFps& pf)
 {
 	if (!g_DebugText) return;
 

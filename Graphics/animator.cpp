@@ -73,10 +73,10 @@ void Animator::PlayCrossFade(int index, bool loop, double blendTime)
 {
 	if (!m_Model) return;
 
-	// 1. 如果目标就是当前正在播的主动画，只更新循环状态，不重置
+	// If target equals current animation, just update loop state without resetting.
 	if (index == m_CurrentAnimationIndex)
 	{
-		// 如果允许同个动画叠加 (Self-Overlap)
+		// Self-overlap: caller explicitly opted in to restart the same animation.
 		if (m_SameAniOverlapAllow)
 		{
 			if (blendTime > 0.0)
@@ -111,7 +111,7 @@ void Animator::PlayCrossFade(int index, bool loop, double blendTime)
 	{
 		if (blendTime > 0.0 && m_CurrentAnimationIndex != -1)
 		{
-			// 拍下当前视觉姿态的快照（无论是否正在混合中）
+			// Snapshot the current visual pose (even mid-blend) so we can fade from it.
 			TakeSnapshot();
 
 			m_CurrentAnimationIndex = index;
@@ -124,7 +124,7 @@ void Animator::PlayCrossFade(int index, bool loop, double blendTime)
 		}
 		else
 		{
-			// 无混合直接切换
+			// No blend: switch immediately.
 			m_CurrentAnimationIndex = index;
 			m_CurrentTime = 0.0;
 			m_Loop = loop;
@@ -138,7 +138,7 @@ bool Animator::IsCurrAniFinished() const
 	if (!m_Model || m_CurrentAnimationIndex == -1) return true;
 	if (m_Model->Animations.empty()) return true;
 	const Animation& animCurrent = m_Model->Animations[m_CurrentAnimationIndex];
-	if (m_Loop) return false; // 循环播放永远不算完成
+	if (m_Loop) return false; // Looping animations are never "finished".
 	return m_CurrentTime >= animCurrent.duration;
 }
 
@@ -347,7 +347,7 @@ void Animator::UpdateGlobalTransforms(int boneIndex, const DirectX::XMMATRIX& pa
 
 	if (m_IsBlending)
 	{
-		// 从快照中取出过渡前的姿态
+		// Pull the pre-transition pose from the snapshot.
 		XMVECTOR prevS = XMLoadFloat4(&m_SnapshotPose[boneIndex].scale);
 		XMVECTOR prevR = XMLoadFloat4(&m_SnapshotPose[boneIndex].rotation);
 		XMVECTOR prevT = XMLoadFloat4(&m_SnapshotPose[boneIndex].translation);
@@ -403,7 +403,7 @@ void Animator::TakeSnapshot()
 		XMVECTOR s, r, t;
 		GetBoneSRT(i, currAnim, m_CurrentTime, s, r, t);
 
-		// 如果正在混合中，需要混入快照产生「真实视觉姿态」
+		// Mid-blend: mix in the snapshot pose to produce the actual rendered pose.
 		if (m_IsBlending)
 		{
 			XMVECTOR snapS = XMLoadFloat4(&m_SnapshotPose[i].scale);

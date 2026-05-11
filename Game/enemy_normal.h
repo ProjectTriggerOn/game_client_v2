@@ -45,7 +45,7 @@ private:
 	private:
 		EnemyNormal* m_pStateHolder{};
 		XMFLOAT3 m_PatrolPointA{};
-		double g_AccumulatedTime{};
+		double m_AccumulatedTime{};
 	public:
 		EnemyNormalState_Patrol(EnemyNormal* pHolder)
 			: m_pStateHolder(pHolder),
@@ -63,7 +63,7 @@ private:
 	{
 	private:
 		EnemyNormal* m_pStateHolder{};
-		double g_AccumulatedTime{};
+		double m_AccumulatedTime{};
 		int m_TexId{ -1 };
 	public:
 		EnemyNormalState_Chase(EnemyNormal* pHolder)

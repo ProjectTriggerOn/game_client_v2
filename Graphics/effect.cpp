@@ -5,7 +5,7 @@
 #include "texture.h"
 #include "sprite_anime.h"
 
-#include "Audio.h"
+#include "audio.h"
 using namespace DirectX;
 
 struct Effect

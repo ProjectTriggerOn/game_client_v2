@@ -1,3 +1,4 @@
+
 #include "debug_text.h"
 #include "WICTextureLoader11.h"
 using namespace DirectX;

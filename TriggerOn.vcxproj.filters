@@ -30,6 +30,9 @@
     <ClCompile Include="Core\debug_ostream.cpp">
       <Filter>Core</Filter>
     </ClCompile>
+    <ClCompile Include="Core\debug_log.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
     <ClCompile Include="Core\game_window.cpp">
       <Filter>Core</Filter>
     </ClCompile>
@@ -63,7 +66,7 @@
     <ClCompile Include="Game\game.cpp">
       <Filter>Game</Filter>
     </ClCompile>
-    <ClCompile Include="Game\Audio.cpp">
+    <ClCompile Include="Game\audio.cpp">
       <Filter>Game</Filter>
     </ClCompile>
     <ClCompile Include="Game\score.cpp">
@@ -76,9 +79,6 @@
       <Filter>Game</Filter>
     </ClCompile>
     <ClCompile Include="Game\grid.cpp">
-      <Filter>Game</Filter>
-    </ClCompile>
-    <ClCompile Include="Game\player.cpp">
       <Filter>Game</Filter>
     </ClCompile>
     <ClCompile Include="Game\player_cam_tps.cpp">
@@ -96,7 +96,7 @@
     <ClCompile Include="Game\player_fps.cpp">
       <Filter>Game</Filter>
     </ClCompile>
-    <ClCompile Include="Game\player_state_mechine.cpp">
+    <ClCompile Include="Game\player_state_machine.cpp">
       <Filter>Game</Filter>
     </ClCompile>
     <ClCompile Include="Game\collision.cpp">
@@ -215,6 +215,9 @@
     <ClInclude Include="Core\debug_imgui.h">
       <Filter>Core</Filter>
     </ClInclude>
+    <ClInclude Include="Core\debug_log.h">
+      <Filter>Core</Filter>
+    </ClInclude>
     <ClInclude Include="Core\ms_logger.h">
       <Filter>Core</Filter>
     </ClInclude>
@@ -227,7 +230,7 @@
     <ClInclude Include="Game\game.h">
       <Filter>Game</Filter>
     </ClInclude>
-    <ClInclude Include="Game\Audio.h">
+    <ClInclude Include="Game\audio.h">
       <Filter>Game</Filter>
     </ClInclude>
     <ClInclude Include="Game\score.h">
@@ -240,9 +243,6 @@
       <Filter>Game</Filter>
     </ClInclude>
     <ClInclude Include="Game\grid.h">
-      <Filter>Game</Filter>
-    </ClInclude>
-    <ClInclude Include="Game\player.h">
       <Filter>Game</Filter>
     </ClInclude>
     <ClInclude Include="Game\player_cam_tps.h">
@@ -260,7 +260,7 @@
     <ClInclude Include="Game\player_fps.h">
       <Filter>Game</Filter>
     </ClInclude>
-    <ClInclude Include="Game\player_state_mechine.h">
+    <ClInclude Include="Game\player_state_machine.h">
       <Filter>Game</Filter>
     </ClInclude>
     <ClInclude Include="Game\collision.h">

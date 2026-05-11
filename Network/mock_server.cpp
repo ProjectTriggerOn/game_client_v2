@@ -32,7 +32,7 @@ void MockServer::Initialize(INetwork* pNetwork, CollisionWorld* pCollisionWorld)
     m_ServerTime = 0.0;
     m_CurrentTick = 0;
 
-    // Initialize player state (match Player_Fps spawn in Game_Initialize)
+    // Initialize player state (match PlayerFps spawn in Game_Initialize)
     m_PlayerState.tickId = 0;
     m_PlayerState.position = { -7.0f, 0.0f, -7.0f };  // Corner spawn
     m_PlayerState.velocity = { 0.0f, 0.0f, 0.0f };
@@ -42,6 +42,8 @@ void MockServer::Initialize(INetwork* pNetwork, CollisionWorld* pCollisionWorld)
     m_PlayerState.health = 200;
     m_PlayerState.hitByPlayerId = 0xFF;
     m_PlayerState.fireCounter = 0;
+    m_Ammo = WeaponConfig::MAG_SIZE;
+    m_AmmoReserve = WeaponConfig::MAX_RESERVE;
 
     // Initialize last input
     m_LastInputCmd = {};
@@ -146,9 +148,12 @@ void MockServer::Tick()
 
     m_RemotePlayerState.health = m_RemoteHealth;
 
-    // 4. Update tick ID in states
+    // 4. Update tick ID in states (and ack of last processed input — see GameServer)
     m_PlayerState.tickId = m_CurrentTick;
+    m_PlayerState.lastProcessedInputTick = m_LastInputCmd.tickId;
     m_PlayerState.fireCounter = m_FireCounter;
+    m_PlayerState.ammo = m_Ammo;
+    m_PlayerState.ammoReserve = m_AmmoReserve;
 
     // 5. Broadcast snapshot to client
     BroadcastSnapshot();
@@ -184,10 +189,10 @@ void MockServer::ProcessInputCmd(const InputCmd& cmd)
     if (cmd.buttons & InputButtons::RELOAD)
     {
         // Start reload latch — keep IS_RELOADING active for duration
-        if (m_ReloadTimer <= 0.0)
-            m_ReloadTimer = RELOAD_DURATION;
+        if (m_ReloadTimer <= 0.0 && m_Ammo < WeaponConfig::MAG_SIZE && m_AmmoReserve > 0)
+            m_ReloadTimer = WeaponConfig::RELOAD_DURATION;
     }
-    
+
     // Reload latch timer
     if (m_ReloadTimer > 0.0)
     {
@@ -197,11 +202,30 @@ void MockServer::ProcessInputCmd(const InputCmd& cmd)
         {
             m_ReloadTimer = 0.0;
             flags &= ~NetStateFlags::IS_RELOADING;
+
+            // Refill magazine from reserve
+            int needed = WeaponConfig::MAG_SIZE - m_Ammo;
+            int refill = (m_AmmoReserve >= needed) ? needed : m_AmmoReserve;
+            m_Ammo += static_cast<uint8_t>(refill);
+            m_AmmoReserve -= static_cast<uint8_t>(refill);
         }
     }
     else
     {
         flags &= ~NetStateFlags::IS_RELOADING;
+    }
+
+    // Inspect: set when INSPECT pressed, clear on any action input
+    bool hasActionInput = (cmd.buttons & (InputButtons::FIRE | InputButtons::ADS | InputButtons::RELOAD | InputButtons::JUMP | InputButtons::SPRINT)) != 0
+        || fabsf(cmd.moveAxisX) > 0.01f || fabsf(cmd.moveAxisY) > 0.01f;
+
+    if (cmd.buttons & InputButtons::INSPECT)
+    {
+        flags |= NetStateFlags::IS_INSPECTING;
+    }
+    else if ((flags & NetStateFlags::IS_INSPECTING) && hasActionInput)
+    {
+        flags &= ~NetStateFlags::IS_INSPECTING;
     }
 
     m_PlayerState.stateFlags = flags;
@@ -317,9 +341,11 @@ void MockServer::SimulatePhysics()
             // Cap horizontal speed to prevent infinite acceleration
             float horizSpeed = sqrtf(m_PlayerState.velocity.x * m_PlayerState.velocity.x + 
                                      m_PlayerState.velocity.z * m_PlayerState.velocity.z);
-            if (horizSpeed > maxSpeed * 1.2f)  // Allow slight overspeed from bunny hop
+            // Allow slight overspeed from bunny hop
+            const float airCap = maxSpeed * PhysicsConfig::AIR_STRAFE_SPEED_MULT;
+            if (horizSpeed > airCap)
             {
-                float scale = (maxSpeed * 1.2f) / horizSpeed;
+                float scale = airCap / horizSpeed;
                 m_PlayerState.velocity.x *= scale;
                 m_PlayerState.velocity.z *= scale;
             }
@@ -513,6 +539,13 @@ static bool RayAABB(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT3& di
 //-----------------------------------------------------------------------------
 void MockServer::ProcessFiring()
 {
+    // Block firing while reloading or inspecting
+    if (m_PlayerState.stateFlags & (NetStateFlags::IS_RELOADING | NetStateFlags::IS_INSPECTING))
+    {
+        m_FireTimer = 0.0;
+        return;
+    }
+
     bool isFiring = (m_LastInputCmd.buttons & InputButtons::FIRE) != 0;
 
     if (!isFiring)
@@ -541,6 +574,10 @@ void MockServer::ProcessFiring()
 
     if (!shouldFire) return;
 
+    if (m_Ammo == 0)
+        return;
+
+    m_Ammo--;
     m_FireCounter++;
 
     // Eye position

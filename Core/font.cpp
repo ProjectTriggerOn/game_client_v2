@@ -10,8 +10,7 @@
 
 #include "direct3d.h"
 
-// --- 1. 将结构体定义放在文件顶部 ---
-// 用于存储单个字符的渲染信息
+// Render info for a single BMFont glyph.
 struct CharInfo
 {
 	int srcX, srcY;
@@ -20,13 +19,10 @@ struct CharInfo
 	int xadvance;
 };
 
-// --- 2. 定义全局变量 ---
 static int g_FontTextureID = -1;
 static std::map<wchar_t, CharInfo> g_CharMap;
 
-// --- 3. 将辅助函数放在它们被调用之前 ---
-
-// 辅助函数：解析一行BMFont的 "char" 数据
+// Parses a single "char ..." line from a BMFont .fnt file.
 static void ParseCharLine(const std::string& line)
 {
 	std::stringstream ss(line);
@@ -58,18 +54,16 @@ static void ParseCharLine(const std::string& line)
 	}
 }
 
-// 辅助函数：获取单个字符的渲染宽度
+// Render width of a single glyph (fallback to a default space width).
 static int GetCharWidth(wchar_t c)
 {
 	auto it = g_CharMap.find(c);
 	if (it != g_CharMap.end()) {
 		return it->second.xadvance;
 	}
-	return 16; // 返回一个默认的空格宽度
+	return 16;
 }
 
-
-// --- 4. 实现模块的公共函数 ---
 
 void Font_Initialize()
 {
@@ -173,7 +167,7 @@ void Font_DrawWrapped(const wchar_t* text, float dx, float dy, float maxWidth, c
 		size_t breakPos = std::wstring::npos;
 		float currentLineWidth = 0;
 
-		// 找到这一行能容纳的最后一个字符
+		// Find the last character that fits on this line.
 		for (size_t i = 0; i < remainingText.length(); ++i) {
 			currentLineWidth += GetCharWidth(remainingText[i]);
 			if (currentLineWidth > maxWidth) {
@@ -182,9 +176,8 @@ void Font_DrawWrapped(const wchar_t* text, float dx, float dy, float maxWidth, c
 			}
 		}
 
-		// 如果一行都放不下，就在 breakPos 处断开
 		if (breakPos != std::wstring::npos) {
-			// 尝试在断点前回溯，找到最后一个空格或标点，以实现更自然的单词换行
+			// Back up to the last space/punctuation for a more natural word wrap.
 			size_t wordBreakPos = remainingText.find_last_of(L" \t,.", breakPos);
 			if (wordBreakPos != std::wstring::npos && wordBreakPos > 0) {
 				breakPos = wordBreakPos;
@@ -194,18 +187,18 @@ void Font_DrawWrapped(const wchar_t* text, float dx, float dy, float maxWidth, c
 			Font_Draw(lineToDraw.c_str(), dx, cursorY, color);
 			remainingText = remainingText.substr(breakPos);
 
-			// 去掉下一行开头的空格
+			// Trim leading whitespace from the next line.
 			while (!remainingText.empty() && (remainingText[0] == L' ' || remainingText[0] == L'\t')) {
 				remainingText.erase(0, 1);
 			}
-
 		}
-		else { // 如果剩余的文本能在一行内放完
+		else {
+			// Remaining text fits in a single line.
 			Font_Draw(remainingText.c_str(), dx, cursorY, color);
 			remainingText.clear();
 		}
 
-		cursorY += lineHeight; // 換行
+		cursorY += lineHeight;
 	}
 }
 

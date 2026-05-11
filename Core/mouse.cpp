@@ -388,3 +388,11 @@ void clipToWindow(void)
     ClipCursor(&rect);
 }
 
+void Mouse_RefreshClipRect(void)
+{
+    if (gMode != MOUSE_POSITION_MODE_RELATIVE || !gInFocus || gWindow == NULL)
+        return;
+
+    clipToWindow();
+}
+

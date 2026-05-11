@@ -71,6 +71,10 @@ void Mouse_SetVisible(bool visible);
 // �}�E�X����̂��߂̃E�B���h�E���b�Z�[�W�v���V�[�W���t�b�N�֐�
 void Mouse_ProcessMessage(UINT message, WPARAM wParam, LPARAM lParam);
 
+// Recompute the cursor clip rect against the current window client area.
+// No-op unless the mouse is in RELATIVE mode and the window has focus.
+void Mouse_RefreshClipRect(void);
+
 
 // �������@
 //
@@ -104,4 +108,4 @@ void Mouse_ProcessMessage(UINT message, WPARAM wParam, LPARAM lParam);
 // }
 //
 
-#endif // MOUSE_H
+#endif

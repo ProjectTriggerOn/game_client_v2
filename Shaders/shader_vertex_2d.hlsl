@@ -1,4 +1,3 @@
-
 // 定数バッファ
 cbuffer VS_CONSTANT_BUFFER : register(b0)
 {float4x4 proj;}

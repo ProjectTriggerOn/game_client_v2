@@ -28,8 +28,6 @@ void Texture_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 	for (Texture& t : g_Textures)
 	{
 		t.pTexture = nullptr; // 初期化
-		//t.width = 0;
-		//t.height = 0;
 	}
 	g_SetTextureIndex = static_cast<unsigned int>(-1);
 	g_pDevice = pDevice; // デバイスの保存

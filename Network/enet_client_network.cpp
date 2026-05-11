@@ -185,6 +185,7 @@ void ENetClientNetwork::SendInputCmd(const InputCmd& cmd)
         sizeof(buffer),
         ENET_PACKET_FLAG_UNSEQUENCED
     );
+    if (!packet) return;
 
     enet_peer_send(m_pServerPeer, 0, packet);
     m_TotalInputsSent++;
