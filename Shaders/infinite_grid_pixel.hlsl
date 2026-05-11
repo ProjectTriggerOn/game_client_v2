@@ -37,7 +37,7 @@ struct draw_infinite_grid__VS_output
 // Pixel Shader
 //--------------------------------------------------------------------------------------
 
-// 抗锯齿格子线
+// Anti-aliased grid lines
 float4 grid(const float3 fragPos3D, float scale, float x_axis_width, float z_axis_width)
 {
     float2 coord = fragPos3D.xz * scale;
@@ -77,7 +77,6 @@ float computeLinearDepth(const float3 pos, float4x4 g_mView, float4x4 g_mProj,
 
 float4 main(draw_infinite_grid__VS_output input, out float depth : SV_Depth) : SV_Target
 {
-    // 解析参数
     float x_axis_width = grid_axis_widths.x;
     float z_axis_width = grid_axis_widths.y;
     float near_plane = grid_axis_widths.z;
@@ -90,34 +89,29 @@ float4 main(draw_infinite_grid__VS_output input, out float depth : SV_Depth) : S
     float grid_fade_start = grid_fade_params.x;
     float grid_fade_end = grid_fade_params.y;
 
-    // 计算地面交点
+    // Ray-plane intersection with the y=0 ground plane.
     float t = -input.near_point.y / (input.far_point.y - input.near_point.y);
     float3 fragPos3D = input.near_point + t * (input.far_point - input.near_point);
 
-    // 射线未击中XZ平面时直接丢弃，避免写入无效深度
+    // Ray missed the XZ plane: discard to avoid writing invalid depth.
     if (t <= 0.0f)
     {
         clip(-1);
     }
 
-    // 采样贴图
     float2 uv = fragPos3D.xz * plane_width_scale_0;
     float4 tex_decal = gex_decal.Sample(g_sam_linear, uv);
 
-    // 计算深度
     depth = computeDepth(fragPos3D, g_mView, g_mProj);
     float linearDepth = computeLinearDepth(fragPos3D, g_mView, g_mProj, near_plane, far_plane);
 
-    // 格子淡出
+    // Distance-based fade
     float fading = smoothstep(grid_fade_end, grid_fade_start, linearDepth);
 
-    // 叠加贴图和格子线
     float4 outColor = (0 * plane_color_intensity + grid(fragPos3D, plane_width_scale_1, x_axis_width, z_axis_width));
     outColor.a *= fading;
 
-    // 透明区域不写入颜色/深度，允许看到网格另一侧
+    // Discard fully transparent pixels so the grid behind shows through.
     clip(outColor.a - 1e-4f);
     return outColor;
-    //return float4(1, 0, 0, 1); // 全屏红色
-
 }

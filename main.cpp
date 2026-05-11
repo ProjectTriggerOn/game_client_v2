@@ -1,4 +1,3 @@
-//#include <Windows.h>
 #include <sstream>
 #include "debug_ostream.h"
 #include "game_window.h"
@@ -84,11 +83,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR lpC
 
 	KeyLogger_Initialize();
 
-	//Mouse_Initialize(hWnd);
-
 	MSLogger_Initialize(hWnd);
-
-	//Mouse_SetMode(MOUSE_POSITION_MODE_ABSOLUTE);
 
 	InitAudio();
 
@@ -195,8 +190,6 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR lpC
 
 #endif // _DEBUG || DEBUG
 
-	//Game_Initialize();
-
 	ShowWindow(hWnd, nCmdShow);
 
 	UpdateWindow(hWnd);
@@ -234,47 +227,34 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR lpC
 			}
 
 			elapsed_time = current_time - exec_last_time;
-			//if (elapsed_time >= (1.0 / 60.0)) {  // 60FPSで更新する場合
-			if (true){
-				exec_last_time = current_time;
+			exec_last_time = current_time;
 
+			KeyLogger_Update();
+			MSLogger_Update();
 
-				//ゲームループ処理／ゲーム更新
-				KeyLogger_Update();
-				MSLogger_Update();
+			Scene_Update(elapsed_time);
 
-				//Game_Update(elapsed_time);
-				Scene_Update(elapsed_time);
+			g_InputProducer.Update();
 
-				// ====================================================================
-				// Input Producer: Sample input and send InputCmd to server
-				// ====================================================================
-				g_InputProducer.Update();
+			if (g_NetworkMode == "local" || g_NetworkMode == "remote")
+			{
+				g_ENetNetwork.PollEvents();
+			}
+			else
+			{
+				g_MockServer.Update(elapsed_time);
+			}
 
-				// ====================================================================
-				// Network: Poll events (ENet) or run local server (Mock)
-				// ====================================================================
-				if (g_NetworkMode == "local" || g_NetworkMode == "remote")
-				{
-					g_ENetNetwork.PollEvents();
-				}
-				else
-				{
-					g_MockServer.Update(elapsed_time);
-				}
+			Fade_Update(elapsed_time);
 
-				Fade_Update(elapsed_time);
+			SpriteAnime_Update(elapsed_time);
 
-				SpriteAnime_Update(elapsed_time);
+			Direct3D_Clear();
 
-				//ゲーム描画処理
-				Direct3D_Clear();
+			Sprite_Begin();
 
-				Sprite_Begin();
-
-				//Game_Draw();
-				Scene_Draw();
-				Fade_Draw();
+			Scene_Draw();
+			Fade_Draw();
 
 
 
@@ -285,16 +265,13 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR lpC
 
 #endif // _DEBUG || DEBUG
 
-				Direct3D_Present();
+			Direct3D_Present();
 
-				Scene_Refresh();
+			Scene_Refresh();
 
-				frame_count++;
-			}
+			frame_count++;
 		}
 	} while (msg.message != WM_QUIT);
-
-	//Game_Finalize();
 
 	// Network cleanup
 	if (g_NetworkMode == "local" || g_NetworkMode == "remote")

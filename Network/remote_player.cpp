@@ -31,11 +31,11 @@ RemotePlayer::RemotePlayer()
     , m_Pitch(0.0f)
     , m_StateFlags(0)
     , m_SyncMode("INIT")
-    , m_DebugLerpFactor(0.0f)
-    , m_DebugRenderTime(0.0)
+    , m_LerpFactor(0.0f)
+    , m_LastRenderTime(0.0)
     , m_StuckFrameCount(0)
     , m_LastRenderPosition{ 0.0f, 0.0f, 0.0f }
-    , m_DebugIsStuck(false)
+    , m_IsStuck(false)
     , m_IsActive(false)
     , m_TeamId(PlayerTeam::RED)
     , m_Height(1.6f)
@@ -196,7 +196,7 @@ void RemotePlayer::Update(double elapsed_time, double currentTime)
     
     // Calculate render time (delayed behind real time for interpolation)
     double renderTime = currentTime - m_InterpolationDelay;
-    m_DebugRenderTime = renderTime;  // Save for debug
+    m_LastRenderTime = renderTime;  // Save for debug
     
     // Save previous position for stuck detection
     DirectX::XMFLOAT3 prevPos = m_RenderPosition;
@@ -204,7 +204,7 @@ void RemotePlayer::Update(double elapsed_time, double currentTime)
     if (m_SnapshotBuffer.empty())
     {
         m_SyncMode = "NODATA";
-        m_DebugLerpFactor = 0.0f;
+        m_LerpFactor = 0.0f;
         return;
     }
     
@@ -254,7 +254,7 @@ void RemotePlayer::Update(double elapsed_time, double currentTime)
             m_Yaw = oldest.state.yaw;
             m_Pitch = oldest.state.pitch;
             m_StateFlags = oldest.state.stateFlags;
-            m_DebugLerpFactor = 0.0f;
+            m_LerpFactor = 0.0f;
         }
         else if (renderTime >= newest.receiveTime)
         {
@@ -277,7 +277,7 @@ void RemotePlayer::Update(double elapsed_time, double currentTime)
                 m_Yaw = newest.state.yaw;
                 m_Pitch = newest.state.pitch;
                 m_StateFlags = newest.state.stateFlags;
-                m_DebugLerpFactor = 1.0f;
+                m_LerpFactor = 1.0f;
             }
         }
     }
@@ -295,14 +295,13 @@ void RemotePlayer::Update(double elapsed_time, double currentTime)
         m_StuckFrameCount++;
         if (m_StuckFrameCount >= 3)
         {
-            m_DebugIsStuck = true;
-            // Log warning (would use OutputDebugString in real app)
+            m_IsStuck = true;
         }
     }
     else
     {
         m_StuckFrameCount = 0;
-        m_DebugIsStuck = false;
+        m_IsStuck = false;
     }
     m_LastRenderPosition = m_RenderPosition;
     
@@ -357,7 +356,7 @@ void RemotePlayer::InterpolateBetween(const RemoteSnapshot& a, const RemoteSnaps
     
     float t = static_cast<float>((renderTime - a.receiveTime) / duration);
     t = std::max(0.0f, std::min(1.0f, t));  // Clamp 0-1
-    m_DebugLerpFactor = t;  // Save for debug
+    m_LerpFactor = t;  // Save for debug
     
     // Lerp position
     m_RenderPosition.x = a.state.position.x + (b.state.position.x - a.state.position.x) * t;

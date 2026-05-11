@@ -191,11 +191,10 @@
     <ClCompile Include="Network\enet_client_network.cpp" />
     <ClCompile Include="Network\mock_network.cpp" />
     <ClCompile Include="Network\mock_server.cpp" />
-    <ClCompile Include="Game\player.cpp" />
     <ClCompile Include="Game\player_cam_fps.cpp" />
     <ClCompile Include="Game\player_cam_tps.cpp" />
     <ClCompile Include="Game\player_fps.cpp" />
-    <ClCompile Include="Game\player_state_mechine.cpp" />
+    <ClCompile Include="Game\player_state_machine.cpp" />
     <ClCompile Include="Network\remote_player.cpp" />
     <ClCompile Include="Network\remote_player_state_machine.cpp" />
     <ClCompile Include="Graphics\polygon.cpp" />
@@ -251,11 +250,10 @@
     <ClInclude Include="Network\mock_server.h" />
     <ClInclude Include="Network\net_common.h" />
     <ClInclude Include="Network\net_packet.h" />
-    <ClInclude Include="Game\player.h" />
     <ClInclude Include="Game\player_cam_fps.h" />
     <ClInclude Include="Game\player_cam_tps.h" />
     <ClInclude Include="Game\player_fps.h" />
-    <ClInclude Include="Game\player_state_mechine.h" />
+    <ClInclude Include="Game\player_state_machine.h" />
     <ClInclude Include="Network\remote_player.h" />
     <ClInclude Include="Network\remote_player_state_machine.h" />
     <ClInclude Include="Graphics\polygon.h" />

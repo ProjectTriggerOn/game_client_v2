@@ -18,12 +18,6 @@ bool Collision_OverlapCircleCircle(const Circle& a, const Circle& b)
 	float y1 = b.center.y - a.center.y;
 
 	return (a.radius + b.radius) * (a.radius + b.radius) > (x1 * x1 + y1 * y1);
-
-	//XMVECTOR centerA = XMLoadFloat2(&a.center);
-	//XMVECTOR centerB = XMLoadFloat2(&b.center);
-	//XMVECTOR lsq = XMVector2LengthSq(centerB - centerA);
-
-	//return (a.radius + b.radius) * (a.radius + b.radius) > XMVectorGetX(lsq);
 }
 
 bool Collision_OverlapCircleBox(const Box& a, const Box& b)
@@ -118,18 +112,18 @@ bool Collision_isHitRayOnSphere(const Ray& ray, const Sphere& sphere, float* out
 	XMVECTOR m = rayOrigin - sphereCenter;
 	float b = XMVectorGetX(XMVector3Dot(m, rayDirection));
 	float c = XMVectorGetX(XMVector3Dot(m, m)) - sphere.radius * sphere.radius;
-	// 光線起点在球外且光线远离球心
+	// Ray origin outside the sphere and pointing away from the center
 	if (c > 0.0f && b > 0.0f) {
 		return false;
 	}
 	float discriminant = b * b - c;
-	// 判定なし
+	// No intersection
 	if (discriminant < 0.0f) {
 		return false;
 	}
-	// 衝突距离を計算
+	// Compute intersection distance
 	float t = -b - sqrtf(discriminant);
-	// 光線起点が球内部にある場合
+	// Ray origin is inside the sphere
 	if (t < 0.0f) {
 		t = 0.0f;
 	}
@@ -149,7 +143,7 @@ bool Collision_OverlapSphere(const Sphere& sphereA, const Sphere& sphereB)
 }
 
 // ============================================================
-// 辅助函数：点到线段的最近点（返回参数t in [0,1]）
+// Helper: closest point on a segment to a given point (returns t in [0,1])
 // ============================================================
 static XMVECTOR ClosestPointOnSegment(XMVECTOR segA, XMVECTOR segB, XMVECTOR point, float* outT = nullptr)
 {
@@ -165,7 +159,7 @@ static XMVECTOR ClosestPointOnSegment(XMVECTOR segA, XMVECTOR segB, XMVECTOR poi
 }
 
 // ============================================================
-// 辅助函数：两条线段之间的最近距离的平方及最近点
+// Helper: squared closest distance between two segments + closest points
 // ============================================================
 static float ClosestDistanceSqSegmentSegment(
 	XMVECTOR p1, XMVECTOR q1,
@@ -173,8 +167,8 @@ static float ClosestDistanceSqSegmentSegment(
 	XMVECTOR* outClosest1 = nullptr,
 	XMVECTOR* outClosest2 = nullptr)
 {
-	XMVECTOR d1 = q1 - p1; // 线段1方向
-	XMVECTOR d2 = q2 - p2; // 线段2方向
+	XMVECTOR d1 = q1 - p1; // direction of segment 1
+	XMVECTOR d2 = q2 - p2; // direction of segment 2
 	XMVECTOR r = p1 - p2;
 
 	float a = XMVectorGetX(XMVector3Dot(d1, d1)); // |d1|^2
@@ -185,18 +179,18 @@ static float ClosestDistanceSqSegmentSegment(
 	const float EPSILON = 1e-8f;
 
 	if (a <= EPSILON && e <= EPSILON) {
-		// 两条线段都退化为点
+		// Both segments degenerate to points
 		s = t = 0.0f;
 	}
 	else if (a <= EPSILON) {
-		// 线段1退化为点
+		// Segment 1 degenerates to a point
 		s = 0.0f;
 		t = std::clamp(f / e, 0.0f, 1.0f);
 	}
 	else {
 		float c = XMVectorGetX(XMVector3Dot(d1, r));
 		if (e <= EPSILON) {
-			// 线段2退化为点
+			// Segment 2 degenerates to a point
 			t = 0.0f;
 			s = std::clamp(-c / a, 0.0f, 1.0f);
 		}
@@ -233,7 +227,7 @@ static float ClosestDistanceSqSegmentSegment(
 }
 
 // ============================================================
-// Capsule vs Capsule 重叠判定
+// Capsule vs Capsule — overlap test
 // ============================================================
 bool Collision_OverlapCapsuleCapsule(const Capsule& a, const Capsule& b)
 {
@@ -248,7 +242,7 @@ bool Collision_OverlapCapsuleCapsule(const Capsule& a, const Capsule& b)
 }
 
 // ============================================================
-// Capsule vs Capsule 碰撞判定（带法线）
+// Capsule vs Capsule — hit test (returns contact normal)
 // ============================================================
 Hit Collision_IsHitCapsuleCapsule(const Capsule& a, const Capsule& b)
 {
@@ -273,13 +267,13 @@ Hit Collision_IsHitCapsuleCapsule(const Capsule& a, const Capsule& b)
 		XMStoreFloat3(&hit.normal, normal);
 	}
 	else {
-		hit.normal = { 0.0f, 1.0f, 0.0f }; // 重叠时默认向上
+		hit.normal = { 0.0f, 1.0f, 0.0f }; // default to up when fully overlapping
 	}
 	return hit;
 }
 
 // ============================================================
-// Capsule vs Sphere 重叠判定
+// Capsule vs Sphere — overlap test
 // ============================================================
 bool Collision_OverlapCapsuleSphere(const Capsule& capsule, const Sphere& sphere)
 {
@@ -295,26 +289,26 @@ bool Collision_OverlapCapsuleSphere(const Capsule& capsule, const Sphere& sphere
 }
 
 // ============================================================
-// Capsule vs AABB 重叠判定
+// Capsule vs AABB — overlap test
 // ============================================================
 bool Collision_OverlapCapsuleAABB(const Capsule& capsule, const AABB& aabb)
 {
-	// 将胶囊体线段上采样多个点，找到离AABB最近的距离
-	// 更精确的做法：找线段上离AABB最近的点
+	// Sample points along the capsule segment and track the minimum distance
+	// to the AABB. (A more accurate approach is to solve the closest point
+	// on the segment analytically.)
 	XMVECTOR segA = XMLoadFloat3(&capsule.pointA);
 	XMVECTOR segB = XMLoadFloat3(&capsule.pointB);
 	XMVECTOR aabbMin = XMLoadFloat3(&aabb.min);
 	XMVECTOR aabbMax = XMLoadFloat3(&aabb.max);
 
-	// 在线段上搜索离AABB最近的点（迭代法）
-	// 对线段参数t进行二分/采样
+	// Iterative search for the closest point on the segment to the AABB.
 	float bestDistSq = FLT_MAX;
 	const int STEPS = 16;
 	for (int i = 0; i <= STEPS; ++i) {
 		float t = static_cast<float>(i) / STEPS;
 		XMVECTOR segPoint = segA + (segB - segA) * t;
 
-		// AABB上离segPoint最近的点（clamp到AABB范围）
+		// Closest point on the AABB to segPoint (clamp to AABB bounds)
 		XMVECTOR clamped = XMVectorClamp(segPoint, aabbMin, aabbMax);
 		float distSq = XMVectorGetX(XMVector3LengthSq(segPoint - clamped));
 		if (distSq < bestDistSq) {
@@ -326,12 +320,12 @@ bool Collision_OverlapCapsuleAABB(const Capsule& capsule, const AABB& aabb)
 }
 
 // ============================================================
-// Ray vs Capsule 射线判定
+// Ray vs Capsule — hit test
 // ============================================================
 bool Collision_isHitRayOnCapsule(const Ray& ray, const Capsule& capsule, float* outDistance)
 {
-	// 将胶囊体视为：无限圆柱体 + 两端半球
-	// 先检测射线与圆柱体部分，再检测与两端球
+	// Model the capsule as an infinite cylinder + two end hemispheres.
+	// First test the ray against the cylinder portion, then against the spheres.
 
 	XMVECTOR rayOrig = XMLoadFloat3(&ray.origin);
 	XMVECTOR rayDir = XMLoadFloat3(&ray.direction);
@@ -344,11 +338,11 @@ bool Collision_isHitRayOnCapsule(const Ray& ray, const Capsule& capsule, float* 
 	bool hasHit = false;
 
 	if (capLenSq > 1e-8f) {
-		// 圆柱体部分的射线检测
+		// Ray vs cylinder body
 		XMVECTOR capDir = capAxis / sqrtf(capLenSq);
 		XMVECTOR oc = rayOrig - capA;
 
-		// 去除沿胶囊体轴方向的分量
+		// Strip out the component along the capsule axis
 		float dDotAxis = XMVectorGetX(XMVector3Dot(rayDir, capDir));
 		float ocDotAxis = XMVectorGetX(XMVector3Dot(oc, capDir));
 
@@ -366,7 +360,7 @@ bool Collision_isHitRayOnCapsule(const Ray& ray, const Capsule& capsule, float* 
 			if (t < 0.0f) t = (-b + sqrtDisc) / a;
 
 			if (t >= 0.0f) {
-				// 检查交点是否在胶囊体圆柱段内
+				// Check the intersection lies within the cylinder span
 				float hitOnAxis = ocDotAxis + t * dDotAxis;
 				float capLen = sqrtf(capLenSq);
 				if (hitOnAxis >= 0.0f && hitOnAxis <= capLen) {
@@ -376,7 +370,7 @@ bool Collision_isHitRayOnCapsule(const Ray& ray, const Capsule& capsule, float* 
 		}
 	}
 
-	// 检测两端半球
+	// Ray vs the two end hemispheres
 	Sphere sphereA = { capsule.pointA, capsule.radius };
 	Sphere sphereB = { capsule.pointB, capsule.radius };
 	float tA, tB;
@@ -506,7 +500,7 @@ void Collision_DebugDraw(const Box& box, const DirectX::XMFLOAT4& color)
 
 void Collision_DebugDraw(const AABB& aabb, const DirectX::XMFLOAT4& color)
 {
-	// 1. 获取AABB的8个顶点（角）
+	// 1. Compute the 8 corners of the AABB
 	DirectX::XMFLOAT3 corners[8] = {
 		{ aabb.min.x, aabb.min.y, aabb.min.z }, // 0: Bottom-Back-Left
 		{ aabb.max.x, aabb.min.y, aabb.min.z }, // 1: Bottom-Back-Right
@@ -518,7 +512,7 @@ void Collision_DebugDraw(const AABB& aabb, const DirectX::XMFLOAT4& color)
 		{ aabb.min.x, aabb.max.y, aabb.max.z }  // 7: Top-Front-Left
 	};
 
-	// 2. 定义12条线 (需要24个顶点)
+	// 2. Define 12 edges (24 vertices)
 	Vertex v[24];
 
 	auto set_line = [&](int v_index, int corner_a, int corner_b) {
@@ -531,33 +525,33 @@ void Collision_DebugDraw(const AABB& aabb, const DirectX::XMFLOAT4& color)
 		v[v_index + 1].uv = { 0.0f, 0.0f };
 		};
 
-	// 绘制底面 (4条线)
+	// Bottom face (4 edges)
 	set_line(0, 0, 1);
 	set_line(2, 1, 5);
 	set_line(4, 5, 4);
 	set_line(6, 4, 0);
 
-	// 绘制顶面 (4条线)
+	// Top face (4 edges)
 	set_line(8, 3, 2);
 	set_line(10, 2, 6);
 	set_line(12, 6, 7);
 	set_line(14, 7, 3);
 
-	// 绘制垂直的边 (4条线)
+	// Vertical edges (4 edges)
 	set_line(16, 0, 3);
 	set_line(18, 1, 2);
 	set_line(20, 5, 6);
 	set_line(22, 4, 7);
 
 
-	// 3. 复制标准D3D绘制流程
+	// 3. Standard D3D draw flow
 	Shader_Begin();
 	Shader_SetMatrix(g_DebugViewProj);
 
 	D3D11_MAPPED_SUBRESOURCE msr;
 	g_pContext->Map(g_pVertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &msr);
 
-	// 将所有24个顶点数据复制到顶点缓冲区
+	// Upload all 24 vertices into the vertex buffer
 	memcpy(msr.pData, v, sizeof(Vertex) * 24);
 
 	g_pContext->Unmap(g_pVertexBuffer, 0);
@@ -568,12 +562,11 @@ void Collision_DebugDraw(const AABB& aabb, const DirectX::XMFLOAT4& color)
 
 	Shader_SetWorldMatrix(DirectX::XMMatrixIdentity());
 
-	// *** 注意：这里使用 LINELIST ***
+	// LINELIST topology for wireframe edges
 	g_pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
 
 	Texture_Set(g_WhiteId);
 
-	// *** 注意：绘制24个顶点 ***
 	g_pContext->Draw(24, 0);
 }
 
@@ -608,15 +601,15 @@ void Collision_DebugDrawLine(const DirectX::XMFLOAT3& start, const DirectX::XMFL
 
 void Collision_DebugDraw(const Capsule& capsule, const DirectX::XMFLOAT4& color)
 {
-	const int CIRCLE_SEGMENTS = 16; // 每个圆环的分段数
-	const int NUM_RINGS = 3;        // 沿轴方向的圆环数（除两端）
+	const int CIRCLE_SEGMENTS = 16; // segments per ring
+	const int NUM_RINGS = 3;        // rings along the axis (excluding both ends)
 
 	XMVECTOR a = XMLoadFloat3(&capsule.pointA);
 	XMVECTOR b = XMLoadFloat3(&capsule.pointB);
 	XMVECTOR axis = b - a;
 	float axisLen = XMVectorGetX(XMVector3Length(axis));
 
-	// 构建正交基
+	// Build an orthonormal basis around the capsule axis
 	XMVECTOR up;
 	if (axisLen > 1e-6f) {
 		up = XMVector3Normalize(axis);
@@ -625,7 +618,7 @@ void Collision_DebugDraw(const Capsule& capsule, const DirectX::XMFLOAT4& color)
 		up = XMVectorSet(0, 1, 0, 0);
 	}
 
-	// 找一个不平行的向量来叉乘
+	// Pick a non-parallel helper vector for the cross product
 	XMVECTOR helper = XMVectorSet(1, 0, 0, 0);
 	if (fabsf(XMVectorGetX(XMVector3Dot(up, helper))) > 0.9f) {
 		helper = XMVectorSet(0, 0, 1, 0);
@@ -633,17 +626,17 @@ void Collision_DebugDraw(const Capsule& capsule, const DirectX::XMFLOAT4& color)
 	XMVECTOR right = XMVector3Normalize(XMVector3Cross(up, helper));
 	XMVECTOR forward = XMVector3Cross(right, up);
 
-	// 顶点数组
-	// 圆环线: (NUM_RINGS + 2) * CIRCLE_SEGMENTS * 2 (LINELIST)
-	// 连接线: 4条纵线 * 2 顶点 = 8
-	// 半球弧线: 两端各2条弧(right平面和forward平面) * (CIRCLE_SEGMENTS/2+1) 顶点
+	// Vertex layout (LINELIST):
+	//   ring lines:        (NUM_RINGS + 2) * CIRCLE_SEGMENTS * 2
+	//   axial connectors:  4 lines * 2 vertices = 8
+	//   hemisphere arcs:   4 arcs * arcSegments * 2 vertices
 	const int ringVertices = (NUM_RINGS + 2) * CIRCLE_SEGMENTS * 2;
 	const int lineVertices = 8;
 	const int arcSegments = CIRCLE_SEGMENTS / 2;
-	const int arcVertices = 4 * arcSegments * 2; // 4条弧线
+	const int arcVertices = 4 * arcSegments * 2;
 	const int totalVertices = ringVertices + lineVertices + arcVertices;
 
-	Vertex v[NUM_VERTEX]; // 使用已有的上限
+	Vertex v[NUM_VERTEX];
 	int vi = 0;
 
 	auto addLine = [&](XMVECTOR p1, XMVECTOR p2) {
@@ -658,7 +651,7 @@ void Collision_DebugDraw(const Capsule& capsule, const DirectX::XMFLOAT4& color)
 		vi++;
 	};
 
-	// 绘制圆环（底端、顶端、中间）
+	// Draw rings (bottom, top, and intermediate)
 	for (int ring = 0; ring <= NUM_RINGS + 1; ++ring) {
 		float t = static_cast<float>(ring) / (NUM_RINGS + 1);
 		XMVECTOR center = a + axis * t;
@@ -673,15 +666,15 @@ void Collision_DebugDraw(const Capsule& capsule, const DirectX::XMFLOAT4& color)
 		}
 	}
 
-	// 绘制4条纵线连接底端和顶端
+	// Draw 4 axial lines connecting bottom and top
 	for (int i = 0; i < 4; ++i) {
 		float angle = XM_2PI * i / 4;
 		XMVECTOR offset = (right * cosf(angle) + forward * sinf(angle)) * capsule.radius;
 		addLine(a + offset, b + offset);
 	}
 
-	// 绘制两端半球弧线
-	// 底端半球（朝下）: 从赤道经底极到赤道 (π → 2π)
+	// Draw hemisphere arcs at both ends.
+	// Bottom hemisphere (downward): equator -> bottom pole -> equator (PI -> 2*PI)
 	for (int plane = 0; plane < 2; ++plane) {
 		XMVECTOR planeDir = (plane == 0) ? right : forward;
 		for (int i = 0; i < arcSegments; ++i) {
@@ -694,7 +687,7 @@ void Collision_DebugDraw(const Capsule& capsule, const DirectX::XMFLOAT4& color)
 		}
 	}
 
-	// 顶端半球（朝上）: 从赤道经顶极到赤道 (0 → π)
+	// Top hemisphere (upward): equator -> top pole -> equator (0 -> PI)
 	for (int plane = 0; plane < 2; ++plane) {
 		XMVECTOR planeDir = (plane == 0) ? right : forward;
 		for (int i = 0; i < arcSegments; ++i) {
@@ -707,7 +700,7 @@ void Collision_DebugDraw(const Capsule& capsule, const DirectX::XMFLOAT4& color)
 		}
 	}
 
-	// 绘制
+	// Submit the draw
 	Shader_Begin();
 	Shader_SetMatrix(g_DebugViewProj);
 

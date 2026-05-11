@@ -69,16 +69,16 @@ public:
     DirectX::XMFLOAT3 GetEyePosition() const;
     
     //-------------------------------------------------------------------------
-    // Debug Info
+    // Network diagnostic state (exposed via the HUD)
     //-------------------------------------------------------------------------
     const char* GetSyncMode() const { return m_SyncMode; }
     size_t GetBufferSize() const { return m_SnapshotBuffer.size(); }
     double GetInterpolationDelay() const { return m_InterpolationDelay; }
-    float GetLerpFactor() const { return m_DebugLerpFactor; }
-    double GetLastRenderTime() const { return m_DebugRenderTime; }
+    float GetLerpFactor() const { return m_LerpFactor; }
+    double GetLastRenderTime() const { return m_LastRenderTime; }
     double GetOldestSnapshotTime() const;
     double GetNewestSnapshotTime() const;
-    bool IsStuck() const { return m_DebugIsStuck; }
+    bool IsStuck() const { return m_IsStuck; }
     std::string GetPlayerStateString() const;
     std::string GetWeaponStateString() const;
     std::string GetMoveDirectionString() const;
@@ -114,13 +114,13 @@ private:
     float m_Pitch;
     uint32_t m_StateFlags;
     
-    // Debug
+    // Diagnostic state (exposed via HUD)
     const char* m_SyncMode;
-    float m_DebugLerpFactor;
-    double m_DebugRenderTime;
-    int m_StuckFrameCount;  // Frames where position hasn't changed
-    DirectX::XMFLOAT3 m_LastRenderPosition;  // For stuck detection
-    bool m_DebugIsStuck;
+    float m_LerpFactor;
+    double m_LastRenderTime;
+    int m_StuckFrameCount;
+    DirectX::XMFLOAT3 m_LastRenderPosition;
+    bool m_IsStuck;
     
     // Display properties
     bool m_IsActive;

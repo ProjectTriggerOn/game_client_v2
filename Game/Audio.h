@@ -1,13 +1,9 @@
 #pragma once
 
-
-
 void InitAudio();
 void UninitAudio();
 
-
-int LoadAudio(const char* FileName);
-void UnloadAudio(int Index);
-void PlayAudio(int Index, bool Loop = false);
-
-void SetVolume(int Index, float Volume);
+int  LoadAudio(const char* fileName);
+void UnloadAudio(int index);
+void PlayAudio(int index, bool loop = false);
+void SetVolume(int index, float volume);

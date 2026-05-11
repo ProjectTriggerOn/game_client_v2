@@ -175,7 +175,7 @@ InputCmd InputProducer::BuildInputCmd() const
 {
     InputCmd cmd;
     // Stamp with player_fps's m_CurrentClientTick so the cmd.tickId we send is
-    // in the same domain as Player_Fps::m_InputHistory.cmd.tickId. The server
+    // in the same domain as PlayerFps::m_InputHistory.cmd.tickId. The server
     // echoes this value back as NetPlayerState.lastProcessedInputTick so the
     // client can find the matching history entry for RESIM.
     cmd.tickId = Game_GetClientTick();

@@ -32,7 +32,7 @@ void MockServer::Initialize(INetwork* pNetwork, CollisionWorld* pCollisionWorld)
     m_ServerTime = 0.0;
     m_CurrentTick = 0;
 
-    // Initialize player state (match Player_Fps spawn in Game_Initialize)
+    // Initialize player state (match PlayerFps spawn in Game_Initialize)
     m_PlayerState.tickId = 0;
     m_PlayerState.position = { -7.0f, 0.0f, -7.0f };  // Corner spawn
     m_PlayerState.velocity = { 0.0f, 0.0f, 0.0f };
@@ -341,9 +341,11 @@ void MockServer::SimulatePhysics()
             // Cap horizontal speed to prevent infinite acceleration
             float horizSpeed = sqrtf(m_PlayerState.velocity.x * m_PlayerState.velocity.x + 
                                      m_PlayerState.velocity.z * m_PlayerState.velocity.z);
-            if (horizSpeed > maxSpeed * 1.2f)  // Allow slight overspeed from bunny hop
+            // Allow slight overspeed from bunny hop
+            const float airCap = maxSpeed * PhysicsConfig::AIR_STRAFE_SPEED_MULT;
+            if (horizSpeed > airCap)
             {
-                float scale = (maxSpeed * 1.2f) / horizSpeed;
+                float scale = airCap / horizSpeed;
                 m_PlayerState.velocity.x *= scale;
                 m_PlayerState.velocity.z *= scale;
             }

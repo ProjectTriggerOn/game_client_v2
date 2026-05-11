@@ -14,7 +14,7 @@
 
 using namespace DirectX;
 
-Player_Fps::Player_Fps()
+PlayerFps::PlayerFps()
 	: m_Position({ 0,0,0 })
 	, m_Velocity({ 0,0,0 })
 	, m_RenderOffset({ 0,0,0 })
@@ -30,7 +30,7 @@ Player_Fps::Player_Fps()
 	, m_CamRelativePos({ 0.0f, 0.0f,0.3f })
 	, m_Height(1.6f)
 	, m_CapsuleRadius(0.3f)
-	, m_isJump(false)
+	, m_IsJump(false)
 	, m_JumpPending(false)
 	, m_pCollisionWorld(nullptr)
 	, m_PhysicsAccumulator(0.0)
@@ -52,12 +52,12 @@ Player_Fps::Player_Fps()
 {
 }
 
-Player_Fps::~Player_Fps()
+PlayerFps::~PlayerFps()
 {
 	Finalize();
 }
 
-void Player_Fps::Initialize(const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3& front,
+void PlayerFps::Initialize(const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3& front,
                             CollisionWorld* pCollisionWorld)
 {
 	m_Position = position;
@@ -91,7 +91,7 @@ void Player_Fps::Initialize(const DirectX::XMFLOAT3& position, const DirectX::XM
 	}
 }
 
-void Player_Fps::Finalize()
+void PlayerFps::Finalize()
 {
 	if (m_Animator)
 	{
@@ -105,7 +105,7 @@ void Player_Fps::Finalize()
 	}
 }
 
-void Player_Fps::SetTeam(uint8_t teamId)
+void PlayerFps::SetTeam(uint8_t teamId)
 {
 	if (teamId == m_TeamId) return;
 	m_TeamId = teamId;
@@ -134,7 +134,7 @@ void Player_Fps::SetTeam(uint8_t teamId)
 	}
 }
 
-void Player_Fps::Update(double elapsed_time)
+void PlayerFps::Update(double elapsed_time)
 {
 	const float frameDt = static_cast<float>(elapsed_time);
 
@@ -420,7 +420,7 @@ if (KeyLogger_IsTrigger(KK_R))
 
 }
 
-void Player_Fps::Draw()
+void PlayerFps::Draw()
 {
 	if (!m_Model) return;
 
@@ -467,22 +467,22 @@ void Player_Fps::Draw()
 	ModelAni_Draw(m_Model, world, m_Animator, true); // isBlender=false as we constructed the matrix manually
 }
 
-const DirectX::XMFLOAT3& Player_Fps::GetPosition() const
+const DirectX::XMFLOAT3& PlayerFps::GetPosition() const
 {
 	return m_Position;
 }
 
-const DirectX::XMFLOAT3& Player_Fps::GetFront() const
+const DirectX::XMFLOAT3& PlayerFps::GetFront() const
 {
 	return m_ModelFront;
 }
 
-void Player_Fps::SetPosition(const DirectX::XMFLOAT3& position)
+void PlayerFps::SetPosition(const DirectX::XMFLOAT3& position)
 {
 	m_Position = position;
 }
 
-void Player_Fps::SetVelocity(const DirectX::XMFLOAT3& velocity)
+void PlayerFps::SetVelocity(const DirectX::XMFLOAT3& velocity)
 {
 	m_Velocity = velocity;
 }
@@ -492,7 +492,7 @@ void Player_Fps::SetVelocity(const DirectX::XMFLOAT3& velocity)
 //   Lerp between previous and current physics position using accumulator remainder
 //   Then add server correction render offset on top
 //-----------------------------------------------------------------------------
-DirectX::XMFLOAT3 Player_Fps::GetRenderPosition() const
+DirectX::XMFLOAT3 PlayerFps::GetRenderPosition() const
 {
 	float a = m_PhysicsAlpha;
 	return {
@@ -509,7 +509,7 @@ DirectX::XMFLOAT3 Player_Fps::GetRenderPosition() const
 // Soft Correction: Small error -> apply visual offset, decay over time
 // Hard Snap: Large error -> teleport immediately
 //-----------------------------------------------------------------------------
-void Player_Fps::ApplyServerCorrection(const NetPlayerState& serverState)
+void PlayerFps::ApplyServerCorrection(const NetPlayerState& serverState)
 {
 	// Skip if same tick already processed
 	if (serverState.tickId <= m_LastServerTick && m_LastServerTick != 0)
@@ -535,7 +535,7 @@ void Player_Fps::ApplyServerCorrection(const NetPlayerState& serverState)
 				"clientIsJump=%d serverGrounded=%d",
 				m_CurrentClientTick, serverState.tickId, perr,
 				m_RenderOffset.x, m_RenderOffset.y, m_RenderOffset.z,
-				(int)m_isJump,
+				(int)m_IsJump,
 				(int)((serverState.stateFlags & NetStateFlags::IS_GROUNDED) != 0));
 		}
 	}
@@ -597,7 +597,7 @@ void Player_Fps::ApplyServerCorrection(const NetPlayerState& serverState)
 		m_PrevPhysicsPosition = serverState.position;
 		m_Velocity = serverState.velocity;
 		m_RenderOffset = { 0.0f, 0.0f, 0.0f };
-		m_isJump = !(serverState.stateFlags & NetStateFlags::IS_GROUNDED);
+		m_IsJump = !(serverState.stateFlags & NetStateFlags::IS_GROUNDED);
 
 		// Clear input history on hard snap
 		ClearInputHistory();
@@ -633,7 +633,7 @@ void Player_Fps::ApplyServerCorrection(const NetPlayerState& serverState)
 				m_CurrentClientTick, serverState.tickId, error, dx, dy, dz,
 				m_InputHistoryCount, oldestTick, newestTick, ackTick,
 				m_RenderOffset.x, m_RenderOffset.y, m_RenderOffset.z,
-				(int)m_isJump,
+				(int)m_IsJump,
 				(int)((serverState.stateFlags & NetStateFlags::IS_GROUNDED) != 0));
 
 			// History miss (cmd too old, dropped, or first-snapshot edge case):
@@ -642,7 +642,7 @@ void Player_Fps::ApplyServerCorrection(const NetPlayerState& serverState)
 			DirectX::XMFLOAT3 originalPredictedPos = m_Position;
 			m_Position    = serverState.position;
 			m_Velocity    = serverState.velocity;
-			m_isJump      = !(serverState.stateFlags & NetStateFlags::IS_GROUNDED);
+			m_IsJump      = !(serverState.stateFlags & NetStateFlags::IS_GROUNDED);
 			// = (not +=) so RenderOffset doesn't unbounded-accumulate across consecutive misses.
 			m_RenderOffset.x = originalPredictedPos.x - m_Position.x;
 			m_RenderOffset.y = originalPredictedPos.y - m_Position.y;
@@ -662,7 +662,7 @@ void Player_Fps::ApplyServerCorrection(const NetPlayerState& serverState)
 			// Reset current physics state to server state
 			m_Position = serverState.position;
 			m_Velocity = serverState.velocity;
-			m_isJump = !(serverState.stateFlags & NetStateFlags::IS_GROUNDED);
+			m_IsJump = !(serverState.stateFlags & NetStateFlags::IS_GROUNDED);
 
 			// Re-simulate all ticks from acked cmd tick to current tick
 			ResimulateFromTick(ackTick);
@@ -705,7 +705,7 @@ void Player_Fps::ApplyServerCorrection(const NetPlayerState& serverState)
 	{
 		const char* nowMode = m_CorrectionMode ? m_CorrectionMode : "NONE";
 		bool serverGrounded = (serverState.stateFlags & NetStateFlags::IS_GROUNDED) != 0;
-		bool clientAirborne = m_isJump;
+		bool clientAirborne = m_IsJump;
 
 		if (strcmp(prevMode, nowMode) != 0)
 		{
@@ -725,7 +725,7 @@ void Player_Fps::ApplyServerCorrection(const NetPlayerState& serverState)
 		}
 
 		// Grounded-state mismatch is the primary suspect for "jump fails / lags".
-		// Local prediction needs !m_isJump (grounded) to apply jump impulse;
+		// Local prediction needs !m_IsJump (grounded) to apply jump impulse;
 		// server needs IS_GROUNDED to accept JUMP bit.
 		if (clientAirborne == serverGrounded)
 		{
@@ -759,7 +759,7 @@ void Player_Fps::ApplyServerCorrection(const NetPlayerState& serverState)
 		m_PrevPhysicsPosition = serverState.position;
 		m_Velocity = serverState.velocity;
 		m_RenderOffset = { 0.0f, 0.0f, 0.0f };
-		m_isJump = !(serverState.stateFlags & NetStateFlags::IS_GROUNDED);
+		m_IsJump = !(serverState.stateFlags & NetStateFlags::IS_GROUNDED);
 
 		// Face toward world center (0, 0, 0)
 		float dx = 0.0f - serverState.position.x;
@@ -790,7 +790,7 @@ void Player_Fps::ApplyServerCorrection(const NetPlayerState& serverState)
 	}
 }
 
-AABB Player_Fps::GetAABB() const
+AABB PlayerFps::GetAABB() const
 {
 	return {
 		{m_Position.x - 1.0f, m_Position.y, m_Position.z - 1.0f },
@@ -798,7 +798,7 @@ AABB Player_Fps::GetAABB() const
 	};
 }
 
-Capsule Player_Fps::GetCapsule() const
+Capsule PlayerFps::GetCapsule() const
 {
 	return {
 		{ m_Position.x, m_Position.y + m_CapsuleRadius, m_Position.z },
@@ -807,17 +807,17 @@ Capsule Player_Fps::GetCapsule() const
 	};
 }
 
-void Player_Fps::SetHeight(float height)
+void PlayerFps::SetHeight(float height)
 {
 	m_Height = height;
 }
 
-float Player_Fps::GetHeight() const
+float PlayerFps::GetHeight() const
 {
 	return m_Height;
 }
 
-DirectX::XMFLOAT3 Player_Fps::GetEyePosition() const
+DirectX::XMFLOAT3 PlayerFps::GetEyePosition() const
 {
 	// Use interpolated position for smooth camera
 	float a = m_PhysicsAlpha;
@@ -828,17 +828,17 @@ DirectX::XMFLOAT3 Player_Fps::GetEyePosition() const
 	return eyePos;
 }
 
-std::string Player_Fps::GetPlayerState() const
+std::string PlayerFps::GetPlayerState() const
 {
 	return PlayerStateToString(m_StateMachine->GetPlayerState());
 }
 
-std::string Player_Fps::GetWeaponState() const
+std::string PlayerFps::GetWeaponState() const
 {
 	return WeaponStateToString(m_StateMachine->GetWeaponState());
 }
 
-std::string Player_Fps::GetCurrentAniName() const
+std::string PlayerFps::GetCurrentAniName() const
 {
 	if (m_Model && m_Animator)
 	{
@@ -851,7 +851,7 @@ std::string Player_Fps::GetCurrentAniName() const
 	return "No Animation";
 }
 
-float Player_Fps::GetCurrentAniDuration() const
+float PlayerFps::GetCurrentAniDuration() const
 {
 	if (m_Model && m_Animator)
 	{
@@ -864,7 +864,7 @@ float Player_Fps::GetCurrentAniDuration() const
 	return 0.0f;
 }
 
-float Player_Fps::GetCurrentAniProgress() const
+float PlayerFps::GetCurrentAniProgress() const
 {
 	if (m_Animator)
 	{
@@ -877,7 +877,7 @@ float Player_Fps::GetCurrentAniProgress() const
 // Client-Side Prediction Reconciliation - Input History & Re-simulation
 //=============================================================================
 
-void Player_Fps::RecordInputHistory(const InputCmd& cmd, float worldInputX, float worldInputZ)
+void PlayerFps::RecordInputHistory(const InputCmd& cmd, float worldInputX, float worldInputZ)
 {
 	// Store input + resulting physics state in circular buffer
 	InputHistoryEntry& entry = m_InputHistory[m_InputHistoryHead];
@@ -896,7 +896,7 @@ void Player_Fps::RecordInputHistory(const InputCmd& cmd, float worldInputX, floa
 		m_InputHistoryCount++;
 }
 
-InputHistoryEntry* Player_Fps::FindHistoryEntry(uint32_t tickId)
+InputHistoryEntry* PlayerFps::FindHistoryEntry(uint32_t tickId)
 {
 	// Linear search through circular buffer (only 10 entries, fast enough)
 	for (int i = 0; i < m_InputHistoryCount; i++)
@@ -910,24 +910,24 @@ InputHistoryEntry* Player_Fps::FindHistoryEntry(uint32_t tickId)
 	return nullptr;  // Tick not found (too old or not recorded)
 }
 
-void Player_Fps::ClearInputHistory()
+void PlayerFps::ClearInputHistory()
 {
 	m_InputHistoryHead = 0;
 	m_InputHistoryCount = 0;
 }
 
-uint32_t Player_Fps::GetStateFlags() const
+uint32_t PlayerFps::GetStateFlags() const
 {
 	uint32_t flags = 0;
-	if (m_isJump)
+	if (m_IsJump)
 		flags |= NetStateFlags::IS_JUMPING;
-	if (!m_isJump)
+	if (!m_IsJump)
 		flags |= NetStateFlags::IS_GROUNDED;
 	// Add other state flags as needed (IS_FIRING, IS_ADS, etc.)
 	return flags;
 }
 
-void Player_Fps::ResimulateFromTick(uint32_t serverTick)
+void PlayerFps::ResimulateFromTick(uint32_t serverTick)
 {
 	// Replay all ticks from serverTick+1 to m_CurrentClientTick
 	// This corrects client prediction based on server's authoritative state
@@ -955,7 +955,7 @@ void Player_Fps::ResimulateFromTick(uint32_t serverTick)
 	m_InResimulation = false;
 }
 
-void Player_Fps::ApplyPhysicsTick(float worldInputX, float worldInputZ, uint32_t buttons, float dt)
+void PlayerFps::ApplyPhysicsTick(float worldInputX, float worldInputZ, uint32_t buttons, float dt)
 {
 	// ========================================================================
 	// CS:GO / Valorant Style Movement Parameters (match server)
@@ -981,7 +981,7 @@ void Player_Fps::ApplyPhysicsTick(float worldInputX, float worldInputZ, uint32_t
 	// ====================================================================
 	// Ground vs Air Movement
 	// ====================================================================
-	if (!m_isJump)  // Grounded
+	if (!m_IsJump)  // Grounded
 	{
 		float accelStep = GROUND_ACCEL * dt;
 
@@ -1005,7 +1005,7 @@ void Player_Fps::ApplyPhysicsTick(float worldInputX, float worldInputZ, uint32_t
 				DebugLog_Printf("PHYS", "LOCAL_PREDICT_JUMP cTick=%u", m_CurrentClientTick);
 			}
 			m_Velocity.y = JUMP_VELOCITY;
-			m_isJump = true;
+			m_IsJump = true;
 			m_JumpPending = false;
 		}
 		else if (!m_InResimulation && jumpPressed && DebugLog_IsEnabled() && DebugLog_LogJumpEvents())
@@ -1024,7 +1024,7 @@ void Player_Fps::ApplyPhysicsTick(float worldInputX, float worldInputZ, uint32_t
 		if (!m_InResimulation && jumpPressed && DebugLog_IsEnabled() && DebugLog_LogJumpEvents())
 		{
 			DebugLog_Printf("PHYS",
-				"LOCAL_REJECT_AIRBORNE cTick=%u m_isJump=1 (client thinks airborne)",
+				"LOCAL_REJECT_AIRBORNE cTick=%u m_IsJump=1 (client thinks airborne)",
 				m_CurrentClientTick);
 		}
 
@@ -1065,9 +1065,9 @@ void Player_Fps::ApplyPhysicsTick(float worldInputX, float worldInputZ, uint32_t
 		m_Position = result.position;
 		m_Velocity = result.velocity;
 		if (result.isGrounded)
-			m_isJump = false;
+			m_IsJump = false;
 		else
-			m_isJump = true;
+			m_IsJump = true;
 	}
 	else
 	{
@@ -1075,7 +1075,7 @@ void Player_Fps::ApplyPhysicsTick(float worldInputX, float worldInputZ, uint32_t
 		{
 			m_Position.y = 0.0f;
 			m_Velocity.y = 0.0f;
-			m_isJump = false;
+			m_IsJump = false;
 		}
 	}
 }

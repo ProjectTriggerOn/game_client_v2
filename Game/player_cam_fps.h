@@ -28,6 +28,6 @@ float PlayerCamFps_GetSensitivity();
 const DirectX::XMFLOAT4X4& PlayerCamFps_GetViewMatrix();
 const DirectX::XMFLOAT4X4& PlayerCamFps_GetProjectMatrix();
 
-void PlayerCamFps_Debug(const Player_Fps& pf);
+void PlayerCamFps_Debug(const PlayerFps& pf);
 
 #endif

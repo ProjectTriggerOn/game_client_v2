@@ -1,22 +1,33 @@
+#include "Audio.h"
+
 #include <xaudio2.h>
 #include <cassert>
-#include "audio.h"
+
 #pragma comment(lib, "winmm.lib")
 
-namespace{
+namespace
+{
 	IXAudio2* g_Xaudio{};
 	IXAudio2MasteringVoice* g_MasteringVoice{};
-}
 
+	constexpr int AUDIO_MAX = 100;
+
+	struct AudioClip
+	{
+		IXAudio2SourceVoice* sourceVoice{};
+		BYTE*                soundData{};
+		int                  length{};
+		int                  playLength{};
+	};
+
+	AudioClip g_Audio[AUDIO_MAX]{};
+}
 
 void InitAudio()
 {
-	
 	XAudio2Create(&g_Xaudio, 0);
-	
 	g_Xaudio->CreateMasteringVoice(&g_MasteringVoice);
 }
-
 
 void UninitAudio()
 {
@@ -24,50 +35,20 @@ void UninitAudio()
 	g_Xaudio->Release();
 }
 
-
-
-
-
-
-
-
-
-struct AUDIO
-{
-	IXAudio2SourceVoice*	SourceVoice{};
-	BYTE*					SoundData{};
-
-	int						Length{};
-	int						PlayLength{};
-};
-
-#define AUDIO_MAX 100
-static AUDIO g_Audio[AUDIO_MAX]{};
-
-
-
-int LoadAudio(const char *FileName)
+int LoadAudio(const char* fileName)
 {
 	int index = -1;
-
 	for (int i = 0; i < AUDIO_MAX; i++)
 	{
-		if (g_Audio[i].SourceVoice == nullptr)
+		if (g_Audio[i].sourceVoice == nullptr)
 		{
 			index = i;
 			break;
 		}
 	}
+	if (index == -1) return -1;
 
-	if (index == -1)
-		return -1;
-
-
-
-
-	// �T�E���h�f�[�^�Ǎ�
 	WAVEFORMATEX wfx = { 0 };
-
 	{
 		HMMIO hmmio = NULL;
 		MMIOINFO mmioinfo = { 0 };
@@ -77,8 +58,7 @@ int LoadAudio(const char *FileName)
 		UINT32 buflen;
 		LONG readlen;
 
-
-		hmmio = mmioOpen((LPSTR)FileName, &mmioinfo, MMIO_READ);
+		hmmio = mmioOpen((LPSTR)fileName, &mmioinfo, MMIO_READ);
 		assert(hmmio);
 
 		riffchunkinfo.fccType = mmioFOURCC('W', 'A', 'V', 'E');
@@ -104,81 +84,56 @@ int LoadAudio(const char *FileName)
 		datachunkinfo.ckid = mmioFOURCC('d', 'a', 't', 'a');
 		mmioDescend(hmmio, &datachunkinfo, &riffchunkinfo, MMIO_FINDCHUNK);
 
-
-
 		buflen = datachunkinfo.cksize;
-		g_Audio[index].SoundData = new unsigned char[buflen];
-		readlen = mmioRead(hmmio, (HPSTR)g_Audio[index].SoundData, buflen);
+		g_Audio[index].soundData = new unsigned char[buflen];
+		readlen = mmioRead(hmmio, (HPSTR)g_Audio[index].soundData, buflen);
 
-
-		g_Audio[index].Length = readlen;
-		g_Audio[index].PlayLength = readlen / wfx.nBlockAlign;
-
+		g_Audio[index].length = readlen;
+		g_Audio[index].playLength = readlen / wfx.nBlockAlign;
 
 		mmioClose(hmmio, 0);
 	}
 
-
-	// �T�E���h�\�[�X����
-	g_Xaudio->CreateSourceVoice(&g_Audio[index].SourceVoice, &wfx);
-	assert(g_Audio[index].SourceVoice);
-
+	g_Xaudio->CreateSourceVoice(&g_Audio[index].sourceVoice, &wfx);
+	assert(g_Audio[index].sourceVoice);
 
 	return index;
 }
 
-
-
-
-void UnloadAudio(int Index)
+void UnloadAudio(int index)
 {
-	g_Audio[Index].SourceVoice->Stop();
-	g_Audio[Index].SourceVoice->DestroyVoice();
+	g_Audio[index].sourceVoice->Stop();
+	g_Audio[index].sourceVoice->DestroyVoice();
 
-	delete[] g_Audio[Index].SoundData;
-	g_Audio[Index].SoundData = nullptr;
+	delete[] g_Audio[index].soundData;
+	g_Audio[index].soundData = nullptr;
 }
 
-
-
-
-
-void PlayAudio(int Index, bool Loop)
+void PlayAudio(int index, bool loop)
 {
-	g_Audio[Index].SourceVoice->Stop();
-	g_Audio[Index].SourceVoice->FlushSourceBuffers();
+	g_Audio[index].sourceVoice->Stop();
+	g_Audio[index].sourceVoice->FlushSourceBuffers();
 
-
-	// �o�b�t�@�ݒ�
 	XAUDIO2_BUFFER bufinfo;
-
 	memset(&bufinfo, 0x00, sizeof(bufinfo));
-	bufinfo.AudioBytes = g_Audio[Index].Length;
-	bufinfo.pAudioData = g_Audio[Index].SoundData;
+	bufinfo.AudioBytes = g_Audio[index].length;
+	bufinfo.pAudioData = g_Audio[index].soundData;
 	bufinfo.PlayBegin = 0;
-	bufinfo.PlayLength = g_Audio[Index].PlayLength;
+	bufinfo.PlayLength = g_Audio[index].playLength;
 
-	// ���[�v�ݒ�
-	if (Loop)
+	if (loop)
 	{
 		bufinfo.LoopBegin = 0;
-		bufinfo.LoopLength = g_Audio[Index].PlayLength;
+		bufinfo.LoopLength = g_Audio[index].playLength;
 		bufinfo.LoopCount = XAUDIO2_LOOP_INFINITE;
 	}
 
-	g_Audio[Index].SourceVoice->SubmitSourceBuffer(&bufinfo, NULL);
-
-
-	// �Đ�
-	g_Audio[Index].SourceVoice->Start();
-
+	g_Audio[index].sourceVoice->SubmitSourceBuffer(&bufinfo, NULL);
+	g_Audio[index].sourceVoice->Start();
 }
 
-void SetVolume(int Index, float Volume)
+void SetVolume(int index, float volume)
 {
-	assert(g_Audio[Index].SourceVoice);
-	g_Audio[Index].SourceVoice->SetVolume(Volume);
-};
-
-
-
+	assert(g_Audio[index].sourceVoice);
+	g_Audio[index].sourceVoice->SetVolume(volume);
+}

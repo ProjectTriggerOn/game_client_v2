@@ -1,7 +1,6 @@
 #include "player_cam_fps.h"
 #include "key_logger.h"
 #include "direct3d.h"
-#include "player.h"
 #include "shader_3d.h"
 #include "shader_field.h"
 #include "shader_infinite.h"
@@ -90,7 +89,7 @@ void PlayerCamFps_Update(double elapsed_time, const DirectX::XMFLOAT3& position)
 
 	// 3. Update Camera Position
 	// Direct assignment: The input position is now treated as the Eye/Camera position.
-	// The offset logic should be handled by the caller (e.g. Player_Fps class).
+	// The offset logic should be handled by the caller (e.g. PlayerFps class).
 	g_CameraPosition = position;
 	DirectX::XMVECTOR vPos = XMLoadFloat3(&g_CameraPosition);
 
@@ -173,7 +172,7 @@ const DirectX::XMFLOAT4X4& PlayerCamFps_GetProjectMatrix()
 	return g_ProjectionMatrix;
 }
 
-void PlayerCamFps_Debug(const Player_Fps& pf)
+void PlayerCamFps_Debug(const PlayerFps& pf)
 {
 	if (!g_DebugText) return;
 

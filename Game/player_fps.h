@@ -15,7 +15,7 @@
 #include "collision_world.h"
 #include "model_ani.h"
 #include "mouse.h"
-#include "player_state_mechine.h"
+#include "player_state_machine.h"
 #include "net_common.h"
 
 //=============================================================================
@@ -32,11 +32,11 @@ struct InputHistoryEntry
 	uint32_t stateFlags;               // State flags (grounded, jumping, etc.)
 };
 
-class Player_Fps
+class PlayerFps
 {
 public:
-	Player_Fps();
-	~Player_Fps();
+	PlayerFps();
+	~PlayerFps();
 
 	void Initialize(const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3& front,
 	                CollisionWorld* pCollisionWorld = nullptr);
@@ -120,7 +120,7 @@ private:
 	DirectX::XMFLOAT3 m_CamRelativePos;
 	float m_Height;
 	float m_CapsuleRadius;
-	bool m_isJump;
+	bool m_IsJump;
 	bool m_JumpPending;   // buffers jump input across fixed-timestep ticks
 	CollisionWorld* m_pCollisionWorld;
 

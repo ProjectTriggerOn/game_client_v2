@@ -1,310 +1,142 @@
-#include "key_logger.h"
 #include "player_cam_tps.h"
 
 #include "direct3d.h"
-#include "player.h"
+#include "key_logger.h"
+#include "mouse.h"
+#include "ms_logger.h"
 #include "shader_3d.h"
 #include "shader_field.h"
 #include "shader_infinite.h"
-#include "mouse.h"
-#include "ms_logger.h"
-#include "shader_3d_ani.h"
-using namespace DirectX;
-namespace 
+
+#include <algorithm>
+
+namespace
 {
-	//XMMATRIX mtxView;
+    using namespace DirectX;
 
-	XMFLOAT3 eyePosition{0.0f,0.0f,0.0f};
-	XMFLOAT3 eyeDirection{};
-	XMFLOAT3 upDirection{};
+    XMFLOAT3 g_EyePosition{ 0.0f, 0.0f, 0.0f };
+    XMFLOAT3 g_CameraFront{ 0.0f, 0.0f, 1.0f };
 
-	constexpr float MOVE_SPEED = 1.0f;
-	constexpr float CAMERA_ROT_SPEED = XMConvertToRadians(30.0f);
+    XMFLOAT4X4 g_ViewMatrix{};
+    XMFLOAT4X4 g_PerspectiveMatrix{};
 
-	XMFLOAT3 g_CameraFront{0.0f,0.0f,1.0f};
-	XMFLOAT3 g_CameraRight{};
-	XMFLOAT3 g_CameraUp{};
-
-	XMFLOAT4X4 g_ViewMatrix{};
-	XMFLOAT4X4 g_PerspectiveMatrix{};
-
-	float g_fov;
-
-	float g_cameraYaw = 0.0f;     // 环绕水平角度（弧度）
-	float g_cameraPitch = 0.2f;   // 上下仰角（弧度）
-	float g_cameraDistance = 5.0f; // 距离，默认5米
-	bool g_lastRightButton = false;    // 上一帧右键
-	int  g_lastMouseX = 0, g_lastMouseY = 0; // 上一帧鼠标位置
+    float g_CameraYaw      = 0.0f;
+    float g_CameraPitch    = 0.2f;
+    float g_CameraDistance = 5.0f;
 }
+
 void PlayerCamTps_Initialize()
 {
-
 }
 
-void PlayerCamTps_Initialize(
-	const DirectX::XMFLOAT3& position, 
-	const DirectX::XMFLOAT3& front, 
-	const DirectX::XMFLOAT3& right, 
-	const DirectX::XMFLOAT3& up)
+void PlayerCamTps_Finalize()
 {
 }
 
-void PlayerCamTps_Finalize(void)
+// Maya-style orbit camera (debug only). Orbits around the supplied target.
+void PlayerCamTps_Update_Maya(double /*elapsed_time*/, const DirectX::XMFLOAT3& target)
 {
-}
+    using namespace DirectX;
 
-void PlayerCamTps_Update(double elapsed_time)
-{
-	XMVECTOR position = XMLoadFloat3(&Player_GetPosition());
+    const bool altDown = KeyLogger_IsPressed(KK_LEFTALT);
+    static int  lastX = 0, lastY = 0;
+    static bool dragging   = false;
+    static int  dragButton = 0; // 1:Left, 2:Middle, 3:Right
 
-	position = XMVectorMultiply(position, { 1.0f,0.0f,1.0f });
-
-	XMVECTOR target = position;
-
-	position = XMVectorAdd(position, { 0.0f,4.0f,-8.0f });
-
-
-	XMVECTOR front = XMVector3Normalize(target - position);
-
-	XMStoreFloat3(&g_CameraFront, front);
-	XMStoreFloat3(&eyePosition, position);
-
-	XMMATRIX mtxView = XMMatrixLookAtLH(
-		position, // 視点座標
-		target, // 注視点座標
-		{0.0f,1.0f,0.0f} // 上方向ベクトル
-	);
-
-	Shader_3D_SetViewMatrix(mtxView);
-	Shader_Field_SetViewMatrix(mtxView);
-
-	float aspectRatio = static_cast<float>(Direct3D_GetBackBufferWidth()) / static_cast<float>(Direct3D_GetBackBufferHeight());
-	float nearZ = 0.1f;
-	float farZ = 1000.0f;
-
-	XMMATRIX mtxPerspective = XMMatrixPerspectiveFovLH(
-		1.0f,
-		aspectRatio,
-		nearZ,
-		farZ
-	);
-
-	Shader_3D_SetProjectMatrix(mtxPerspective);
-	Shader_Field_SetProjectMatrix(mtxPerspective);
-}
-
-
-
-void PlayerCamTps_Update_Mouse(double elapsed_time)
-{
-    // 读取鼠标
-    Mouse_State ms;
-    Mouse_GetState(&ms);
-
-    // 仅按下右键时旋转摄像机
-    if (isButtonDown(MBT_RIGHT)) {
-        // 只在"按住"时更新
-        static bool dragging = false;
-        if (!g_lastRightButton) { // 新按下，初始化
-            dragging = true;
-            g_lastMouseX = MSLogger_GetX();
-            g_lastMouseY = MSLogger_GetY();
-        }
-        if (dragging) {
-            int dx = MSLogger_GetX() - g_lastMouseX;
-            int dy = MSLogger_GetY() - g_lastMouseY;
-            g_cameraYaw -= dx * 0.01f; // 鼠标X控制水平角
-            g_cameraPitch -= dy * 0.01f; // 鼠标Y控制俯仰角
-
-            // Pitch限制，避免翻转
-            constexpr float PITCH_MAX = DirectX::XM_PIDIV2 - 0.05f;
-            constexpr float PITCH_MIN = -DirectX::XM_PIDIV4; // 视角朝上不要超过45°
-			g_cameraPitch = std::min(g_cameraPitch, PITCH_MAX);
-			g_cameraPitch = std::max(g_cameraPitch, PITCH_MIN);
-
-            g_lastMouseX = MSLogger_GetX();
-            g_lastMouseY = MSLogger_GetY();
-        }
-    }
-    else {
-        g_lastRightButton = false;
-    }
-    g_lastRightButton = isButtonDown(MBT_RIGHT);
-
-    // 滚轮控制距离
-    if (MSLogger_GetScrollWheelValue() != 0) {
-        g_cameraDistance -= MSLogger_GetScrollWheelValue() * 0.001f;  // 一格缩放0.12左右
-        if (g_cameraDistance < 2.0f) g_cameraDistance = 2.0f;
-        if (g_cameraDistance > 20.0f) g_cameraDistance = 20.0f;
-
-        Mouse_ResetScrollWheelValue(); // 把值清掉
-    }
-
-    // 球坐标计算摄像机
-    DirectX::XMFLOAT3 target = Player_GetPosition();
-    float x = cosf(g_cameraPitch) * cosf(g_cameraYaw);
-    float z = cosf(g_cameraPitch) * sinf(g_cameraYaw);
-    float y = sinf(g_cameraPitch);
-
-    XMFLOAT3 camPos = {
-        target.x + x * g_cameraDistance,
-        target.y + 2.0f + y * g_cameraDistance, // 2.0f为高度补偿，让镜头瞄准玩家头顶
-        target.z + z * g_cameraDistance
-    };
-
-    DirectX::XMVECTOR position = XMLoadFloat3(&camPos);
-    DirectX::XMVECTOR focus = XMLoadFloat3(&target);
-
-    XMVECTOR up = { 0, 1, 0 };
-
-    // 生成视图矩阵
-    XMMATRIX mtxView = XMMatrixLookAtLH(position, focus, up);
-
-	Shader_InfiniteGrid_SetViewMatrix(mtxView);
-
-	XMStoreFloat4x4(&g_ViewMatrix, mtxView);
-
-    // 投影矩阵
-    float aspectRatio = static_cast<float>(Direct3D_GetBackBufferWidth()) / static_cast<float>(Direct3D_GetBackBufferHeight());
-    float fov = 1.0f;
-    float nearZ = 0.1f;
-    float farZ = 1000.0f;
-    XMMATRIX mtxPerspective = XMMatrixPerspectiveFovLH(fov, aspectRatio, nearZ, farZ);
-
-	Shader_InfiniteGrid_SetProjectMatrix(mtxPerspective);
-
-	XMStoreFloat4x4(&g_PerspectiveMatrix, mtxPerspective);
-
-    // 存储当前摄像机位置、前方向
-    XMStoreFloat3(&eyePosition, {camPos.x,camPos.y,camPos.z});
-    XMVECTOR camFront = XMVector3Normalize(focus - position);
-    XMStoreFloat3(&g_CameraFront, camFront);
-}
-
-// Maya风格摄像机操作
-void PlayerCamTps_Update_Maya(double elapsed_time)
-{
-    // 检查 Alt 键
-    bool altDown = KeyLogger_IsPressed(KK_LEFTALT);
-    static int lastX = 0, lastY = 0;
-    static bool dragging = false;
-    static int dragButton = 0; // 1:左, 2:中, 3:右
-
-    if (altDown && (isButtonDown(MBT_LEFT) || isButtonDown(MBT_MIDDLE) || isButtonDown(MBT_RIGHT))) {
-        if (!dragging) {
+    if (altDown && (isButtonDown(MBT_LEFT) || isButtonDown(MBT_MIDDLE) || isButtonDown(MBT_RIGHT)))
+    {
+        if (!dragging)
+        {
             dragging = true;
             lastX = MSLogger_GetX();
             lastY = MSLogger_GetY();
-            if (isButtonDown(MBT_LEFT)) dragButton = 1;
+            if      (isButtonDown(MBT_LEFT))   dragButton = 1;
             else if (isButtonDown(MBT_MIDDLE)) dragButton = 2;
-            else if (isButtonDown(MBT_RIGHT)) dragButton = 3;
+            else if (isButtonDown(MBT_RIGHT))  dragButton = 3;
         }
         int dx = MSLogger_GetX() - lastX;
         int dy = MSLogger_GetY() - lastY;
         lastX = MSLogger_GetX();
         lastY = MSLogger_GetY();
 
-        if (dragButton == 1) {
-            // Alt+左键：旋转（轨道）
-            g_cameraYaw -= dx * 0.01f;
-            g_cameraPitch -= dy * 0.01f;
-            constexpr float PITCH_MAX = DirectX::XM_PIDIV2 - 0.05f;
-            constexpr float PITCH_MIN = -DirectX::XM_PIDIV4;
-            g_cameraPitch = std::min(g_cameraPitch, PITCH_MAX);
-            g_cameraPitch = std::max(g_cameraPitch, PITCH_MIN);
+        if (dragButton == 1)
+        {
+            // Alt + Left : orbit
+            g_CameraYaw   -= dx * 0.01f;
+            g_CameraPitch -= dy * 0.01f;
+            constexpr float PITCH_MAX = XM_PIDIV2 - 0.05f;
+            constexpr float PITCH_MIN = -XM_PIDIV4;
+            g_CameraPitch = std::min(g_CameraPitch, PITCH_MAX);
+            g_CameraPitch = std::max(g_CameraPitch, PITCH_MIN);
         }
-        else if (dragButton == 2) {
-            // Alt+中键：平移（拖动摄像机目标）
-            float panSpeed = 0.01f * g_cameraDistance;
-            float x = cosf(g_cameraPitch) * cosf(g_cameraYaw + DirectX::XM_PIDIV2);
-            float z = cosf(g_cameraPitch) * sinf(g_cameraYaw + DirectX::XM_PIDIV2);
-            float y = 0.0f;
-            DirectX::XMFLOAT3 right = { x, y, z };
-            DirectX::XMFLOAT3 up = { 0, 1, 0 };
-            DirectX::XMFLOAT3 target = Player_GetPosition();
-            target.x += (-dx * panSpeed * right.x + dy * panSpeed * up.x);
-            target.y += (-dx * panSpeed * right.y + dy * panSpeed * up.y);
-            target.z += (-dx * panSpeed * right.z + dy * panSpeed * up.z);
-            // 更新玩家位置（如需支持拖动目标，需提供接口）
-            // 这里只是演示，实际应有 Player_SetPosition(target)
-            Player_SetPosition(target);
-        }
-        else if (dragButton == 3) {
-            // Alt+右键：缩放（推拉摄像机）
-            g_cameraDistance += dy * 0.05f;
-			g_cameraDistance = std::max(2.0f, g_cameraDistance);
-			g_cameraDistance = std::min(20.0f, g_cameraDistance);
+        else if (dragButton == 3)
+        {
+            // Alt + Right : dolly (push/pull)
+            g_CameraDistance += dy * 0.05f;
+            g_CameraDistance = std::max(2.0f,  g_CameraDistance);
+            g_CameraDistance = std::min(20.0f, g_CameraDistance);
         }
     }
-    else {
-        dragging = false;
+    else
+    {
+        dragging   = false;
         dragButton = 0;
     }
 
-    // 滚轮缩放
-    if (MSLogger_GetScrollWheelValue() != 0) {
-        g_cameraDistance -= MSLogger_GetScrollWheelValue() * 0.001f;
-        g_cameraDistance = std::max(2.0f, g_cameraDistance);
-        g_cameraDistance = std::min(20.0f, g_cameraDistance);
+    // Scroll wheel zoom
+    if (MSLogger_GetScrollWheelValue() != 0)
+    {
+        g_CameraDistance -= MSLogger_GetScrollWheelValue() * 0.001f;
+        g_CameraDistance = std::max(2.0f,  g_CameraDistance);
+        g_CameraDistance = std::min(20.0f, g_CameraDistance);
         Mouse_ResetScrollWheelValue();
     }
 
-    // 球坐标计算摄像机
-    DirectX::XMFLOAT3 target = Player_GetPosition();
-    float x = cosf(g_cameraPitch) * cosf(g_cameraYaw);
-    float z = cosf(g_cameraPitch) * sinf(g_cameraYaw);
-    float y = sinf(g_cameraPitch);
+    // Spherical -> Cartesian camera position
+    const float cx = cosf(g_CameraPitch) * cosf(g_CameraYaw);
+    const float cz = cosf(g_CameraPitch) * sinf(g_CameraYaw);
+    const float cy = sinf(g_CameraPitch);
 
-    DirectX::XMFLOAT3 camPos = {
-        target.x + x * g_cameraDistance,
-        target.y + 2.0f + y * g_cameraDistance,
-        target.z + z * g_cameraDistance
+    const XMFLOAT3 camPos = {
+        target.x + cx * g_CameraDistance,
+        target.y + 2.0f + cy * g_CameraDistance,
+        target.z + cz * g_CameraDistance,
     };
 
-    DirectX::XMVECTOR position = XMLoadFloat3(&camPos);
-    DirectX::XMVECTOR focus = XMLoadFloat3(&target);
-    XMVECTOR up = { 0, 1, 0 };
+    const XMVECTOR position = XMLoadFloat3(&camPos);
+    const XMVECTOR focus    = XMLoadFloat3(&target);
+    const XMVECTOR up       = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 
-    // 生成视图矩阵
-    XMMATRIX mtxView = XMMatrixLookAtLH(position, focus, up);
-	Shader_InfiniteGrid_SetViewMatrix(mtxView);
-	XMStoreFloat4x4(&g_ViewMatrix, mtxView);
+    const XMMATRIX mtxView = XMMatrixLookAtLH(position, focus, up);
+    Shader_InfiniteGrid_SetViewMatrix(mtxView);
+    XMStoreFloat4x4(&g_ViewMatrix, mtxView);
 
-    // 投影矩阵
-    float aspectRatio = static_cast<float>(Direct3D_GetBackBufferWidth()) / static_cast<float>(Direct3D_GetBackBufferHeight());
-    float fov = 1.0f;
-    float nearZ = 0.1f;
-    float farZ = 1000.0f;
-    XMMATRIX mtxPerspective = XMMatrixPerspectiveFovLH(fov, aspectRatio, nearZ, farZ);
+    const float aspectRatio = static_cast<float>(Direct3D_GetBackBufferWidth())
+                            / static_cast<float>(Direct3D_GetBackBufferHeight());
+    const float fov   = 1.0f;
+    const float nearZ = 0.1f;
+    const float farZ  = 1000.0f;
+    const XMMATRIX mtxPerspective = XMMatrixPerspectiveFovLH(fov, aspectRatio, nearZ, farZ);
 
-	Shader_InfiniteGrid_SetProjectMatrix(mtxPerspective);
+    Shader_InfiniteGrid_SetProjectMatrix(mtxPerspective);
+    XMStoreFloat4x4(&g_PerspectiveMatrix, mtxPerspective);
 
-	XMStoreFloat4x4(&g_PerspectiveMatrix, mtxPerspective);
-
-    // 存储当前摄像机位置、前方向
-    XMStoreFloat3(&eyePosition, { camPos.x,camPos.y,camPos.z });
-    XMVECTOR camFront = XMVector3Normalize(focus - position);
+    g_EyePosition = camPos;
+    const XMVECTOR camFront = XMVector3Normalize(focus - position);
     XMStoreFloat3(&g_CameraFront, camFront);
-}
-
-const DirectX::XMFLOAT3& PlayerCamTps_GetFront()
-{
-	return g_CameraFront;
 }
 
 const DirectX::XMFLOAT3& PlayerCamTps_GetPosition()
 {
-	return eyePosition;
+    return g_EyePosition;
 }
 
 const DirectX::XMFLOAT4X4& PlayerCamTps_GetPerspectiveMatrix()
 {
-	return g_PerspectiveMatrix;
+    return g_PerspectiveMatrix;
 }
 
 const DirectX::XMFLOAT4X4& PlayerCamTps_GetViewMatrix()
 {
-	return g_ViewMatrix;
+    return g_ViewMatrix;
 }
-
-

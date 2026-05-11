@@ -102,7 +102,7 @@ private:
     uint8_t m_Ammo = WeaponConfig::MAG_SIZE;
     uint8_t m_AmmoReserve = WeaponConfig::MAX_RESERVE;
 
-    // Player collision parameters (must match Player_Fps)
+    // Player collision parameters (must match PlayerFps)
     static constexpr float PLAYER_HEIGHT = 1.6f;
     static constexpr float CAPSULE_RADIUS = 0.3f;
 

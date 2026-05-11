@@ -49,7 +49,7 @@ public:
 private:
 	void UpdateGlobalTransforms(int boneIndex, const DirectX::XMMATRIX& parentTransform, const struct Animation& anim);
 	void GetBoneSRT(int boneIndex, const Animation& anim, double time, DirectX::XMVECTOR& outS, DirectX::XMVECTOR& outR, DirectX::XMVECTOR& outT) const;
-	void TakeSnapshot(); // 拍下当前所有骨骼的实际姿态（含混合中间状态）
+	void TakeSnapshot(); // Capture the current pose of all bones (including mid-blend state).
 	void ApplyAdditive(int boneIndex, DirectX::XMVECTOR& s, DirectX::XMVECTOR& r, DirectX::XMVECTOR& t);
 
 private:
