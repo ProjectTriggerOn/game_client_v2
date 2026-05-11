@@ -50,8 +50,6 @@ public:
 	const DirectX::XMFLOAT3& GetPosition() const;      // Logic position (for gameplay)
 	DirectX::XMFLOAT3 GetRenderPosition() const;        // Logic + Offset (for rendering)
 	const DirectX::XMFLOAT3& GetFront() const;
-	void SetPosition(const DirectX::XMFLOAT3& position);
-	void SetVelocity(const DirectX::XMFLOAT3& velocity);
 
 	//-------------------------------------------------------------------------
 	// Server Reconciliation (Prediction + Correction)

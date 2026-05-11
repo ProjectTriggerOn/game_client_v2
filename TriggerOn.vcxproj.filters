@@ -66,7 +66,7 @@
     <ClCompile Include="Game\game.cpp">
       <Filter>Game</Filter>
     </ClCompile>
-    <ClCompile Include="Game\Audio.cpp">
+    <ClCompile Include="Game\audio.cpp">
       <Filter>Game</Filter>
     </ClCompile>
     <ClCompile Include="Game\score.cpp">
@@ -230,7 +230,7 @@
     <ClInclude Include="Game\game.h">
       <Filter>Game</Filter>
     </ClInclude>
-    <ClInclude Include="Game\Audio.h">
+    <ClInclude Include="Game\audio.h">
       <Filter>Game</Filter>
     </ClInclude>
     <ClInclude Include="Game\score.h">

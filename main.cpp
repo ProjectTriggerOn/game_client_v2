@@ -26,7 +26,7 @@
 #pragma comment(lib, "xinput.lib")
 #include "game.h"
 
-#include "Audio.h"
+#include "audio.h"
 #include "cube.h"
 #include "fade.h"
 #include "infinite_grid.h"
