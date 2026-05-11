@@ -42,9 +42,6 @@ MODEL* ModelLoad(const char* FileName, float scale, bool isBlender)
 {
 	MODEL* model = new MODEL;
 
-
-	//const std::string modelPath(FileName);
-
 	model->AiScene = aiImportFile(FileName, aiProcessPreset_TargetRealtime_MaxQuality | aiProcess_ConvertToLeftHanded);
 	assert(model->AiScene);
 
@@ -75,7 +72,6 @@ MODEL* ModelLoad(const char* FileName, float scale, bool isBlender)
 			bd.Usage = D3D11_USAGE_DEFAULT;
 			bd.ByteWidth = sizeof(Vertex3D) * mesh->mNumVertices;
 			bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-			//bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 			bd.CPUAccessFlags = 0;
 			D3D11_SUBRESOURCE_DATA sd;
 			ZeroMemory(&sd, sizeof(sd));
@@ -266,7 +262,6 @@ void ModelDraw(MODEL* model, const DirectX::XMMATRIX& mtxW)
 		aiMaterial->GetTexture(aiTextureType_DIFFUSE, 0, &texture);
 
 		if (texture.length != 0)
-			//if (texture != aiString(""))
 		{
 			Direct3D_GetDeviceContext()->PSSetShaderResources(0, 1, &model->Texture[texture.data]);
 			Shader_3D_SetColor({ 1.0f,1.0f,1.0f,1.0f });
@@ -279,7 +274,6 @@ void ModelDraw(MODEL* model, const DirectX::XMMATRIX& mtxW)
 			Shader_3D_SetColor(XMFLOAT4(diffuse.r, diffuse.g, diffuse.b, 1.0f));
 		}
 
-		//aiMaterial* aiMaterial = model->AiScene->mMaterials[model->AiScene->mMeshes[m]->mMaterialIndex];
 		aiColor3D diffuse;
 		aiMaterial->Get(AI_MATKEY_COLOR_DIFFUSE, diffuse);
 		Shader_3D_SetColor(XMFLOAT4(diffuse.r, diffuse.g, diffuse.b, 1.0f));
@@ -313,7 +307,6 @@ void ModelDrawUnlit(MODEL* model, const DirectX::XMMATRIX& mtxW)
 		aiMaterial->GetTexture(aiTextureType_DIFFUSE, 0, &texture);
 
 		if (texture.length != 0)
-			//if (texture != aiString(""))
 		{
 			Direct3D_GetDeviceContext()->PSSetShaderResources(0, 1, &model->Texture[texture.data]);
 			Shader_3DUnlit_SetColor({ 1.0f,1.0f,1.0f,1.0f });
@@ -326,7 +319,6 @@ void ModelDrawUnlit(MODEL* model, const DirectX::XMMATRIX& mtxW)
 			Shader_3DUnlit_SetColor(XMFLOAT4(diffuse.r, diffuse.g, diffuse.b, 1.0f));
 		}
 
-		//aiMaterial* aiMaterial = model->AiScene->mMaterials[model->AiScene->mMeshes[m]->mMaterialIndex];
 		aiColor3D diffuse;
 		aiMaterial->Get(AI_MATKEY_COLOR_DIFFUSE, diffuse);
 		Shader_3DUnlit_SetColor(XMFLOAT4(diffuse.r, diffuse.g, diffuse.b, 1.0f));

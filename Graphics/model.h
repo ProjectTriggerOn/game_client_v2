@@ -25,7 +25,7 @@ struct MODEL
 };
 
 
-MODEL* ModelLoad(const char* FileNam,float scale = 1.0f, bool isBlender = false);
+MODEL* ModelLoad(const char* FileName, float scale = 1.0f, bool isBlender = false);
 void ModelRelease(MODEL* model);
 void ModelDraw(MODEL* model,const DirectX::XMMATRIX& mtxW);
 void ModelDrawUnlit(MODEL* model, const DirectX::XMMATRIX& mtxW);

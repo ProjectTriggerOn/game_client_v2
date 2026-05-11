@@ -10,7 +10,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 //Window info
 static constexpr char WINDOW_CLASS[] = "GameWindow";//メインウインドウクラス名
-static constexpr char TITLE[] = "Trigger On"; //タイトルバ一のテキスト
+static constexpr char TITLE[] = "Trigger On"; //タイトルバーのテキスト
 
 HWND GameWindow_Generate(HINSTANCE hInstance)
 {
@@ -54,7 +54,6 @@ HWND GameWindow_Generate(HINSTANCE hInstance)
 		WINDOW_CLASS,
 		TITLE,
 		WINDOW_STYLE,
-		//WS_OVERLAPPEDWINDOW ^WS_THICKFRAME,
 		WINDOW_X,
 		WINDOW_Y,
 		WINDOW_WIDTH,
@@ -64,7 +63,6 @@ HWND GameWindow_Generate(HINSTANCE hInstance)
 		hInstance,
 		nullptr);
 	return hWnd;
-	//	return HWND();
 }
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {

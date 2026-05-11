@@ -61,9 +61,6 @@ public:
 	AABB GetAABB() const;
 	Capsule GetCapsule() const;
 
-	void SetHeight(float height);
-	float GetHeight() const;
-	
 	DirectX::XMFLOAT3 GetEyePosition() const;
 
 	std::string GetPlayerState() const;
@@ -116,7 +113,6 @@ private:
 	
 	// Other members
 	DirectX::XMFLOAT3 m_ModelFront;
-	DirectX::XMFLOAT3 m_MoveDir;
 	DirectX::XMFLOAT3 m_CamRelativePos;
 	float m_Height;
 	float m_CapsuleRadius;

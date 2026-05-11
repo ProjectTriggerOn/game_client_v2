@@ -10,8 +10,6 @@ struct PointLight
 	DirectX::XMFLOAT3 LightPosition;
 	float range;
 	DirectX::XMFLOAT4 Color;
-	//float SpecularStrength;
-	//XMFLOAT3 SpecularColor;
 };
 
 //点光源リスト

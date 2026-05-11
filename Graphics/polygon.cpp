@@ -7,10 +7,6 @@ using namespace DirectX;
 #include "debug_ostream.h"
 
 
-//static constexpr int NUM_VERTEX = 4; // 頂点数
-
-
-
 static ID3D11Buffer* g_pVertexBuffer = nullptr; // 頂点バッファ
 static ID3D11ShaderResourceView* g_pTexture = nullptr;
 
@@ -83,13 +79,11 @@ void Polygon_Draw(void)
 	const float SCREEN_HEIGHT = (float)Direct3D_GetBackBufferHeight();
 
 	const float rad = 2.0f* DirectX::XM_PI / (float)g_NumVertex; // 1頂点あたりの角度
-	//float rad = 0.01f;
 	for (int i = 0; i < g_NumVertex; ++i) {
 		float angle = rad * i; // 現在の角度
 		v[i].position = { g_Cx + g_Radius * cosf(angle), g_Cy + g_Radius * sinf(angle), 0.0f };
-		v[i].color = { 0.1f, 0.1f, 0.1f, 1.0f }; 
+		v[i].color = { 0.1f, 0.1f, 0.1f, 1.0f };
 		v[i].uv = { 0.0f,0.0f };
-		//v[i].uv = { (v[i].position.x / SCREEN_WIDTH) * 2.0f - 1.0f, (v[i].position.y / SCREEN_HEIGHT) * 2.0f - 1.0f }; // UV座標変換
 	}
 
 	// 頂点バッファのロックを解除

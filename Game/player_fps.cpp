@@ -26,7 +26,6 @@ PlayerFps::PlayerFps()
 	, m_CurrentClientTick(0)
 	, m_InResimulation(false)
 	, m_ModelFront({ 0,0,1 })
-	, m_MoveDir({ 0,0,1 })
 	, m_CamRelativePos({ 0.0f, 0.0f,0.3f })
 	, m_Height(1.6f)
 	, m_CapsuleRadius(0.3f)
@@ -74,7 +73,6 @@ void PlayerFps::Initialize(const DirectX::XMFLOAT3& position, const DirectX::XMF
 	m_Ammo        = WeaponConfig::MAG_SIZE;
 	m_AmmoReserve = WeaponConfig::MAX_RESERVE;
 
-	XMStoreFloat3(&m_MoveDir, XMVector3Normalize(XMLoadFloat3(&front)));
 	XMStoreFloat3(&m_ModelFront, XMVector3Normalize(XMLoadFloat3(&front)));
 
 	m_StateMachine = new PlayerStateMachine();
@@ -240,7 +238,6 @@ void PlayerFps::Update(double elapsed_time)
 	if (inputMag > 0.01f)
 	{
 		m_StateMachine->SetPlayerState(tryRunning ? PlayerState::RUNNING : PlayerState::WALKING);
-		XMStoreFloat3(&m_MoveDir, XMVectorSet(worldInputX, 0, worldInputZ, 0));
 	}
 	else
 	{
@@ -805,16 +802,6 @@ Capsule PlayerFps::GetCapsule() const
 		{ m_Position.x, m_Position.y + m_Height - m_CapsuleRadius, m_Position.z },
 		m_CapsuleRadius
 	};
-}
-
-void PlayerFps::SetHeight(float height)
-{
-	m_Height = height;
-}
-
-float PlayerFps::GetHeight() const
-{
-	return m_Height;
 }
 
 DirectX::XMFLOAT3 PlayerFps::GetEyePosition() const

@@ -57,26 +57,6 @@ struct Ray
 	DirectX::XMFLOAT3 direction; // 光线方向（应为单位向量）
 };
 
-//2D
-bool Collision_OverlapCircleCircle(const Circle& a, const Circle& b);
-bool Collision_OverlapCircleBox(const Box& a, const Box& b);
-
-//3D
-bool Collision_IsOverLapAABB(const AABB& a, const AABB& b);
-Hit Collision_IsHitAABB(const AABB& a, const AABB& b);
-bool Collision_OverlapSphere(const Sphere& sphere, const DirectX::XMFLOAT3& point);
-
-bool Collision_isHitRayOnSphere(const Ray& ray, const Sphere& sphere, float* outDistance = nullptr);
-
-bool Collision_OverlapSphere(const Sphere& sphereA, const Sphere& sphereB);
-
-// Capsule
-bool Collision_OverlapCapsuleCapsule(const Capsule& a, const Capsule& b);
-bool Collision_OverlapCapsuleSphere(const Capsule& capsule, const Sphere& sphere);
-bool Collision_OverlapCapsuleAABB(const Capsule& capsule, const AABB& aabb);
-bool Collision_isHitRayOnCapsule(const Ray& ray, const Capsule& capsule, float* outDistance = nullptr);
-Hit Collision_IsHitCapsuleCapsule(const Capsule& a, const Capsule& b);
-
 void Collision_DebugSetViewProj(const DirectX::XMMATRIX& viewProj);
 void Collision_DebugInitialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext);
 void Collision_DebugFinalize();
