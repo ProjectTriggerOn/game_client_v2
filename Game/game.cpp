@@ -156,9 +156,15 @@ void Game_Update(double elapsed_time)
 			g_pInputProducer->SetLastServerState(snap.localPlayer);
 		}
 
-		// Dispatch remote players from snapshot
+		// Dispatch remote players from snapshot.
+		// Clamp remotePlayerCount to the array bound — a malicious/corrupted
+		// snapshot with count > MAX_PLAYERS-1 would otherwise OOB-read past
+		// the Snapshot struct.
+		const uint8_t remoteCount = (snap.remotePlayerCount < (MAX_PLAYERS - 1))
+			? snap.remotePlayerCount
+			: static_cast<uint8_t>(MAX_PLAYERS - 1);
 		bool seenThisSnap[MAX_PLAYERS] = {};
-		for (uint8_t i = 0; i < snap.remotePlayerCount; i++)
+		for (uint8_t i = 0; i < remoteCount; i++)
 		{
 			uint8_t rid = snap.remotePlayers[i].playerId;
 			if (rid < MAX_PLAYERS)
