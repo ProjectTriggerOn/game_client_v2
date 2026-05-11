@@ -9,9 +9,9 @@ Windows game client for TriggerOn — a multiplayer networked FPS built with Dir
 ## Features
 
 - **Direct3D 11** rendering with HLSL shaders (lit, unlit, skeletal animation)
-- **Server-authoritative netcode** with client-side prediction and smooth correction
+- **Server-authoritative netcode** with client-side prediction, rollback reconciliation, and snapshot interpolation/extrapolation for remote players
 - **Three network modes**: mock (offline), local (LAN), remote (internet)
-- **Skeletal animation** via ASSIMP with cross-fade blending
+- **Skeletal animation** via ASSIMP with snapshot-based cross-fade and additive-layer blending
 
 ## Requirements
 
@@ -28,7 +28,7 @@ Open `TriggerOn.sln` → select **Release | x64** → Build Solution.
 **From command line:**
 
 ```
-msbuild TriggerOn.vcxproj /p:Configuration=Release /p:Platform=x64
+msbuild TriggerOn.sln /p:Configuration=Release /p:Platform=x64
 ```
 
 The build compiles HLSL shaders to `.cso` and copies them to `resource/shader/` via a post-build step.
@@ -45,8 +45,8 @@ local_host  = "127.0.0.1"
 remote_host = "127.0.0.1"
 
 [client]
-window_width  = 1280
-window_height = 720
+window_width  = 1920
+window_height = 1080
 ```
 
 ### Network Modes
