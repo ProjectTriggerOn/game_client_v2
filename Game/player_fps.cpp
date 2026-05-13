@@ -385,10 +385,10 @@ void PlayerFps::Update(double elapsed_time)
 			bool fireTrig   = MSLogger_IsTrigger(MBT_LEFT);
 			bool sprintTrig = KeyLogger_IsTrigger(KK_LEFTSHIFT);
 			bool jumpTrig   = KeyLogger_IsTrigger(KK_SPACE);
-		if (fireTrig || sprintTrig || jumpTrig) {
-			m_StateMachine->SetWeaponState(WeaponState::HIP);
-			// Does NOT set m_ReloadJustCompleted → no ammo refill
-		}
+			if (fireTrig || sprintTrig || jumpTrig) {
+				m_StateMachine->SetWeaponState(WeaponState::HIP);
+				// Does NOT set m_ReloadJustCompleted → no ammo refill
+			}
 		}
 	}
 

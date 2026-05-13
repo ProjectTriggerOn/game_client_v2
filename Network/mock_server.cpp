@@ -101,32 +101,34 @@ void MockServer::Update(double deltaTime)
 
 //-----------------------------------------------------------------------------
 // Tick - Fixed rate game logic (32Hz)
-// 
+//
 // This is where all authoritative game logic runs:
-//   1. Consume input commands from client
-//   2. Simulate physics
-//   3. Update game state
-//   4. Broadcast snapshot to client
+//   1. Update reload timer (before input so freshly-started reloads last full duration)
+//   2. Consume input commands from client
+//   3. Simulate physics
+//   4. Update game state
+//   5. Broadcast snapshot to client
 //-----------------------------------------------------------------------------
 void MockServer::Tick()
 {
     m_CurrentTick++;
     m_ServerTime += TICK_DURATION;
 
-    // 1. Consume all pending input commands
+    // 1. Update reload timer once per tick (BEFORE input so newly-started reloads
+    //    this tick last exactly RELOAD_DURATION rather than RELOAD_DURATION - TICK_DURATION)
+    UpdateReloadTimer();
+
+    // 2. Consume all pending input commands
     InputCmd cmd;
     while (m_pNetwork->ReceiveInputCmd(cmd))
     {
         ProcessInputCmd(cmd);
     }
 
-    // 2. Update reload timer once per tick (after all input processed)
-    UpdateReloadTimer();
-
     // 3. Simulate physics for this tick
     SimulatePhysics();
 
-    // 3. Clear hit marker, then process combat
+    // 4. Clear hit marker, then process combat
     m_PlayerState.hitByPlayerId = 0xFF;
     m_RemotePlayerState.hitByPlayerId = 0xFF;
 
@@ -151,14 +153,14 @@ void MockServer::Tick()
 
     m_RemotePlayerState.health = m_RemoteHealth;
 
-    // 4. Update tick ID in states (and ack of last processed input — see GameServer)
+    // 5. Update tick ID in states (and ack of last processed input — see GameServer)
     m_PlayerState.tickId = m_CurrentTick;
     m_PlayerState.lastProcessedInputTick = m_LastInputCmd.tickId;
     m_PlayerState.fireCounter = m_FireCounter;
     m_PlayerState.ammo = m_Ammo;
     m_PlayerState.ammoReserve = m_AmmoReserve;
 
-    // 5. Broadcast snapshot to client
+    // 6. Broadcast snapshot to client
     BroadcastSnapshot();
 }
 
@@ -202,6 +204,10 @@ void MockServer::ProcessInputCmd(const InputCmd& cmd)
             } else {
                 m_ReloadTimer = WeaponConfig::RELOAD_DURATION;
             }
+            // Set IS_RELOADING immediately so ProcessFiring's gate blocks fire this tick.
+            // UpdateReloadTimer already ran for this tick, so this won't be decremented
+            // until next tick — giving the reload exactly RELOAD_DURATION before completion.
+            flags |= NetStateFlags::IS_RELOADING;
         }
     }
 
@@ -235,7 +241,9 @@ void MockServer::ProcessInputCmd(const InputCmd& cmd)
 
 //-----------------------------------------------------------------------------
 // UpdateReloadTimer - Decrement reload timer once per tick
-// MUST be called exactly once per Tick(), after all InputCmds processed.
+// MUST be called exactly once per Tick(), BEFORE InputCmd processing — this
+// ensures reloads started in ProcessInputCmd last exactly RELOAD_DURATION
+// (no same-tick decrement) and matches ProcessFiring's auto-reload duration.
 //-----------------------------------------------------------------------------
 void MockServer::UpdateReloadTimer()
 {

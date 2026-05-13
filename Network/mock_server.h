@@ -57,7 +57,7 @@ private:
     void ProcessInputCmd(const InputCmd& cmd);
 
     //-------------------------------------------------------------------------
-    // Update reload timer once per tick (after all input processed)
+    // Update reload timer once per tick (BEFORE input processing)
     //-------------------------------------------------------------------------
     void UpdateReloadTimer();
 
