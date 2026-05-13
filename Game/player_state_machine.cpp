@@ -68,8 +68,7 @@ void PlayerStateMachine::BuildTables()
 	//                                                progress  nextState            requireNotBlending
 	m_AutoTransitions[WeaponState::ADS_IN]       = { 0.3f,     WeaponState::ADS,     false };
 	m_AutoTransitions[WeaponState::ADS_OUT]      = { 0.3f,     WeaponState::HIP,     false };
-	m_AutoTransitions[WeaponState::RELOADING]              = { 0.9f, WeaponState::HIP, false };
-	m_AutoTransitions[WeaponState::RELOADING_OUT_OF_AMMO]  = { 0.9f, WeaponState::HIP, false };
+	// RELOADING / RELOADING_OUT_OF_AMMO are now driven by timer (see Update())
 	m_AutoTransitions[WeaponState::TAKING_OUT]             = { 0.8f, WeaponState::HIP, false };
 	m_AutoTransitions[WeaponState::HIP_FIRING]   = { 0.70f,    WeaponState::HIP,     true  };
 }
@@ -99,7 +98,10 @@ PlayerState PlayerStateMachine::GetPlayerState() const
 
 void PlayerStateMachine::SetWeaponState(WeaponState state)
 {
+	if (state != m_WeaponState) m_StateTimer = 0.0;
 	m_WeaponState = state;
+	// Note: m_ReloadJustCompleted is only set by Update() natural timeout,
+	// never by external SetWeaponState() — this is how interrupts avoid refilling ammo.
 }
 
 WeaponState PlayerStateMachine::GetWeaponState() const
@@ -112,6 +114,24 @@ WeaponState PlayerStateMachine::GetWeaponState() const
 //=============================================================================
 void PlayerStateMachine::Update(double elapsed_time, Animator* animator)
 {
+	// ----------------------------------------------------------------
+	// 0. Timer-driven reload completion (replaces animation-progress auto-transition)
+	// ----------------------------------------------------------------
+	if (m_WeaponState == WeaponState::RELOADING ||
+	    m_WeaponState == WeaponState::RELOADING_OUT_OF_AMMO)
+	{
+		m_StateTimer += elapsed_time;
+		double duration = (m_WeaponState == WeaponState::RELOADING_OUT_OF_AMMO)
+			? WeaponConfig::RELOAD_OUT_OF_AMMO_DURATION
+			: WeaponConfig::RELOAD_DURATION;
+		if (m_StateTimer >= duration)
+		{
+			m_WeaponState = WeaponState::HIP;
+			m_StateTimer = 0.0;
+			m_ReloadJustCompleted = true;  // Only natural timeout sets this
+		}
+	}
+
 	// ----------------------------------------------------------------
 	// 1. Auto-transitions: check if a one-shot animation is done
 	// ----------------------------------------------------------------
@@ -175,4 +195,11 @@ void PlayerStateMachine::Update(double elapsed_time, Animator* animator)
 	}
 
 	animator->Update(elapsed_time);
+}
+
+bool PlayerStateMachine::ConsumeReloadCompleted()
+{
+	bool r = m_ReloadJustCompleted;
+	m_ReloadJustCompleted = false;
+	return r;
 }

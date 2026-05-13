@@ -3,6 +3,7 @@
 #include <unordered_map>
 
 #include "animator.h"
+#include "net_common.h"
 
 //=============================================================================
 // Player State / Weapon State Enums
@@ -72,6 +73,10 @@ private:
 
 	void BuildTables();
 
+	// Reload timer: drives RELOADING/RELOADING_OUT_OF_AMMO → HIP transition
+	double m_StateTimer = 0.0;
+	bool   m_ReloadJustCompleted = false;
+
 public:
 	PlayerStateMachine();
 	~PlayerStateMachine() = default;
@@ -80,6 +85,9 @@ public:
 	PlayerState GetPlayerState() const;
 	void SetWeaponState(WeaponState state);
 	WeaponState GetWeaponState() const;
+
+	// Returns true only when reload naturally timed out (not on interrupt)
+	bool ConsumeReloadCompleted();
 
 	void Update(double elapsed_time, Animator* animator);
 };

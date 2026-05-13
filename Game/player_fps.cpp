@@ -250,11 +250,12 @@ void PlayerFps::Update(double elapsed_time)
 	bool isPressingLeft = isButtonDown(MBT_LEFT);
 	bool isPressingRight = isButtonDown(MBT_RIGHT);
 	
-	if (isPressingRight &&
-		m_StateMachine->GetWeaponState() != WeaponState::ADS &&
-		m_StateMachine->GetWeaponState() != WeaponState::ADS_FIRING &&
-		m_StateMachine->GetWeaponState() != WeaponState::RELOADING &&
-		m_StateMachine->GetWeaponState() != WeaponState::RELOADING_OUT_OF_AMMO)
+	bool isRightTrigger = MSLogger_IsTrigger(MBT_RIGHT);
+	WeaponState ws = m_StateMachine->GetWeaponState();
+	bool isReloading = (ws == WeaponState::RELOADING || ws == WeaponState::RELOADING_OUT_OF_AMMO);
+	if ((isPressingRight && !isReloading &&
+	     ws != WeaponState::ADS && ws != WeaponState::ADS_FIRING) ||
+	    (isRightTrigger && isReloading))
 	{
 		m_StateMachine->SetWeaponState(WeaponState::ADS_IN);
 	}
@@ -373,6 +374,22 @@ if (KeyLogger_IsTrigger(KK_R))
 		}
 	}
 
+	// ---- INTERRUPT RELOAD (trigger only, not held) ----
+	{
+		WeaponState ws = m_StateMachine->GetWeaponState();
+		bool isReloading = (ws == WeaponState::RELOADING ||
+		                    ws == WeaponState::RELOADING_OUT_OF_AMMO);
+		if (isReloading) {
+			bool fireTrig   = MSLogger_IsTrigger(MBT_LEFT);
+			bool sprintTrig = KeyLogger_IsTrigger(KK_LEFTSHIFT);
+			bool jumpTrig   = KeyLogger_IsTrigger(KK_SPACE);
+		if (fireTrig || sprintTrig || jumpTrig) {
+			m_StateMachine->SetWeaponState(WeaponState::HIP);
+			// Does NOT set m_ReloadJustCompleted → no ammo refill
+		}
+		}
+	}
+
 	if (KeyLogger_IsTrigger(KK_E))
 	{
 		m_StateMachine->SetWeaponState(WeaponState::INSPECTING);
@@ -396,15 +413,13 @@ if (KeyLogger_IsTrigger(KK_R))
 		m_StateMachine->Update(elapsed_time, m_Animator);
 		WeaponState curWs = m_StateMachine->GetWeaponState();
 
-		// Reload complete: refill magazine from reserve
-		if (curWs == WeaponState::HIP &&
-		    (prevWs == WeaponState::RELOADING ||
-		     prevWs == WeaponState::RELOADING_OUT_OF_AMMO))
+		// Reload complete: refill magazine from reserve (only on natural timeout)
+		if (m_StateMachine->ConsumeReloadCompleted())
 		{
-		int needed = WeaponConfig::MAG_SIZE - m_Ammo;
-		int refill    = (m_AmmoReserve >= needed) ? needed : m_AmmoReserve;
-		m_Ammo       += refill;
-		m_AmmoReserve -= refill;
+			int needed = WeaponConfig::MAG_SIZE - m_Ammo;
+			int refill = (m_AmmoReserve >= needed) ? needed : m_AmmoReserve;
+			m_Ammo += refill;
+			m_AmmoReserve -= refill;
 		}
 
 		// Override additive layer: fire animation during ADS transition
@@ -777,10 +792,16 @@ void PlayerFps::ApplyServerCorrection(const NetPlayerState& serverState)
 
 	// Sync authoritative ammo only on respawn or large divergence
 	// (avoids HUD flicker from RTT delay during continuous firing)
+	// Skip sync while server OR client is mid-reload — server.ammo is transient during reload,
+	// and client prediction should own the reload completion timing.
+	bool serverReloading = (serverState.stateFlags & NetStateFlags::IS_RELOADING) != 0;
+	WeaponState clientWs = m_StateMachine ? m_StateMachine->GetWeaponState() : WeaponState::HIP;
+	bool clientReloading = (clientWs == WeaponState::RELOADING || clientWs == WeaponState::RELOADING_OUT_OF_AMMO);
 	static constexpr int AMMO_SYNC_THRESHOLD = 2;
 	int ammoDiff = abs(static_cast<int>(serverState.ammo) - m_Ammo);
 	int reserveDiff = abs(static_cast<int>(serverState.ammoReserve) - m_AmmoReserve);
-	if ((!isDead && wasDeadBefore) || ammoDiff > AMMO_SYNC_THRESHOLD || reserveDiff > AMMO_SYNC_THRESHOLD)
+	if (!serverReloading && !clientReloading &&
+	    ((!isDead && wasDeadBefore) || ammoDiff > AMMO_SYNC_THRESHOLD || reserveDiff > AMMO_SYNC_THRESHOLD))
 	{
 		m_Ammo = serverState.ammo;
 		m_AmmoReserve = serverState.ammoReserve;
