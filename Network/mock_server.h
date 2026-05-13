@@ -57,6 +57,11 @@ private:
     void ProcessInputCmd(const InputCmd& cmd);
 
     //-------------------------------------------------------------------------
+    // Update reload timer once per tick (after all input processed)
+    //-------------------------------------------------------------------------
+    void UpdateReloadTimer();
+
+    //-------------------------------------------------------------------------
     // Apply physics simulation for one tick
     //-------------------------------------------------------------------------
     void SimulatePhysics();
@@ -82,6 +87,7 @@ private:
     // Game State (Server Authoritative)
     NetPlayerState m_PlayerState;
     InputCmd m_LastInputCmd;        // Most recent input from client
+    uint32_t m_PrevButtons = 0;     // Previous cmd.buttons for edge detection
 
     // Reload latch timer — keeps IS_RELOADING active for full animation duration
     double m_ReloadTimer = 0.0;

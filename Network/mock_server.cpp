@@ -120,7 +120,10 @@ void MockServer::Tick()
         ProcessInputCmd(cmd);
     }
 
-    // 2. Simulate physics for this tick
+    // 2. Update reload timer once per tick (after all input processed)
+    UpdateReloadTimer();
+
+    // 3. Simulate physics for this tick
     SimulatePhysics();
 
     // 3. Clear hit marker, then process combat
@@ -167,6 +170,9 @@ void MockServer::Tick()
 //-----------------------------------------------------------------------------
 void MockServer::ProcessInputCmd(const InputCmd& cmd)
 {
+    uint32_t prevButtons = m_PrevButtons;
+    m_PrevButtons = cmd.buttons;
+    uint32_t newlyPressed = cmd.buttons & ~prevButtons;  // 0→1 edges
     m_LastInputCmd = cmd;
 
     // Store camera angles
@@ -188,31 +194,27 @@ void MockServer::ProcessInputCmd(const InputCmd& cmd)
 
     if (cmd.buttons & InputButtons::RELOAD)
     {
-        // Start reload latch — keep IS_RELOADING active for duration
         if (m_ReloadTimer <= 0.0 && m_Ammo < WeaponConfig::MAG_SIZE && m_AmmoReserve > 0)
-            m_ReloadTimer = WeaponConfig::RELOAD_DURATION;
-    }
-
-    // Reload latch timer
-    if (m_ReloadTimer > 0.0)
-    {
-        flags |= NetStateFlags::IS_RELOADING;
-        m_ReloadTimer -= TICK_DURATION;
-        if (m_ReloadTimer <= 0.0)
         {
-            m_ReloadTimer = 0.0;
-            flags &= ~NetStateFlags::IS_RELOADING;
-
-            // Refill magazine from reserve
-            int needed = WeaponConfig::MAG_SIZE - m_Ammo;
-            int refill = (m_AmmoReserve >= needed) ? needed : m_AmmoReserve;
-            m_Ammo += static_cast<uint8_t>(refill);
-            m_AmmoReserve -= static_cast<uint8_t>(refill);
+            if (m_Ammo == 0) {
+                m_ReloadTimer = WeaponConfig::RELOAD_OUT_OF_AMMO_DURATION;
+                flags |= NetStateFlags::IS_RELOAD_EMPTY;
+            } else {
+                m_ReloadTimer = WeaponConfig::RELOAD_DURATION;
+            }
         }
     }
-    else
+
+    // Interrupt reload on trigger-edges (FIRE/ADS/SPRINT/JUMP)
+    constexpr uint32_t INTERRUPT_MASK =
+        InputButtons::FIRE | InputButtons::ADS |
+        InputButtons::SPRINT | InputButtons::JUMP;
+    if (m_ReloadTimer > 0.0 && (newlyPressed & INTERRUPT_MASK))
     {
+        m_ReloadTimer = 0.0;
         flags &= ~NetStateFlags::IS_RELOADING;
+        flags &= ~NetStateFlags::IS_RELOAD_EMPTY;
+        // No ammo refill on interrupt
     }
 
     // Inspect: set when INSPECT pressed, clear on any action input
@@ -229,6 +231,37 @@ void MockServer::ProcessInputCmd(const InputCmd& cmd)
     }
 
     m_PlayerState.stateFlags = flags;
+}
+
+//-----------------------------------------------------------------------------
+// UpdateReloadTimer - Decrement reload timer once per tick
+// MUST be called exactly once per Tick(), after all InputCmds processed.
+//-----------------------------------------------------------------------------
+void MockServer::UpdateReloadTimer()
+{
+    uint32_t& flags = m_PlayerState.stateFlags;
+
+    if (m_ReloadTimer > 0.0)
+    {
+        flags |= NetStateFlags::IS_RELOADING;
+        m_ReloadTimer -= TICK_DURATION;
+        if (m_ReloadTimer <= 0.0)
+        {
+            m_ReloadTimer = 0.0;
+            flags &= ~NetStateFlags::IS_RELOADING;
+            flags &= ~NetStateFlags::IS_RELOAD_EMPTY;
+
+            // Refill magazine from reserve
+            int needed = WeaponConfig::MAG_SIZE - m_Ammo;
+            int refill = (m_AmmoReserve >= needed) ? needed : m_AmmoReserve;
+            m_Ammo += static_cast<uint8_t>(refill);
+            m_AmmoReserve -= static_cast<uint8_t>(refill);
+        }
+    }
+    else
+    {
+        flags &= ~NetStateFlags::IS_RELOADING;
+    }
 }
 
 //-----------------------------------------------------------------------------
@@ -575,10 +608,25 @@ void MockServer::ProcessFiring()
     if (!shouldFire) return;
 
     if (m_Ammo == 0)
+    {
+        // Auto-reload: handles empty-fire after interrupted reload, or held FIRE on empty mag
+        if (m_AmmoReserve > 0 && m_ReloadTimer <= 0.0) {
+            m_ReloadTimer = WeaponConfig::RELOAD_OUT_OF_AMMO_DURATION;
+            m_PlayerState.stateFlags |= NetStateFlags::IS_RELOADING;
+            m_PlayerState.stateFlags |= NetStateFlags::IS_RELOAD_EMPTY;
+        }
         return;
+    }
 
     m_Ammo--;
     m_FireCounter++;
+
+    // Auto-reload IMMEDIATELY when last bullet just fired
+    if (m_Ammo == 0 && m_AmmoReserve > 0 && m_ReloadTimer <= 0.0) {
+        m_ReloadTimer = WeaponConfig::RELOAD_OUT_OF_AMMO_DURATION;
+        m_PlayerState.stateFlags |= NetStateFlags::IS_RELOADING;
+        m_PlayerState.stateFlags |= NetStateFlags::IS_RELOAD_EMPTY;
+    }
 
     // Eye position
     DirectX::XMFLOAT3 eyePos = {
