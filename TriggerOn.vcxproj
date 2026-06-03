@@ -225,6 +225,7 @@ if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ui_src" "
     <ClCompile Include="Graphics\WICTextureLoader11.cpp" />
     <ClCompile Include="UI\ui_manager.cpp" />
     <ClCompile Include="UI\ui_d3d11_renderer.cpp" />
+    <ClCompile Include="UI\ui_filesystem.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Core\font.h" />
@@ -287,6 +288,7 @@ if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ui_src" "
     <ClInclude Include="ThirdParty\enet\include\enet\enet.h" />
     <ClInclude Include="UI\ui_manager.h" />
     <ClInclude Include="UI\ui_d3d11_renderer.h" />
+    <ClInclude Include="UI\ui_filesystem.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\infinite_grid_pixel.hlsl">

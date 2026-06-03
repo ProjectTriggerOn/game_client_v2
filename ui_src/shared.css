@@ -1,0 +1,30 @@
+/* shared.css —— 全局原子样式，不带 page-id 前缀 */
+
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    font-family: sans-serif;
+    color: white;
+}
+
+body {
+    /* 让 UI 整体透明，露出下方 3D 场景；各 page 自己决定背景 */
+    background: transparent;
+}
+
+.page {
+    position: absolute;
+    inset: 0;
+}
+
+.page.hidden {
+    display: none;
+}
+
+.page.overlay {
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 10;
+}

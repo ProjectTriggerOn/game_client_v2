@@ -1,5 +1,6 @@
 #include "ui_manager.h"
 #include "ui_d3d11_renderer.h"
+#include "ui_filesystem.h"
 
 #include <Ultralight/Ultralight.h>
 #include <Ultralight/platform/Platform.h>
@@ -13,12 +14,14 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <string>
+#include <memory>
 
 namespace {
 
 ultralight::RefPtr<ultralight::Renderer> g_renderer;
 ultralight::RefPtr<ultralight::View>     g_view;
 UI::D3D11BitmapRenderer                  g_d3d_renderer;
+std::unique_ptr<UI::UIFileSystem>        g_filesystem;  // 需要长生命周期，Ultralight 持裸指针
 int g_width = 0, g_height = 0;
 
 std::string GetExeDirA() {
@@ -28,22 +31,15 @@ std::string GetExeDirA() {
     return s.substr(0, s.find_last_of("\\/")) + "\\";
 }
 
-// Slice A 用的硬编码 HTML。后续切片改为 UIFileSystem 从 ui_src/index.html 加载。
-const char* kSliceAHtml = R"HTML(
-<!DOCTYPE html>
-<html>
-<head><style>
-  html, body { margin:0; padding:0; height:100%; }
-  body {
-    background: red;
-    color: white;
-    font: bold 64px sans-serif;
-    display: flex; align-items: center; justify-content: center;
-  }
-</style></head>
-<body>Hello Ultralight</body>
-</html>
-)HTML";
+// Debug: exe 在 game_client/x64/Debug/，ui_src 在 game_client/ → 往上两层
+// Release: ui_src 已镜像到 exe 同级的 resource/ui/
+std::string GetUiRoot() {
+#if defined(_DEBUG) || defined(DEBUG)
+    return GetExeDirA() + "..\\..\\ui_src";
+#else
+    return GetExeDirA() + "resource\\ui";
+#endif
+}
 
 }  // namespace
 
@@ -60,10 +56,9 @@ void Initialize(ID3D11Device* dev, ID3D11DeviceContext* ctx, int w, int h) {
     config.resource_path_prefix = resPath.c_str();
     ultralight::Platform::instance().set_config(config);
 
-    // 2. FileSystem 占位（Slice B 替换为我们自己的 UIFileSystem）
-    ultralight::Platform::instance().set_file_system(
-        ultralight::GetPlatformFileSystem(GetExeDirA().c_str())
-    );
+    // 2. FileSystem —— 自己的实现，按 Debug/Release 切根目录
+    g_filesystem = std::make_unique<UI::UIFileSystem>(GetUiRoot());
+    ultralight::Platform::instance().set_file_system(g_filesystem.get());
 
     // 3. FontLoader（必需，否则字体渲染不出来）
     ultralight::Platform::instance().set_font_loader(
@@ -92,7 +87,7 @@ void Initialize(ID3D11Device* dev, ID3D11DeviceContext* ctx, int w, int h) {
         return;
     }
 
-    g_view->LoadHTML(kSliceAHtml);
+    g_view->LoadURL("file:///index.html");
 
     // 6. D3D11 渲染器
     if (!g_d3d_renderer.Initialize(dev, ctx, w, h)) {
@@ -127,6 +122,19 @@ void Finalize() {
     g_d3d_renderer.Finalize();
     g_view     = nullptr;  // RefPtr 释放
     g_renderer = nullptr;
+    g_filesystem.reset();
+}
+
+void ShowPage(const char* name) {
+    if (!g_view || !name) return;
+    // 简单转义：避免单引号意外。Slice D 的正经 Bridge 会取代这个。
+    std::string js = "Router.show('";
+    for (const char* p = name; *p; ++p) {
+        if (*p == '\'' || *p == '\\') js += '\\';
+        js += *p;
+    }
+    js += "')";
+    g_view->EvaluateScript(ultralight::String(js.c_str()));
 }
 
 }  // namespace UI

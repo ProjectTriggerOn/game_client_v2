@@ -1,0 +1,94 @@
+/* hud.css —— 战斗中常驻 HUD */
+
+#page-hud {
+    /* HUD 必须透明，露出 3D 场景 */
+    background: transparent;
+    pointer-events: none;  /* HUD 不接收输入，全转给游戏 */
+}
+
+#page-hud .hud-crosshair {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 16px;
+    height: 16px;
+    margin-left: -8px;
+    margin-top: -8px;
+    border: 2px solid white;
+    border-radius: 50%;
+    opacity: 0.8;
+}
+
+#page-hud .hud-bottom-left {
+    position: absolute;
+    left: 40px;
+    bottom: 40px;
+    width: 320px;
+}
+
+#page-hud .hud-hp-label {
+    font-size: 14px;
+    letter-spacing: 4px;
+    opacity: 0.7;
+    margin-bottom: 6px;
+}
+
+#page-hud .hud-hp-bar {
+    width: 100%;
+    height: 18px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+#page-hud .hud-hp-fill {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #4caf50, #8bc34a);
+    transition: width 0.2s ease-out;
+}
+
+#page-hud .hud-hp-text {
+    margin-top: 6px;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+#page-hud .hud-bottom-right {
+    position: absolute;
+    right: 40px;
+    bottom: 40px;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-family: 'Consolas', monospace;
+}
+
+#page-hud .hud-ammo-current {
+    font-size: 48px;
+    font-weight: bold;
+    color: #ffe082;
+}
+
+#page-hud .hud-ammo-sep {
+    font-size: 24px;
+    opacity: 0.5;
+}
+
+#page-hud .hud-ammo-reserve {
+    font-size: 24px;
+    opacity: 0.7;
+}
+
+#page-hud .hud-top-center {
+    position: absolute;
+    left: 50%;
+    top: 24px;
+    transform: translateX(-50%);
+    font-size: 32px;
+    font-weight: bold;
+    font-family: 'Consolas', monospace;
+}
+
+#page-hud .hud-score-red  { color: #ef5350; }
+#page-hud .hud-score-blue { color: #42a5f5; }
+#page-hud .hud-score-sep  { opacity: 0.5; margin: 0 12px; }

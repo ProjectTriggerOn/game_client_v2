@@ -242,6 +242,10 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR lpC
 			KeyLogger_Update();
 			MSLogger_Update();
 
+			// Slice B 验证：F1 → hud, F2 → title。Slice C 上输入路由后删除。
+			if (KeyLogger_IsTrigger(KK_F1)) UI::ShowPage("hud");
+			if (KeyLogger_IsTrigger(KK_F2)) UI::ShowPage("title");
+
 			Scene_Update(elapsed_time);
 
 			g_InputProducer.Update();

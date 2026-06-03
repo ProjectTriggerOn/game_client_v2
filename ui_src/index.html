@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>TriggerOn</title>
+    <link rel="stylesheet" href="shared.css">
+    <link rel="stylesheet" href="pages/title.css">
+    <link rel="stylesheet" href="pages/hud.css">
+</head>
+<body>
+    <div id="page-title" class="page hidden"></div>
+    <div id="page-hud"   class="page hidden"></div>
+
+    <!-- 页面 JS（IIFE 定义 PageXxx 钩子） -->
+    <script src="pages/title.js"></script>
+    <script src="pages/hud.js"></script>
+
+    <!-- 路由：fetch 页面 markup → 注入 div → 默认显示 title -->
+    <script src="router.js"></script>
+</body>
+</html>
