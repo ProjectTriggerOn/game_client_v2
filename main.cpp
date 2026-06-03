@@ -49,6 +49,7 @@
 #include "config.h"
 #include "debug_log.h"
 #include "game.h"
+#include "ui_manager.h"
 
 
 //Window procedure prototype claim
@@ -110,6 +111,15 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR lpC
 	SpriteAnime_Initialize();
 
 	Fade_Initialize();
+
+	// UI (Ultralight): per docs §6.3, init after Fade and before Scene.
+	// Use GetClientRect (physical pixels) — see docs §6.4 DPI 约定.
+	{
+		RECT rc{};
+		GetClientRect(hWnd, &rc);
+		UI::Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext(),
+		               rc.right - rc.left, rc.bottom - rc.top);
+	}
 
 	Scene_Initialize();
 
@@ -254,6 +264,9 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR lpC
 			Sprite_Begin();
 
 			Scene_Draw();
+
+			UI::Render();   // 在 3D/2D 之上、Fade 之下（Fade 用于场景过渡，覆盖一切）
+
 			Fade_Draw();
 
 
@@ -294,6 +307,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR lpC
 	Cube_Finalize();
 
 	Scene_Finalize();
+
+	UI::Finalize();
 
 	Fade_Finalize();
 

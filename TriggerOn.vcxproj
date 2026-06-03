@@ -103,7 +103,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>.;./Core;./Graphics;./Game;./Network;./ThirdParty/enet/include;./ThirdParty/assimp/include;./ThirdParty/ultralight/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.;./Core;./Graphics;./Game;./Network;./UI;./ThirdParty/enet/include;./ThirdParty/assimp/include;./ThirdParty/ultralight/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <WarningLevel>Level4</WarningLevel>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -120,6 +120,7 @@
     </Link>
     <PostBuildEvent>
       <Command>xcopy /D /Y "$(TargetDir)*.cso" "$(ProjectDir)resource/shader"
+xcopy /D /Y /I "$(TargetDir)ui\*.cso" "$(ProjectDir)resource\shader\ui\"
 xcopy /Y /D "$(ProjectDir)ThirdParty\ultralight\bin\*.dll" "$(TargetDir)"
 xcopy /Y /D /E /I "$(ProjectDir)ThirdParty\ultralight\resources" "$(TargetDir)resources\"
 if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ui_src" "$(ProjectDir)resource\ui\"</Command>
@@ -133,7 +134,7 @@ if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ui_src" "
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>.;./Core;./Graphics;./Game;./Network;./ThirdParty/enet/include;./ThirdParty/assimp/include;./ThirdParty/ultralight/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.;./Core;./Graphics;./Game;./Network;./UI;./ThirdParty/enet/include;./ThirdParty/assimp/include;./ThirdParty/ultralight/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <WarningLevel>Level4</WarningLevel>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -154,6 +155,7 @@ if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ui_src" "
     </Link>
     <PostBuildEvent>
       <Command>xcopy /D /Y "$(TargetDir)*.cso" "$(ProjectDir)resource/shader"
+xcopy /D /Y /I "$(TargetDir)ui\*.cso" "$(ProjectDir)resource\shader\ui\"
 xcopy /Y /D "$(ProjectDir)ThirdParty\ultralight\bin\*.dll" "$(TargetDir)"
 xcopy /Y /D /E /I "$(ProjectDir)ThirdParty\ultralight\resources" "$(TargetDir)resources\"
 if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ui_src" "$(ProjectDir)resource\ui\"</Command>
@@ -221,6 +223,8 @@ if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ui_src" "
     <ClCompile Include="Graphics\ui_widget.cpp" />
     <ClCompile Include="Game\title.cpp" />
     <ClCompile Include="Graphics\WICTextureLoader11.cpp" />
+    <ClCompile Include="UI\ui_manager.cpp" />
+    <ClCompile Include="UI\ui_d3d11_renderer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Core\font.h" />
@@ -281,6 +285,8 @@ if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ui_src" "
     <ClInclude Include="Game\title.h" />
     <ClInclude Include="Graphics\WICTextureLoader11.h" />
     <ClInclude Include="ThirdParty\enet\include\enet\enet.h" />
+    <ClInclude Include="UI\ui_manager.h" />
+    <ClInclude Include="UI\ui_d3d11_renderer.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\infinite_grid_pixel.hlsl">
@@ -346,6 +352,22 @@ if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ui_src" "
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="Shaders\ui_vs.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)ui\%(Filename).cso</ObjectFileOutput>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)ui\%(Filename).cso</ObjectFileOutput>
+    </FxCompile>
+    <FxCompile Include="Shaders\ui_ps.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)ui\%(Filename).cso</ObjectFileOutput>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)ui\%(Filename).cso</ObjectFileOutput>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
