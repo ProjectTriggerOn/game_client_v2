@@ -369,3 +369,6 @@ resource/shader/shader_vertex_3d.cso
 resource/shader/shader_vertex_2d.cso
 resource/shader/shader_pixel_field.cso
 resource/shader/shader_pixel_2d.cso
+
+# Ultralight post-build output (mirrored from ui_src/ on Release)
+resource/ui/

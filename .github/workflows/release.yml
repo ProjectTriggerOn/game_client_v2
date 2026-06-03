@@ -28,6 +28,11 @@ jobs:
           mkdir release
           copy x64\Release\TriggerOn.exe release\
           copy assimp-vc143-mt.dll release\
+          copy x64\Release\Ultralight.dll release\
+          copy x64\Release\UltralightCore.dll release\
+          copy x64\Release\WebCore.dll release\
+          copy x64\Release\AppCore.dll release\
+          xcopy /E /I x64\Release\resources release\resources
           copy config.toml release\
           xcopy /E /I resource release\resource
 
