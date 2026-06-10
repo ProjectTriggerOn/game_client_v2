@@ -10,6 +10,7 @@ Windows game client for TriggerOn — a multiplayer networked FPS built with Dir
 
 - **Direct3D 11** rendering with HLSL shaders (lit, unlit, skeletal animation)
 - **Server-authoritative netcode** with client-side prediction, rollback reconciliation, and snapshot interpolation/extrapolation for remote players
+- **Up to 10 players** (5v5 team-based) with team-colored models rendered from server state
 - **Three network modes**: mock (offline), local (LAN), remote (internet)
 - **Skeletal animation** via ASSIMP with snapshot-based cross-fade and additive-layer blending
 
