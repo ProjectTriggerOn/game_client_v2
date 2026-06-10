@@ -63,6 +63,31 @@ void MockServer::Initialize(INetwork* pNetwork, CollisionWorld* pCollisionWorld)
     m_RemoteRespawnTimer = 0.0;
     m_FireTimer = 0.0;
     m_FireCounter = 0;
+
+    // Initialize display-only dummy bots on the team strips (matches the server
+    // GetSpawnPosition layout): RED on the -Z side, BLUE on the +Z side. Even
+    // indices are RED, odd are BLUE, so both team models appear on screen.
+    for (int i = 0; i < MOCK_DUMMY_BOTS; i++)
+    {
+        uint8_t team  = (i % 2 == 0) ? PlayerTeam::RED : PlayerTeam::BLUE;
+        int     k     = i / 2;                 // 0..3 within each team
+        float   baseX = -6.0f + k * 4.0f;      // -6, -2, 2, 6
+        float   baseZ = (team == PlayerTeam::RED) ? -7.0f : 7.0f;
+
+        m_DummyTeams[i] = team;
+        m_DummyBase[i]  = { baseX, 0.0f, baseZ };
+
+        NetPlayerState& s = m_DummyBots[i];
+        s = {};
+        s.position = m_DummyBase[i];
+        // Face the battlefield: RED (-Z side) looks +Z (yaw 0), BLUE looks -Z.
+        s.yaw = (team == PlayerTeam::RED) ? 0.0f : 3.14159265f;
+        s.stateFlags = NetStateFlags::IS_GROUNDED;
+        s.health = MAX_HEALTH;
+        s.hitByPlayerId = 0xFF;
+        s.ammo = WeaponConfig::MAG_SIZE;
+        s.ammoReserve = WeaponConfig::MAX_RESERVE;
+    }
 }
 
 void MockServer::Finalize()
@@ -159,6 +184,9 @@ void MockServer::Tick()
     m_PlayerState.fireCounter = m_FireCounter;
     m_PlayerState.ammo = m_Ammo;
     m_PlayerState.ammoReserve = m_AmmoReserve;
+
+    // 5b. Advance display-only dummy bots (mock many-player render test)
+    UpdateDummyBots();
 
     // 6. Broadcast snapshot to client
     BroadcastSnapshot();
@@ -692,6 +720,27 @@ void MockServer::ProcessFiring()
 }
 
 //-----------------------------------------------------------------------------
+// UpdateDummyBots - Pace the display-only bots left/right along their strip so
+// remote interpolation + velocity-derived animation can be eyeballed in mock.
+//-----------------------------------------------------------------------------
+void MockServer::UpdateDummyBots()
+{
+    const float t   = static_cast<float>(m_ServerTime);
+    const float w   = 0.6f;   // angular speed (rad/s)
+    const float amp = 1.5f;   // pace amplitude (m), kept small to avoid overlap
+
+    for (int i = 0; i < MOCK_DUMMY_BOTS; i++)
+    {
+        const float ph = static_cast<float>(i);
+        const DirectX::XMFLOAT3& base = m_DummyBase[i];
+
+        m_DummyBots[i].position = { base.x + sinf(t * w + ph) * amp, base.y, base.z };
+        m_DummyBots[i].velocity = { cosf(t * w + ph) * amp * w, 0.0f, 0.0f };
+        m_DummyBots[i].tickId = m_CurrentTick;
+    }
+}
+
+//-----------------------------------------------------------------------------
 // BroadcastSnapshot - Send authoritative state to client
 //-----------------------------------------------------------------------------
 void MockServer::BroadcastSnapshot()
@@ -705,12 +754,22 @@ void MockServer::BroadcastSnapshot()
     snapshot.localPlayerId = 0;
     snapshot.localPlayerTeam = PlayerTeam::RED;
 
-    // Include remote bot player
+    // Include remote bot player (the shootable combat bot is id 1)
     m_RemotePlayerState.tickId = m_CurrentTick;
     snapshot.remotePlayers[0].playerId = 1;
     snapshot.remotePlayers[0].teamId = PlayerTeam::BLUE;
     snapshot.remotePlayers[0].state = m_RemotePlayerState;
-    snapshot.remotePlayerCount = 1;
+
+    // Append display-only dummy bots after the combat bot (ids 2..).
+    uint8_t remoteCount = 1;
+    for (int i = 0; i < MOCK_DUMMY_BOTS && remoteCount < MAX_PLAYERS - 1; i++)
+    {
+        snapshot.remotePlayers[remoteCount].playerId = static_cast<uint8_t>(2 + i);
+        snapshot.remotePlayers[remoteCount].teamId = m_DummyTeams[i];
+        snapshot.remotePlayers[remoteCount].state = m_DummyBots[i];
+        remoteCount++;
+    }
+    snapshot.remotePlayerCount = remoteCount;
 
     m_pNetwork->SendSnapshot(snapshot);
 }

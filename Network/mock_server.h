@@ -76,6 +76,11 @@ private:
     //-------------------------------------------------------------------------
     void ProcessFiring();
 
+    //-------------------------------------------------------------------------
+    // Advance the display-only dummy bots (mock-mode many-player render test)
+    //-------------------------------------------------------------------------
+    void UpdateDummyBots();
+
 private:
     INetwork* m_pNetwork;
 
@@ -99,6 +104,14 @@ private:
     NetPlayerState m_RemotePlayerState{};
     uint8_t  m_RemoteHealth = 200;
     double   m_RemoteRespawnTimer = 0.0;
+
+    // Display-only bots (no combat) to exercise many-player rendering in mock
+    // mode. Player ids 2..(MOCK_DUMMY_BOTS+1); the combat bot above keeps id 1
+    // and the local player is id 0 → 8 dummies + 1 combat bot + local = 10.
+    static constexpr int MOCK_DUMMY_BOTS = 8;
+    NetPlayerState    m_DummyBots[MOCK_DUMMY_BOTS]{};
+    uint8_t           m_DummyTeams[MOCK_DUMMY_BOTS]{};
+    DirectX::XMFLOAT3 m_DummyBase[MOCK_DUMMY_BOTS]{};
 
     // Local player combat state
     double   m_FireTimer = 0.0;
