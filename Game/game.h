@@ -41,6 +41,12 @@ CollisionWorld* Game_GetCollisionWorld();
 // lastProcessedInputTick ack can be looked up)
 uint32_t Game_GetClientTick();
 
+// Fractional server tick the local player is currently VIEWING (the interp-
+// delayed remote-player render time mapped into tick space). outTick == 0
+// means "no data yet" — the server must not rewind. Stamped into
+// InputCmd.viewTick / viewTickFrac for lag compensation.
+void Game_GetViewTick(uint32_t& outTick, float& outFrac);
+
 
 
 

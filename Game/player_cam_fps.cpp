@@ -197,6 +197,28 @@ void PlayerCamFps_Debug(const PlayerFps& pf)
 	ss << "SnapRate: " << g_NetDebugInfo.snapshotsPerSecond << "/s (expect 32)\n";
 	ss << "TickDelta: " << g_NetDebugInfo.tickDelta << " (expect 1)\n";
 
+	// ---- Lag compensation (what we report in InputCmd.viewTick) ----
+	{
+		uint32_t viewTick = 0;
+		float viewFrac = 0.0f;
+		Game_GetViewTick(viewTick, viewFrac);
+		if (viewTick != 0)
+		{
+			// How far behind "now" the viewed world is = how far the server
+			// will rewind hitboxes for our shots (client tick ≈ server tick)
+			const double lagTicks = static_cast<double>(Game_GetClientTick())
+				- (static_cast<double>(viewTick) + static_cast<double>(viewFrac));
+			ss << "LagComp: viewing tick " << viewTick
+			   << " (-" << std::fixed << std::setprecision(1) << lagTicks
+			   << "t / " << std::setprecision(0) << (lagTicks * 1000.0 / 32.0)
+			   << "ms behind)\n";
+		}
+		else
+		{
+			ss << "LagComp: no view data\n";
+		}
+	}
+
 	// ---- Server Info ----
 	ss << "\n=== Server (32Hz) ===\n";
 	if (g_NetDebugInfo.hasData)

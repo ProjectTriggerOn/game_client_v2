@@ -173,7 +173,7 @@ void InputProducer::SampleInput()
 //-----------------------------------------------------------------------------
 InputCmd InputProducer::BuildInputCmd() const
 {
-    InputCmd cmd;
+    InputCmd cmd{};
     // Stamp with player_fps's m_CurrentClientTick so the cmd.tickId we send is
     // in the same domain as PlayerFps::m_InputHistory.cmd.tickId. The server
     // echoes this value back as NetPlayerState.lastProcessedInputTick so the
@@ -184,5 +184,9 @@ InputCmd InputProducer::BuildInputCmd() const
     cmd.yaw = m_Yaw;
     cmd.pitch = m_Pitch;
     cmd.buttons = m_Buttons;
+    // Lag compensation: report which (fractional) server tick we are viewing
+    // (remote players render interp-delayed). The server rewinds hitboxes to
+    // this time when this cmd fires. viewTick == 0 → no data, no rewind.
+    Game_GetViewTick(cmd.viewTick, cmd.viewTickFrac);
     return cmd;
 }
