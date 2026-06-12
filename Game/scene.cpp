@@ -119,6 +119,11 @@ void Scene_Change(scene scene)
 	g_NextScene = scene; // 現在のシーンを更新
 }
 
+scene Scene_GetCurrent()
+{
+	return g_CurrentScene;
+}
+
 void Restart_Game()
 {
 	Game_Finalize();

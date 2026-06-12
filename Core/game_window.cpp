@@ -196,6 +196,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
          Keyboard_ProcessMessage(message, wParam, lParam);
         break;
 	case WM_CLOSE:
+		// Documented exception to the MousePolicy_Apply ownership rule: the modal
+		// MessageBox below blocks the frame loop, so the per-frame policy can't
+		// free the cursor for us. If the user cancels, policy self-heals next frame.
 		Mouse_SetMode(MOUSE_POSITION_MODE_ABSOLUTE);
 		Mouse_SetVisible(true);
 		if (MessageBoxW(hWnd, L"exit?", L"Over", MB_OKCANCEL | MB_ICONQUESTION | MB_DEFBUTTON1) == IDOK) {

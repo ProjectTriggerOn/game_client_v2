@@ -103,8 +103,15 @@ void Game_Initialize()
 	PlayerCamTps_Initialize();
 	PlayerCamFps_Initialize();
 	PlayerCamFps_SetInvertY(true);
-	Mouse_SetMode(MOUSE_POSITION_MODE_RELATIVE);
+	// Mouse mode is owned by MousePolicy_Apply (mouse_policy.h) — no direct calls here
 	Fade_Initialize();
+}
+
+bool Game_WantsUICursor()
+{
+	// Free cursor while in the settings overlay or the debug TPS camera;
+	// consumed by MousePolicy_Apply each frame.
+	return g_GameState == SETTING || isDebugCam;
 }
 
 void Game_Update(double elapsed_time)
@@ -112,37 +119,23 @@ void Game_Update(double elapsed_time)
 	// ========================================================================
 	// ESC: toggle settings screen
 	// ========================================================================
+	// State flips only — cursor mode/visibility derive from state in
+	// MousePolicy_Apply (mouse_policy.h)
 	if (KeyLogger_IsTrigger(KK_ESCAPE))
 	{
-		if (g_GameState != SETTING)
-		{
-			g_GameState = SETTING;
-			Mouse_SetMode(MOUSE_POSITION_MODE_ABSOLUTE);
-			MSLogger_SetUIMode(true);
-		}
-		else
-		{
-			g_GameState = PLAY;
-			Mouse_SetMode(MOUSE_POSITION_MODE_RELATIVE);
-			MSLogger_SetUIMode(false);
-		}
+		g_GameState = (g_GameState != SETTING) ? SETTING : PLAY;
 	}
 
-	// In settings screen: show cursor, skip all gameplay update
+	// In settings screen: skip all gameplay update
 	if (g_GameState == SETTING)
 	{
-		Mouse_SetVisible(true);
 		return;
 	}
-
-	Mouse_SetVisible(false);
 
 
 #if defined(_DEBUG)
 	if (KeyLogger_IsTrigger(KK_C)) {
 		isDebugCam = !isDebugCam;
-		Mouse_SetMode(isDebugCam ? MOUSE_POSITION_MODE_ABSOLUTE : MOUSE_POSITION_MODE_RELATIVE);
-		Mouse_SetVisible(isDebugCam);
 	}
 	if (KeyLogger_IsTrigger(KK_F1)) {
 		isDebugCollision = !isDebugCollision;
@@ -253,9 +246,8 @@ void Game_Update(double elapsed_time)
 		PlayerCamFps_Update(elapsed_time, g_PlayerFps->GetEyePosition());
 	}
 
-	if (KeyLogger_IsTrigger(KK_U)) {
-		MSLogger_SetUIMode(!MSLogger_IsUIMode());
-	}
+	// (KK_U manual MSLogger UI-mode toggle removed — MousePolicy_Apply now owns
+	//  that flag and would override the toggle on the next frame anyway)
 
 	// Update all active RemotePlayer instances (every frame for smooth interpolation)
 	for (int i = 0; i < MAX_PLAYERS; i++)

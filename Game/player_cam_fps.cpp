@@ -17,6 +17,7 @@
 #include "input_producer.h"
 #include "remote_player.h"
 #include "game.h"
+#include "config.h"
 
 using namespace DirectX;
 
@@ -42,6 +43,20 @@ void PlayerCamFps_Initialize()
 	g_cameraYaw = 0.0f;
 	g_cameraPitch = 0.0f;
 	g_CameraFront = { 0.0f, 0.0f, 1.0f };
+
+	// Config subscriptions (docs §9.2: each module owns its keys).
+	// Initialize() runs on every scene (re)entry, but subscription must happen
+	// exactly once — Subscribe also fires immediately if the key has a value,
+	// so persisted settings are applied right here.
+	static bool s_subscribed = false;
+	if (!s_subscribed) {
+		s_subscribed = true;
+		auto& cfg = Config::GetInstance();
+		cfg.Subscribe("input.sensitivity",
+		              [](const ConfigValue& v) { g_Sensitivity = (float)v.AsFloat(); });
+		cfg.Subscribe("input.invert_y",
+		              [](const ConfigValue& v) { g_invertY = v.AsBool(); });
+	}
 
 	g_DebugText = new hal::DebugText(Direct3D_GetDevice(), Direct3D_GetDeviceContext(),
 		L"resource/texture/consolab_ascii_512.png",

@@ -49,6 +49,8 @@
 #include "config.h"
 #include "debug_log.h"
 #include "game.h"
+#include "map.h"
+#include "mouse_policy.h"
 #include "ui_manager.h"
 
 
@@ -160,6 +162,17 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR lpC
 	else
 	{
 		// Mock mode: local in-process server (default)
+		//
+		// Register map colliders BEFORE the mock server starts. Game_Initialize
+		// also does this on game-scene entry, but when booting into another scene
+		// (e.g. ui_test) that hasn't happened yet — the mock server would simulate
+		// the player in an EMPTY collision world (no floor), and by the time the
+		// game scene starts the authoritative position is thousands of meters
+		// below the map (symptom: only sky + FP model visible, skybox jitters
+		// from float precision at huge coordinates).
+		// Map_RegisterColliders is pure static data and idempotent (Clear+add).
+		Map_RegisterColliders(*Game_GetCollisionWorld());
+
 		g_MockNetwork.Initialize();
 		g_MockServer.Initialize(&g_MockNetwork, Game_GetCollisionWorld());
 		g_pNetwork = &g_MockNetwork;
@@ -259,15 +272,48 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR lpC
 			// (F1/F2 page-switch shortcuts moved into SCENE_UI_TEST's UITest_Update)
 			UI::ProcessInput();
 
+			// Dev shortcut: F9 hot-toggles SCENE_UI_TEST ↔ SCENE_GAME at runtime
+			// (no config edit / restart). UI level + page follow the scene.
+			// Removed once Slice E drives all of this from GameState.
+			if (KeyLogger_IsTrigger(KK_F9))
+			{
+				if (Scene_GetCurrent() == SCENE_UI_TEST)
+				{
+					Scene_Change(SCENE_GAME);
+					UI::SetInteractiveLevel(UI::InteractiveLevel::Display);
+					UI::ShowPageDeferred("hud");
+				}
+				else
+				{
+					Scene_Change(SCENE_UI_TEST);
+					UI::SetInteractiveLevel(UI::InteractiveLevel::Interactive);
+					UI::ShowPageDeferred("title");
+				}
+			}
+
 			Scene_Update(elapsed_time);
 
-			g_InputProducer.Update();
+			// Derive cursor mode/visibility from (scene, GameState, UI modal) —
+			// runs after Scene_Update so this frame's state flips are reflected.
+			// Sole owner of Mouse_SetMode/SetVisible; see Game/mouse_policy.h.
+			MousePolicy_Apply();
+
+			// Input sampling and mock-server simulation only run during gameplay.
+			// In other scenes (ui_test): typing WASD into a UI text field must not
+			// drive the server-side player, and the mock world stays frozen.
+			// ENet PollEvents always runs to keep the connection alive.
+			const bool inGameScene = (Scene_GetCurrent() == SCENE_GAME);
+
+			if (inGameScene)
+			{
+				g_InputProducer.Update();
+			}
 
 			if (g_NetworkMode == "local" || g_NetworkMode == "remote")
 			{
 				g_ENetNetwork.PollEvents();
 			}
-			else
+			else if (inGameScene)
 			{
 				g_MockServer.Update(elapsed_time);
 			}

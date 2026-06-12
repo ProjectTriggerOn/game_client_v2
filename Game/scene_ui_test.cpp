@@ -1,14 +1,12 @@
 #include "scene_ui_test.h"
 
 #include "key_logger.h"
-#include "mouse.h"
 #include "ui_manager.h"
 
 void UITest_Initialize()
 {
-    // UI test environment: free + visible cursor, UI consumes all input
-    Mouse_SetMode(MOUSE_POSITION_MODE_ABSOLUTE);
-    Mouse_SetVisible(true);
+    // UI consumes all input. Cursor mode follows automatically: MousePolicy_Apply
+    // gives every non-game scene a free, visible cursor.
     UI::SetInteractiveLevel(UI::InteractiveLevel::Interactive);
 
     // Note: the View's DOM is most likely not ready yet (LoadURL is async),

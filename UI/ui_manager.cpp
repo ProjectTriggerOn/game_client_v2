@@ -2,6 +2,7 @@
 #include "ui_d3d11_renderer.h"
 #include "ui_filesystem.h"
 #include "ui_input_queue.h"
+#include "ui_bridge.h"
 
 #include <Ultralight/Ultralight.h>
 #include <Ultralight/platform/Platform.h>
@@ -50,6 +51,22 @@ public:
     }
 };
 UIViewListener g_viewListener;
+
+// The JSContext is reset on every navigation/reload — rebind game.* each time
+// the DOM is ready (docs §8.3).
+class UILoadListener : public ultralight::LoadListener {
+public:
+    void OnDOMReady(ultralight::View* caller, uint64_t /*frame_id*/,
+                    bool is_main_frame, const ultralight::String& /*url*/) override {
+        if (!is_main_frame) return;
+        UI::Bridge::Register(caller);
+    }
+};
+UILoadListener g_loadListener;
+
+// Page switch requested from inside a JS callback; applied at the start of the
+// next Render to avoid re-entrant script evaluation.
+std::string g_deferredPage;
 
 std::string GetExeDirA() {
     char buf[MAX_PATH];
@@ -115,6 +132,7 @@ void Initialize(ID3D11Device* dev, ID3D11DeviceContext* ctx, int w, int h) {
     }
 
     g_view->set_view_listener(&g_viewListener);   // console.log → VS Output window
+    g_view->set_load_listener(&g_loadListener);   // OnDOMReady → bind game.* (Bridge)
 
     g_view->LoadURL("file:///index.html");
 
@@ -126,6 +144,13 @@ void Initialize(ID3D11Device* dev, ID3D11DeviceContext* ctx, int w, int h) {
 
 void Render() {
     if (!g_renderer || !g_view) return;
+
+    // Apply a page switch requested from a JS callback (game.setState)
+    if (!g_deferredPage.empty()) {
+        std::string page;
+        page.swap(g_deferredPage);
+        ShowPage(page.c_str());
+    }
 
     g_renderer->Update();
 
@@ -246,6 +271,10 @@ InteractiveLevel GetInteractiveLevel() {
 
 bool IsModalActive() {
     return g_interactiveLevel == InteractiveLevel::Modal;
+}
+
+void ShowPageDeferred(const char* name) {
+    if (name) g_deferredPage = name;
 }
 
 void ShowPage(const char* name) {

@@ -47,9 +47,51 @@
         });
     }
 
+    // Slice D bridge test wiring. game.* is bound by C++ in OnDOMReady, which
+    // can race with router's async page injection — retry briefly if missing.
+    let bridgeBound = false;
+    function bindBridgeTest(attempt) {
+        if (bridgeBound) return;
+        const g = window.game;
+        if (!g || !g.getConfig) {
+            if ((attempt || 0) < 20) setTimeout(() => bindBridgeTest((attempt || 0) + 1), 50);
+            return;
+        }
+        bridgeBound = true;
+
+        const verEl  = document.getElementById('bt-version');
+        const sens   = document.getElementById('bt-sens');
+        const sensVal = document.getElementById('bt-sens-val');
+
+        if (verEl) verEl.textContent = g.getVersion();
+
+        const cur = g.getConfig('input.sensitivity');
+        if (sens && sensVal) {
+            if (cur !== null && cur !== undefined) {
+                sens.value = cur;
+                sensVal.textContent = Number(cur).toFixed(4);
+            } else {
+                sensVal.textContent = 'unset';
+            }
+            sens.addEventListener('input', () => {
+                const v = parseFloat(sens.value);
+                sensVal.textContent = v.toFixed(4);
+                g.setConfig('input.sensitivity', v);   // realtime: fires C++ subscriber
+            });
+        }
+
+        document.getElementById('bt-save')
+            ?.addEventListener('click', () => g.saveConfig());
+        document.getElementById('bt-state')
+            ?.addEventListener('click', () => g.setState('hud'));
+        document.getElementById('bt-start')
+            ?.addEventListener('click', () => g.startLocalGame());
+    }
+
     function onEnter() {
         console.log('[PageTitle] enter');
         bindOnce();
+        bindBridgeTest();
     }
 
     function onExit() {

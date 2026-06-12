@@ -13,4 +13,27 @@
             <!-- rows populated by title.js -->
         </div>
     </div>
+
+    <!-- Slice D bridge verification: realtime config roundtrip + save + state.
+         Delete together with .input-test when the real menu lands. -->
+    <div class="bridge-test">
+        <div class="bt-row">
+            <span class="bt-label">version</span>
+            <span id="bt-version">?</span>
+        </div>
+        <div class="bt-row">
+            <span class="bt-label">sensitivity</span>
+            <input id="bt-sens" type="range" min="0.001" max="0.010" step="0.0005">
+            <span id="bt-sens-val">?</span>
+        </div>
+        <div class="bt-row">
+            <button id="bt-save" type="button">Save config</button>
+            <button id="bt-state" type="button">setState('hud')</button>
+            <button id="bt-start" type="button">START GAME</button>
+        </div>
+        <div class="bt-row">
+            <span class="bt-label"></span>
+            <span class="bt-note">F9 toggles back to this scene from the game</span>
+        </div>
+    </div>
 </div>

@@ -25,9 +25,13 @@ void Game_Draw();
 
 void Game_Finalize();
 
-void Game_SetState(GameState state);	
+void Game_SetState(GameState state);
 
 GameState Game_GetState();
+
+// True while gameplay needs a free cursor (settings overlay / debug TPS cam).
+// Consumed by MousePolicy_Apply each frame — do not call Mouse_SetMode directly.
+bool Game_WantsUICursor();
 
 // Correction debug info
 const char* Game_GetCorrectionMode();

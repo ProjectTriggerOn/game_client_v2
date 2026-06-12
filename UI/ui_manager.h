@@ -30,4 +30,8 @@ bool IsModalActive();   // == Modal. Game_Update uses this in Slice E to freeze 
 // Will be replaced by the proper JS Bridge in Slice D.
 void ShowPage(const char* name);
 
+// Same as ShowPage but deferred to the start of the next UI::Render — safe to
+// call from inside a JS callback (avoids re-entrant script evaluation).
+void ShowPageDeferred(const char* name);
+
 }  // namespace UI

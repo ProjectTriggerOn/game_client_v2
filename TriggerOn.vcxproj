@@ -209,6 +209,7 @@ if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ui_src" "
     <ClCompile Include="Graphics\sampler.cpp" />
     <ClCompile Include="Game\scene.cpp" />
     <ClCompile Include="Game\scene_ui_test.cpp" />
+    <ClCompile Include="Game\mouse_policy.cpp" />
     <ClCompile Include="Game\score.cpp" />
     <ClCompile Include="Graphics\shader.cpp" />
     <ClCompile Include="Graphics\shader_3d.cpp" />
@@ -228,6 +229,7 @@ if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ui_src" "
     <ClCompile Include="UI\ui_d3d11_renderer.cpp" />
     <ClCompile Include="UI\ui_filesystem.cpp" />
     <ClCompile Include="UI\ui_input_queue.cpp" />
+    <ClCompile Include="UI\ui_bridge.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Core\font.h" />
@@ -273,6 +275,7 @@ if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ui_src" "
     <ClInclude Include="Graphics\sampler.h" />
     <ClInclude Include="Game\scene.h" />
     <ClInclude Include="Game\scene_ui_test.h" />
+    <ClInclude Include="Game\mouse_policy.h" />
     <ClInclude Include="Game\score.h" />
     <ClInclude Include="Graphics\shader.h" />
     <ClInclude Include="Graphics\shader_3d.h" />
@@ -293,6 +296,7 @@ if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ui_src" "
     <ClInclude Include="UI\ui_d3d11_renderer.h" />
     <ClInclude Include="UI\ui_filesystem.h" />
     <ClInclude Include="UI\ui_input_queue.h" />
+    <ClInclude Include="UI\ui_bridge.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\infinite_grid_pixel.hlsl">
