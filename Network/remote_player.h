@@ -31,6 +31,13 @@ struct RemoteSnapshot
 class RemotePlayer
 {
 public:
+    //-------------------------------------------------------------------------
+    // Interpolation timing constants (single source of truth — also used by
+    // Game_GetViewTick() to compute the view tick reported for lag comp)
+    //-------------------------------------------------------------------------
+    static constexpr double INTERPOLATION_DELAY = 0.1;    // render 100ms behind newest data
+    static constexpr double MAX_EXTRAPOLATION_TIME = 0.15; // beyond this, render SNAPs to newest
+
     RemotePlayer();
     ~RemotePlayer();
 

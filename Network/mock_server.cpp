@@ -7,6 +7,7 @@
 
 #include "mock_server.h"
 #include "i_network.h"
+#include "debug_log.h"
 #include <cmath>
 
 MockServer::MockServer()
@@ -153,6 +154,11 @@ void MockServer::Tick()
     // 3. Simulate physics for this tick
     SimulatePhysics();
 
+    // 3b. Move the combat bot BEFORE firing (mirrors GameServer's physics-
+    // before-combat order, so a shot at viewTick == m_CurrentTick tests the
+    // bot's post-move live position)
+    UpdateCombatBot();
+
     // 4. Clear hit marker, then process combat
     m_PlayerState.hitByPlayerId = 0xFF;
     m_RemotePlayerState.hitByPlayerId = 0xFF;
@@ -187,6 +193,15 @@ void MockServer::Tick()
 
     // 5b. Advance display-only dummy bots (mock many-player render test)
     UpdateDummyBots();
+
+    // 5c. Record lag-compensation history for the combat bot — exactly the
+    // state BroadcastSnapshot() is about to send (incl. respawn teleports)
+    {
+        BotHistoryEntry& h = m_BotHistory[m_CurrentTick % BOT_HISTORY_SIZE];
+        h.tick = m_CurrentTick;
+        h.position = m_RemotePlayerState.position;
+        h.alive = (m_RemotePlayerState.stateFlags & NetStateFlags::IS_DEAD) == 0;
+    }
 
     // 6. Broadcast snapshot to client
     BroadcastSnapshot();
@@ -679,10 +694,46 @@ void MockServer::ProcessFiring()
         cosf(m_PlayerState.yaw) * cosPitch
     };
 
-    // Test against remote bot capsule
+    // Lag compensation: clamp the client-reported view tick (same rules as
+    // GameServer::ProcessFiring) and rewind the bot capsule to the time the
+    // client actually SAW it.
+    uint32_t viewTick = m_LastInputCmd.viewTick;
+    float viewFrac = m_LastInputCmd.viewTickFrac;
+    if (viewTick != 0)
+    {
+        const uint32_t minTick = (m_CurrentTick > LagCompConfig::MAX_REWIND_TICKS)
+            ? m_CurrentTick - LagCompConfig::MAX_REWIND_TICKS : 1u;
+        if (viewTick < minTick) viewTick = minTick;
+        if (viewTick > m_CurrentTick)
+        {
+            viewTick = m_CurrentTick;
+            viewFrac = 0.0f;  // never extrapolate forward server-side
+        }
+        if (!(viewFrac >= 0.0f && viewFrac < 1.0f)) viewFrac = 0.0f;  // NaN-safe
+    }
+
+    DirectX::XMFLOAT3 botPos;
+    if (!GetRewoundBotPosition(viewTick, viewFrac, botPos))
+        return;  // bot was dead at the time the client saw — counts as a miss
+
+    // Test against remote bot capsule (rewound position; damage applies to
+    // the live bot below)
     float hitDist = 0.0f;
-    if (RayCapsule(eyePos, rayDir, m_RemotePlayerState.position,
-                   PLAYER_HEIGHT, CAPSULE_RADIUS, hitDist))
+    bool didHit = RayCapsule(eyePos, rayDir, botPos,
+                             PLAYER_HEIGHT, CAPSULE_RADIUS, hitDist);
+
+    if (viewTick != 0)
+    {
+        const double rewindTicks =
+            static_cast<double>(m_CurrentTick - viewTick) - viewFrac;
+        DebugLog_Printf("LAGCOMP",
+            "view=%u+%.2f rewind=%.1ft (%.0fms) hit=%s dist=%.2f",
+            viewTick, viewFrac,
+            rewindTicks, rewindTicks * TICK_DURATION * 1000.0,
+            didHit ? "yes" : "no", didHit ? hitDist : 0.0f);
+    }
+
+    if (didHit)
     {
         // Check if a wall is closer than the player hit
         float wallDist = 99999.0f;
@@ -717,6 +768,102 @@ void MockServer::ProcessFiring()
             m_PlayerState.hitByPlayerId = 1;
         }
     }
+}
+
+//-----------------------------------------------------------------------------
+// UpdateCombatBot - Deterministic patrol for the shootable bot (id 1)
+//
+// Gives lag compensation a MOVING target in mock mode: even with zero network
+// latency, the 100ms interpolation delay makes the rendered bot trail its true
+// position by ~0.4m at 4 m/s — wider than the 0.3m capsule radius, so tracking
+// shots only land because the server rewinds. Velocity is set so the remote
+// animation state machine derives a proper WALK (< 6 m/s run threshold).
+// Position is set directly (no collision); the strip x∈[4.5,9], z=7 is clear
+// of map colliders (interior blocks end at z=5).
+//-----------------------------------------------------------------------------
+void MockServer::UpdateCombatBot()
+{
+    if (m_RemotePlayerState.stateFlags & NetStateFlags::IS_DEAD)
+        return;  // velocity already zeroed on death; respawn resumes patrol
+
+    constexpr float BOT_SPEED = 4.0f;
+    constexpr float BOT_MIN_X = 4.5f;
+    constexpr float BOT_MAX_X = 9.0f;
+    const float dt = static_cast<float>(TICK_DURATION);
+
+    float x = m_RemotePlayerState.position.x + m_BotDirX * BOT_SPEED * dt;
+    if (x >= BOT_MAX_X)      { x = BOT_MAX_X; m_BotDirX = -1.0f; }
+    else if (x <= BOT_MIN_X) { x = BOT_MIN_X; m_BotDirX =  1.0f; }
+
+    m_RemotePlayerState.position.x = x;
+    m_RemotePlayerState.velocity = { m_BotDirX * BOT_SPEED, 0.0f, 0.0f };
+    // Face the travel direction (model front = (sin(yaw), 0, cos(yaw)))
+    m_RemotePlayerState.yaw = (m_BotDirX > 0.0f) ? 1.5707963f : -1.5707963f;
+}
+
+//-----------------------------------------------------------------------------
+// GetRewoundBotPosition - Lag compensation lookup (mirrors
+// GameServer::GetRewoundPosition; see that function for the boundary rules:
+// history for tick N is written at the END of tick N, so the current tick's
+// position is the live state).
+//
+// Returns false when the bot was dead at the viewed tick (not hittable).
+//-----------------------------------------------------------------------------
+bool MockServer::GetRewoundBotPosition(uint32_t viewTick, float viewFrac,
+                                       DirectX::XMFLOAT3& outPos) const
+{
+    // 0 = "no data" sentinel; >= current tick = "no lag" → live position
+    // (ProcessFiring only runs while the bot is alive now)
+    if (viewTick == 0 || viewTick >= m_CurrentTick)
+    {
+        outPos = m_RemotePlayerState.position;
+        return true;
+    }
+
+    const BotHistoryEntry& a = m_BotHistory[viewTick % BOT_HISTORY_SIZE];
+    if (a.tick != viewTick)  // older than the buffer / never written
+    {
+        outPos = m_RemotePlayerState.position;
+        return true;
+    }
+    if (!a.alive)
+        return false;  // client was looking at a dead bot — no ghost hits
+
+    outPos = a.position;
+    if (viewFrac <= 0.0f) return true;
+
+    // Endpoint B = entry for viewTick+1, or the live position when viewTick+1
+    // is the in-flight current tick (moved this tick, history not yet written)
+    DirectX::XMFLOAT3 posB;
+    bool haveB = false;
+    if (viewTick + 1 == m_CurrentTick)
+    {
+        posB = m_RemotePlayerState.position;
+        haveB = true;
+    }
+    else
+    {
+        const BotHistoryEntry& b = m_BotHistory[(viewTick + 1) % BOT_HISTORY_SIZE];
+        if (b.tick == viewTick + 1 && b.alive)
+        {
+            posB = b.position;
+            haveB = true;
+        }
+    }
+    if (!haveB) return true;
+
+    // Don't lerp across a respawn teleport — the midpoint never existed
+    const float dx = posB.x - outPos.x;
+    const float dy = posB.y - outPos.y;
+    const float dz = posB.z - outPos.z;
+    if (dx * dx + dy * dy + dz * dz >
+        REWIND_TELEPORT_GUARD * REWIND_TELEPORT_GUARD)
+        return true;
+
+    outPos.x += dx * viewFrac;
+    outPos.y += dy * viewFrac;
+    outPos.z += dz * viewFrac;
+    return true;
 }
 
 //-----------------------------------------------------------------------------

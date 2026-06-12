@@ -23,8 +23,8 @@ bool g_RemotePlayerActive[MAX_PLAYERS] = {};
 // Constructor
 //-----------------------------------------------------------------------------
 RemotePlayer::RemotePlayer()
-    : m_InterpolationDelay(0.1)    // 100ms interpolation delay
-    , m_MaxExtrapolationTime(0.15) // 150ms max extrapolation
+    : m_InterpolationDelay(INTERPOLATION_DELAY)
+    , m_MaxExtrapolationTime(MAX_EXTRAPOLATION_TIME)
     , m_RenderPosition{ 0.0f, 0.0f, 0.0f }
     , m_Velocity{ 0.0f, 0.0f, 0.0f }
     , m_Yaw(0.0f)
