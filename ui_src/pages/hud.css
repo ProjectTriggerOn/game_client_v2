@@ -1,9 +1,9 @@
-/* hud.css —— 战斗中常驻 HUD */
+/* hud.css — persistent in-combat HUD */
 
 #page-hud {
-    /* HUD 必须透明，露出 3D 场景 */
+    /* HUD must stay transparent so the 3D scene shows through */
     background: transparent;
-    pointer-events: none;  /* HUD 不接收输入，全转给游戏 */
+    pointer-events: none;  /* HUD takes no input; everything goes to the game */
 }
 
 #page-hud .hud-crosshair {

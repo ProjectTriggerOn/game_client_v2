@@ -3,17 +3,18 @@
 
 namespace UI {
 
-// 把 Ultralight 的 BGRA 像素拷到 D3D11 动态纹理，再画全屏 quad。
-// Draw() 内部 save/restore 所有受影响的 pipeline state，调用者无需关心副作用。
+// Copies Ultralight's BGRA pixels into a D3D11 dynamic texture, then draws a
+// full-screen quad. Draw() saves/restores every pipeline state it touches, so
+// callers never see side effects.
 class D3D11BitmapRenderer {
 public:
     bool Initialize(ID3D11Device* dev, ID3D11DeviceContext* ctx, int w, int h);
     void Finalize();
 
-    // 从 Ultralight BitmapSurface 上传像素到 dynamic texture（DISCARD map）
+    // Upload pixels from the Ultralight BitmapSurface into the dynamic texture (DISCARD map)
     void UpdateFromBitmap(const void* bgra, int w, int h, int row_bytes);
 
-    // 全屏 quad + premul alpha blend；前后 save/restore D3D11 state
+    // Full-screen quad + premultiplied alpha blend; saves/restores D3D11 state around it
     void Draw();
 
 private:

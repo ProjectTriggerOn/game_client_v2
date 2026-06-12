@@ -8,7 +8,7 @@ namespace {
 
 template <class T> void SafeRelease(T*& p) { if (p) { p->Release(); p = nullptr; } }
 
-// 简单 .cso 读文件 helper
+// Minimal .cso file-read helper
 bool ReadFile(const char* path, std::vector<char>& out) {
     std::ifstream ifs(path, std::ios::binary | std::ios::ate);
     if (!ifs) return false;
@@ -19,7 +19,7 @@ bool ReadFile(const char* path, std::vector<char>& out) {
     return ifs.good();
 }
 
-// D3D11 状态快照：Draw() 内部 save → 跑自己的 state → restore
+// D3D11 state snapshot: Draw() saves → applies its own state → restores
 struct D3D11StateSnapshot {
     ID3D11BlendState*         blend = nullptr;
     FLOAT                     blendFactor[4]{};
@@ -180,7 +180,7 @@ void D3D11BitmapRenderer::Draw() {
     D3D11StateSnapshot snap;
     SaveState(m_context, snap);
 
-    // 全屏 viewport
+    // Full-screen viewport
     D3D11_VIEWPORT vp{};
     vp.Width    = (FLOAT)m_width;
     vp.Height   = (FLOAT)m_height;
@@ -188,7 +188,7 @@ void D3D11BitmapRenderer::Draw() {
     vp.MaxDepth = 1.0f;
     m_context->RSSetViewports(1, &vp);
 
-    // 自己的 state
+    // Our own state
     const FLOAT bf[4] = { 0,0,0,0 };
     m_context->OMSetBlendState(m_blend, bf, 0xFFFFFFFF);
     m_context->OMSetDepthStencilState(m_depth, 0);
@@ -200,7 +200,7 @@ void D3D11BitmapRenderer::Draw() {
     m_context->PSSetSamplers(0, 1, &m_sampler);
     m_context->PSSetShaderResources(0, 1, &m_srv);
 
-    // 全屏三角形：3 顶点，VS 用 SV_VertexID 生成
+    // Full-screen triangle: 3 vertices generated in the VS via SV_VertexID
     m_context->Draw(3, 0);
 
     RestoreState(m_context, snap);

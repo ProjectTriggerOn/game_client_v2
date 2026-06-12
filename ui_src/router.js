@@ -1,17 +1,19 @@
-// router.js —— SPA 显隐切换 + 页面生命周期钩子 + 启动时 fetch 预加载页面 HTML
+// router.js — SPA show/hide switching + page lifecycle hooks + fetch-preloading
+// of page HTML at startup
 //
-// 暴露：
-//   Router.show(name)         切换到 name 页；如果是 overlay 则叠加显示
-//   Router.closeOverlay(name) 关闭 overlay
-//   Router.back()             返回上一非 overlay 页
-//   Router.ready              Promise，所有页面 HTML 加载完后 resolve
+// Exposes:
+//   Router.show(name)         switch to page `name`; overlays stack on top instead
+//   Router.closeOverlay(name) close an overlay
+//   Router.back()             return to the previous non-overlay page
+//   Router.ready              Promise resolved once all page HTML is loaded
 //
-// 约定每个页面对应 <div id="page-XXX"> 和 window.PageXxx = { onEnter, onExit }
-// 每个页面的 markup 单独放在 pages/<name>.html，由本文件 fetch 后注入对应 div。
+// Convention: each page owns a <div id="page-XXX"> plus window.PageXxx =
+// { onEnter, onExit }. Page markup lives in pages/<name>.html and is fetched
+// and injected into the matching div by this file.
 
 (function () {
-    const PAGES    = ['title', 'hud'];                  // Slice B 仅这两个；后续切片扩
-    const OVERLAYS = new Set([]);                       // Slice B 暂无 overlay
+    const PAGES    = ['title', 'hud'];                  // Slice B: these two only; later slices extend
+    const OVERLAYS = new Set([]);                       // Slice B: no overlays yet
 
     const cap  = (s) => s[0].toUpperCase() + s.slice(1);
     const hook = (n) => window['Page' + cap(n)];
@@ -20,7 +22,7 @@
     const Router = {
         current: null,
         stack: [],
-        ready: null,           // 由下面的 init() 赋值为 Promise
+        ready: null,           // assigned a Promise by init() below
 
         show(name) {
             if (!PAGES.includes(name)) {
@@ -60,7 +62,7 @@
         },
     };
 
-    // Slice F 热重载占位
+    // Slice F hot-reload placeholder
     window.reloadCSS = function (path) {
         const links = document.querySelectorAll('link[rel=stylesheet]');
         for (const l of links) {
@@ -75,7 +77,7 @@
 
     window.Router = Router;
 
-    // 启动：fetch 全部 pages/*.html → 注入对应 div → 默认显示 title
+    // Startup: fetch all pages/*.html → inject into their divs → show title by default
     Router.ready = (async function init() {
         try {
             await Promise.all(PAGES.map(async (name) => {

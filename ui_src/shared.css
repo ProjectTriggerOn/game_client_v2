@@ -1,4 +1,4 @@
-/* shared.css —— 全局原子样式，不带 page-id 前缀 */
+/* shared.css — global atomic styles, no page-id prefix */
 
 html, body {
     margin: 0;
@@ -11,7 +11,8 @@ html, body {
 }
 
 body {
-    /* 让 UI 整体透明，露出下方 3D 场景；各 page 自己决定背景 */
+    /* Keep the UI transparent overall so the 3D scene shows through;
+       each page decides its own background */
     background: transparent;
 }
 

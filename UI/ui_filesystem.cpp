@@ -8,12 +8,12 @@
 
 namespace {
 
-// 提取小写扩展名，含点（".html" / ".js" / ""）
+// Extract lowercase extension including the dot (".html" / ".js" / "")
 std::string GetExtLower(const std::string& path) {
     auto dot = path.find_last_of('.');
     auto slash = path.find_last_of("/\\");
     if (dot == std::string::npos) return "";
-    if (slash != std::string::npos && dot < slash) return "";  // 点在目录名里
+    if (slash != std::string::npos && dot < slash) return "";  // dot belongs to a directory name
     std::string ext = path.substr(dot);
     std::transform(ext.begin(), ext.end(), ext.begin(),
                    [](unsigned char c) { return (char)std::tolower(c); });
@@ -38,7 +38,7 @@ const char* MimeFromExt(const std::string& ext) {
     return "application/unknown";
 }
 
-// 去掉末尾的路径分隔符
+// Strip trailing path separators
 std::string NormalizeRoot(std::string r) {
     while (!r.empty() && (r.back() == '/' || r.back() == '\\')) r.pop_back();
     return r;
@@ -53,9 +53,10 @@ UIFileSystem::UIFileSystem(const std::string& root) : m_root(NormalizeRoot(root)
 std::string UIFileSystem::Resolve(const ultralight::String& path) const {
     std::string p = path.utf8().data();
 
-    // Ultralight 内部资源（cacert.pem / icudt67l.dat）以 Config::resource_path_prefix
-    // 拼出的绝对路径形式传进来；UI 资源（index.html 等）是相对路径。
-    // 绝对路径直接返回，相对路径才拼 m_root。
+    // Ultralight's internal assets (cacert.pem / icudt67l.dat) arrive as absolute
+    // paths built from Config::resource_path_prefix; UI assets (index.html etc.)
+    // arrive as relative paths. Pass absolute paths through; only join relative
+    // ones onto m_root.
     auto isWindowsAbsolute = [](const std::string& s) {
         if (s.size() >= 3 && s[1] == ':' &&
             (s[2] == '\\' || s[2] == '/') &&
@@ -66,7 +67,7 @@ std::string UIFileSystem::Resolve(const ultralight::String& path) const {
 
     if (isWindowsAbsolute(p)) return p;
 
-    // 相对：去掉可能的前导分隔符，拼到 m_root 下
+    // Relative: strip any leading separators, then join under m_root
     while (!p.empty() && (p.front() == '/' || p.front() == '\\')) p.erase(p.begin());
     return m_root + "\\" + p;
 }
@@ -96,7 +97,7 @@ ultralight::RefPtr<ultralight::Buffer> UIFileSystem::OpenFile(const ultralight::
     std::vector<char> buf((size_t)sz);
     if (sz > 0 && !ifs.read(buf.data(), sz)) return nullptr;
 
-    // CreateFromCopy 内部分配对齐内存并 memcpy；最简单也最安全
+    // CreateFromCopy allocates aligned memory and memcpys; simplest and safest
     return ultralight::Buffer::CreateFromCopy(buf.data(), buf.size());
 }
 

@@ -1,22 +1,23 @@
 <!DOCTYPE html>
 <!--
-  dev.html —— 浏览器侧开发入口
-  ============================
-  和 index.html 的唯一区别是先加载 dev/mock_bridge.js，
-  在浏览器里 stub 出 game.* API + 加上一个 dev overlay。
+  dev.html — browser-side development entry point
+  ===============================================
+  The only difference from index.html is that dev/mock_bridge.js loads first,
+  stubbing out the game.* API in the browser and adding a dev overlay.
 
-  打开方式（推荐 VS Code Live Server 插件）：
-    1. 在 VS Code 里安装 "Live Server" 扩展
-    2. 在本文件上右键 → "Open with Live Server"
-    3. 浏览器自动打开 http://127.0.0.1:5500/.../dev.html
+  How to open (VS Code Live Server extension recommended):
+    1. Install the "Live Server" extension in VS Code
+    2. Right-click this file → "Open with Live Server"
+    3. Browser opens http://127.0.0.1:5500/.../dev.html automatically
 
-  或命令行：
+  Or from the command line:
     cd game_client/ui_src
     python -m http.server 8000
-    # 浏览器访问 http://127.0.0.1:8000/dev.html
+    # browse to http://127.0.0.1:8000/dev.html
 
-  千万不要直接双击 dev.html —— file:// 协议下 fetch('pages/...') 会被 CORS 拒绝，
-  router.js 加载页面 markup 时全部失败、屏幕空白。
+  NEVER double-click dev.html directly — under the file:// protocol,
+  fetch('pages/...') is rejected by CORS, every page-markup load in router.js
+  fails, and the screen stays blank.
 -->
 <html>
 <head>
@@ -26,7 +27,8 @@
     <link rel="stylesheet" href="pages/title.css">
     <link rel="stylesheet" href="pages/hud.css">
     <style>
-        /* 浏览器里没有底下的 3D 场景，给个深灰背景便于看透明 UI */
+        /* No 3D scene underneath in the browser — dark grey backdrop makes
+           the transparent UI visible */
         html, body { background: #2a2a2a; }
     </style>
 </head>
@@ -34,8 +36,8 @@
     <div id="page-title" class="page hidden"></div>
     <div id="page-hud"   class="page hidden"></div>
 
-    <!-- Mock bridge 必须在 router.js / 页面 JS 之前加载，
-         以便它们一启动就能调用 game.* 而不报错 -->
+    <!-- The mock bridge must load before router.js and the page JS so they
+         can call game.* from the moment they start without throwing -->
     <script src="dev/mock_bridge.js"></script>
 
     <script src="pages/title.js"></script>

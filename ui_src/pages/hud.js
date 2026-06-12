@@ -1,4 +1,4 @@
-// hud.js —— IIFE 自封装，对外只暴露 PageHud = { onEnter, onExit }
+// hud.js — self-contained IIFE; exposes only PageHud = { onEnter, onExit }
 
 (function () {
     function onEnter() {

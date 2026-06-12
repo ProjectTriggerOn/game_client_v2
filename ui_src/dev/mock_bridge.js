@@ -1,20 +1,22 @@
 // mock_bridge.js
 // ==============
-// 浏览器侧 stand-in for the C++ JS Bridge. 让你在 Chrome/Edge 里直接调 UI，
-// 不用启动游戏。被 dev.html 加载，**不被** index.html 加载。
+// Browser-side stand-in for the C++ JS Bridge. Lets you iterate on the UI in
+// Chrome/Edge without launching the game. Loaded by dev.html, NOT by index.html.
 //
-// 提供：
-//   1. window.game.* —— mock 实现，行为对齐 docs §8.1 的 API 契约
-//   2. window.on*    —— 暂时不主动触发；Slice D 接入数据推送时会加定时器
-//   3. 右上角 dev overlay：显示当前页 + 按钮切页
-//   4. 键盘快捷键：F1=hud, F2=title（对齐 main.cpp 里的临时调试键）
+// Provides:
+//   1. window.game.* — mock implementations matching the docs §8.1 API contract
+//   2. window.on*    — not fired automatically yet; Slice D adds timers when
+//                      data push lands
+//   3. Top-right dev overlay: shows the current page + page-switch buttons
+//   4. Keyboard shortcuts: F1=hud, F2=title (mirrors the temporary debug keys
+//      in main.cpp)
 
 (function () {
     'use strict';
 
     const STORAGE_KEY = 'triggeron_ui_mock_config';
 
-    // 对齐 docs §9.1 的 Config Schema 默认值
+    // Defaults matching the docs §9.1 Config Schema
     const DEFAULT_CONFIG = {
         'input.sensitivity':    0.005,
         'input.invert_y':       false,
