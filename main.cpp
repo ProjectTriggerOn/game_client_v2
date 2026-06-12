@@ -113,12 +113,20 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR lpC
 	Fade_Initialize();
 
 	// UI (Ultralight): per docs §6.3, init after Fade and before Scene.
-	// Use GetClientRect (physical pixels) — see docs §6.4 DPI 约定.
+	// Use GetClientRect (physical pixels) — see docs §6.4 DPI constraints.
 	{
 		RECT rc{};
 		GetClientRect(hWnd, &rc);
 		UI::Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext(),
 		               rc.right - rc.left, rc.bottom - rc.top);
+	}
+
+	// Boot scene selection (config.toml [debug].start_scene = "game" | "title" | "ui_test")
+	{
+		const std::string bootScene = Config::GetInstance().GetString("debug", "start_scene", "game");
+		if      (bootScene == "ui_test") Scene_SetBootScene(SCENE_UI_TEST);
+		else if (bootScene == "title")   Scene_SetBootScene(SCENE_TITLE);
+		else                             Scene_SetBootScene(SCENE_GAME);
 	}
 
 	Scene_Initialize();
@@ -219,10 +227,13 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR lpC
 
 
 	do{
-		if (PeekMessage(&msg,nullptr,0,0,PM_REMOVE))
+		// W message pump: WM_CHAR encoding is decided by the function that
+		// RETRIEVES the message — the A variant converts character messages of a
+		// Unicode window to ANSI (non-ASCII becomes '?')
+		if (PeekMessageW(&msg,nullptr,0,0,PM_REMOVE))
 		{
 			TranslateMessage(&msg);
-			DispatchMessage(&msg);
+			DispatchMessageW(&msg);
 		}
 		else {
 
@@ -242,9 +253,11 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR lpC
 			KeyLogger_Update();
 			MSLogger_Update();
 
-			// Slice B 验证：F1 → hud, F2 → title。Slice C 上输入路由后删除。
-			if (KeyLogger_IsTrigger(KK_F1)) UI::ShowPage("hud");
-			if (KeyLogger_IsTrigger(KK_F2)) UI::ShowPage("title");
+			// UI input: drain UI_InputQueue and dispatch to Ultralight per
+			// InteractiveLevel. After Slice E this call moves into Game_Update
+			// (paired with the frame-start modal snapshot, docs §5.3).
+			// (F1/F2 page-switch shortcuts moved into SCENE_UI_TEST's UITest_Update)
+			UI::ProcessInput();
 
 			Scene_Update(elapsed_time);
 
@@ -269,7 +282,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR lpC
 
 			Scene_Draw();
 
-			UI::Render();   // 在 3D/2D 之上、Fade 之下（Fade 用于场景过渡，覆盖一切）
+			UI::Render();   // above 3D/2D, below Fade (Fade is the scene transition; covers everything)
 
 			Fade_Draw();
 

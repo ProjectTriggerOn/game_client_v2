@@ -27,3 +27,72 @@
     opacity: 0.6;
     letter-spacing: 2px;
 }
+
+/* ---- Slice C input verification area (delete once verified) ---- */
+
+#page-title .input-test {
+    margin-top: 48px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+
+#page-title #btn-test {
+    font-size: 20px;
+    padding: 12px 36px;
+    border: 2px solid #ff6b35;
+    border-radius: 6px;
+    background: transparent;
+    color: #ff6b35;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+#page-title #btn-test:hover {
+    background: #ff6b35;
+    color: #0f1419;
+}
+
+#page-title #btn-test:active {
+    background: #cc4f22;
+}
+
+#page-title #btn-test:focus {
+    outline: 2px dashed #ffaa80;
+    outline-offset: 4px;
+}
+
+#page-title #input-test {
+    font-size: 18px;
+    padding: 10px 16px;
+    width: 280px;
+    border: 1px solid #44546a;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    color: white;
+}
+
+#page-title #input-test:focus {
+    border-color: #ff6b35;
+    outline: none;
+}
+
+#page-title #scroll-test {
+    width: 320px;
+    height: 140px;
+    overflow-y: scroll;
+    border: 1px solid #44546a;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.3);
+}
+
+#page-title #scroll-test .row {
+    padding: 8px 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    font-size: 15px;
+}
+
+#page-title #scroll-test .row:hover {
+    background: rgba(255, 107, 53, 0.15);
+}

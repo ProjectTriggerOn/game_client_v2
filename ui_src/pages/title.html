@@ -1,5 +1,16 @@
-<!-- title.html —— 注入到 #page-title 内的纯标记 -->
+<!-- title.html — bare markup injected into #page-title -->
 <div class="title-root">
     <div class="title-logo">TRIGGER ON</div>
-    <div class="title-hint">Slice B placeholder — press F1 to switch to HUD</div>
+    <div class="title-hint">Slice C — input test playground</div>
+
+    <!-- Slice C input verification area: button (hover/click), text input (WM_CHAR),
+         scrollable list (wheel). Delete the whole .input-test block once verified
+         and replace it with the real menu. -->
+    <div class="input-test">
+        <button id="btn-test" type="button">CLICK ME — 0</button>
+        <input id="input-test" type="text" placeholder="type here...">
+        <div id="scroll-test">
+            <!-- rows populated by title.js -->
+        </div>
+    </div>
 </div>
