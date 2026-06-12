@@ -29,6 +29,7 @@
 #include "ui_widget.h"
 #include "mouse.h"
 #include <cwchar>
+#include <vector>
 using namespace DirectX;
 
 namespace{
@@ -55,6 +56,28 @@ namespace{
 
 	// Collision world
 	CollisionWorld g_CollisionWorld;
+
+	// ========================================================================
+	// Lag compensation: view-tick tracking
+	//
+	// Client clock driving remote-player interpolation (advanced every frame
+	// in Game_Update). File-scope so Game_GetViewTick() can map the current
+	// interp-delayed render time back into server-tick space.
+	// ========================================================================
+	double g_ClientClock = 0.0;
+
+	constexpr double SERVER_TICK_RATE = 32.0;  // matches PlayerFps/GameServer TICK_RATE (private there)
+
+	// (receiveTime, serverTick) pairs for snapshots, same cadence as the
+	// RemotePlayer snapshot buffers — lets us compute which (fractional)
+	// server tick the interp-delayed render time corresponds to.
+	struct TickTimeEntry
+	{
+		double receiveTime;
+		uint32_t serverTick;
+	};
+	std::vector<TickTimeEntry> g_TickTimeBuffer;
+	constexpr size_t TICK_TIME_BUFFER_MAX = 32;
 }
 
 // Global network debug info (populated from received snapshots)
@@ -138,10 +161,9 @@ void Game_Update(double elapsed_time)
 	extern RemotePlayer g_RemotePlayers[];
 	extern bool g_RemotePlayerActive[];
 	extern InputProducer* g_pInputProducer;
-	static double clientClock = 0.0;
 
 	// Increment client clock EVERY FRAME for smooth interpolation
-	clientClock += elapsed_time;
+	g_ClientClock += elapsed_time;
 
 	Snapshot snap;
 	while (g_pNetwork && g_pNetwork->ReceiveSnapshot(snap))
@@ -173,7 +195,7 @@ void Game_Update(double elapsed_time)
 				g_RemotePlayerActive[rid] = true;
 				g_RemotePlayers[rid].SetActive(true);
 				g_RemotePlayers[rid].SetTeam(snap.remotePlayers[i].teamId);
-				g_RemotePlayers[rid].PushSnapshot(snap.remotePlayers[i].state, clientClock);
+				g_RemotePlayers[rid].PushSnapshot(snap.remotePlayers[i].state, g_ClientClock);
 			}
 		}
 		// Deactivate players absent from this snapshot (disconnected)
@@ -194,6 +216,18 @@ void Game_Update(double elapsed_time)
 		g_NetDebugInfo.lastServerState = snap.localPlayer;
 		g_NetDebugInfo.hasData = true;
 		g_NetDebugInfo.snapshotsThisSecond++;
+
+		// Record (receiveTime, serverTick) for lag-comp view-tick computation.
+		// A backward tick means the server restarted — stale mapping is invalid.
+		if (!g_TickTimeBuffer.empty() && snap.tickId < g_TickTimeBuffer.back().serverTick)
+		{
+			g_TickTimeBuffer.clear();
+		}
+		g_TickTimeBuffer.push_back({ g_ClientClock, snap.tickId });
+		if (g_TickTimeBuffer.size() > TICK_TIME_BUFFER_MAX)
+		{
+			g_TickTimeBuffer.erase(g_TickTimeBuffer.begin());
+		}
 	}
 
 	// Update snapshot receive rate (once per second)
@@ -227,7 +261,7 @@ void Game_Update(double elapsed_time)
 	for (int i = 0; i < MAX_PLAYERS; i++)
 	{
 		if (g_RemotePlayerActive[i])
-			g_RemotePlayers[i].Update(elapsed_time, clientClock);
+			g_RemotePlayers[i].Update(elapsed_time, g_ClientClock);
 	}
 
 	Fade_Update(elapsed_time);
@@ -490,5 +524,52 @@ CollisionWorld* Game_GetCollisionWorld()
 uint32_t Game_GetClientTick()
 {
 	return g_PlayerFps ? g_PlayerFps->GetClientTick() : 0;
+}
+
+void Game_GetViewTick(uint32_t& outTick, float& outFrac)
+{
+	// Map the interp-delayed render time (what the player actually SEES of
+	// remote players) back into server-tick space, mirroring the bracketing
+	// rules of RemotePlayer::Update so the reported tick matches the render.
+	outTick = 0;  // sentinel: no data, server must not rewind
+	outFrac = 0.0f;
+	if (g_TickTimeBuffer.empty()) return;
+
+	const double renderTime = g_ClientClock - RemotePlayer::INTERPOLATION_DELAY;
+
+	// INTERP: find consecutive pair with t0 <= renderTime < t1.
+	// Pairs with t0 >= t1 (snapshots drained in the same frame share one
+	// receiveTime) are skipped — same rule as RemotePlayer::Update.
+	for (size_t i = 0; i + 1 < g_TickTimeBuffer.size(); ++i)
+	{
+		const TickTimeEntry& a = g_TickTimeBuffer[i];
+		const TickTimeEntry& b = g_TickTimeBuffer[i + 1];
+		if (a.receiveTime >= b.receiveTime) continue;
+		if (a.receiveTime <= renderTime && renderTime < b.receiveTime)
+		{
+			const double alpha = (renderTime - a.receiveTime) / (b.receiveTime - a.receiveTime);
+			// Lerp in TICK space — b.serverTick - a.serverTick may be >1 on drops,
+			// matching the position lerp RemotePlayer does across the same pair.
+			const double fracTick = static_cast<double>(a.serverTick)
+				+ static_cast<double>(b.serverTick - a.serverTick) * alpha;
+			outTick = static_cast<uint32_t>(fracTick);
+			outFrac = static_cast<float>(fracTick - static_cast<double>(outTick));
+			return;
+		}
+	}
+
+	// EXTRAP / SNAP: renderTime past the newest snapshot
+	const TickTimeEntry& newest = g_TickTimeBuffer.back();
+	if (renderTime >= newest.receiveTime)
+	{
+		double ahead = renderTime - newest.receiveTime;
+		// Beyond the extrapolation limit RemotePlayer SNAPs to the newest
+		// snapshot — report exactly that tick instead of extrapolating on.
+		if (ahead > RemotePlayer::MAX_EXTRAPOLATION_TIME) ahead = 0.0;
+		const double fracTick = static_cast<double>(newest.serverTick) + ahead * SERVER_TICK_RATE;
+		outTick = static_cast<uint32_t>(fracTick);
+		outFrac = static_cast<float>(fracTick - static_cast<double>(outTick));
+	}
+	// renderTime < oldest (WAIT mode) → outTick stays 0 (no compensation)
 }
 

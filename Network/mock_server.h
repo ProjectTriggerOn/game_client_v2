@@ -77,6 +77,20 @@ private:
     void ProcessFiring();
 
     //-------------------------------------------------------------------------
+    // Advance the combat bot's patrol movement (gives lag compensation a
+    // moving target to demonstrate against in mock mode)
+    //-------------------------------------------------------------------------
+    void UpdateCombatBot();
+
+    //-------------------------------------------------------------------------
+    // Lag compensation: resolve the bot capsule position at the (fractional)
+    // tick the client was viewing. Returns false if the bot was dead at that
+    // time (not hittable — the client rendered no live target there).
+    //-------------------------------------------------------------------------
+    bool GetRewoundBotPosition(uint32_t viewTick, float viewFrac,
+                               DirectX::XMFLOAT3& outPos) const;
+
+    //-------------------------------------------------------------------------
     // Advance the display-only dummy bots (mock-mode many-player render test)
     //-------------------------------------------------------------------------
     void UpdateDummyBots();
@@ -104,6 +118,21 @@ private:
     NetPlayerState m_RemotePlayerState{};
     uint8_t  m_RemoteHealth = 200;
     double   m_RemoteRespawnTimer = 0.0;
+    float    m_BotDirX = 1.0f;       // patrol direction (+X / -X)
+
+    // Lag compensation: per-tick bot position history (mirrors GameServer's
+    // PlayerData::history), written at the end of Tick() — exactly the state
+    // BroadcastSnapshot() sends. Indexed by tick % BOT_HISTORY_SIZE.
+    struct BotHistoryEntry {
+        uint32_t tick = 0;           // 0 = slot never written
+        DirectX::XMFLOAT3 position{};
+        bool alive = false;
+    };
+    static constexpr size_t BOT_HISTORY_SIZE = 64;   // 2s @ 32Hz
+    BotHistoryEntry m_BotHistory[BOT_HISTORY_SIZE]{};
+
+    // Never lerp history across a jump larger than this (respawn teleport)
+    static constexpr float REWIND_TELEPORT_GUARD = 2.0f;
 
     // Display-only bots (no combat) to exercise many-player rendering in mock
     // mode. Player ids 2..(MOCK_DUMMY_BOTS+1); the combat bot above keeps id 1
