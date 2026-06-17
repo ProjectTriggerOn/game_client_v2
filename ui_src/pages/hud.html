@@ -1,18 +1,20 @@
 <!-- hud.html — bare markup injected into #page-hud -->
-<div class="hud-crosshair"></div>
+<!-- crosshair is drawn natively (docs §12.1), not here -->
 
 <div class="hud-bottom-left">
     <div class="hud-hp-label">HP</div>
     <div class="hud-hp-bar">
         <div class="hud-hp-fill"></div>
     </div>
-    <div class="hud-hp-text">200 / 200</div>
+    <!-- sentinel placeholders: replaced by the first C++ push (proves the
+         push channel works; if they stay "--" the push never arrived) -->
+    <div class="hud-hp-text">-- / --</div>
 </div>
 
 <div class="hud-bottom-right">
-    <div class="hud-ammo-current">30</div>
+    <div class="hud-ammo-current">--</div>
     <div class="hud-ammo-sep">/</div>
-    <div class="hud-ammo-reserve">120</div>
+    <div class="hud-ammo-reserve">--</div>
 </div>
 
 <div class="hud-top-center">

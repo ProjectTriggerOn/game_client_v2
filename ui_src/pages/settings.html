@@ -1,0 +1,22 @@
+<!-- settings.html — bare markup injected into #page-settings (overlay) -->
+<div class="settings-root">
+    <div class="settings-title">SETTINGS</div>
+
+    <div class="settings-form">
+        <div class="set-row">
+            <span class="set-label">Mouse sensitivity</span>
+            <input id="set-sens" type="range" min="0.001" max="0.010" step="0.0005">
+            <span id="set-sens-val" class="set-value">?</span>
+        </div>
+        <div class="set-row">
+            <span class="set-label">Invert Y</span>
+            <input id="set-invert" type="checkbox">
+        </div>
+    </div>
+
+    <div class="settings-actions">
+        <button id="set-save" type="button">SAVE</button>
+        <button id="set-back" type="button">BACK</button>
+    </div>
+    <div class="settings-hint">Changes apply live; SAVE persists them. Esc backs out.</div>
+</div>

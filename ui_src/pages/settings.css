@@ -1,0 +1,77 @@
+/* settings.css — modal overlay */
+
+#page-settings .settings-root {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 28px;
+}
+
+#page-settings .settings-title {
+    font-size: 48px;
+    font-weight: 900;
+    letter-spacing: 8px;
+    color: #ff6b35;
+}
+
+#page-settings .settings-form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    width: 460px;
+}
+
+#page-settings .set-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+#page-settings .set-label {
+    width: 200px;
+    text-align: right;
+    opacity: 0.8;
+    font-size: 16px;
+}
+
+#page-settings .set-row input[type="range"] {
+    flex: 1;
+}
+
+#page-settings .set-value {
+    width: 64px;
+    font-family: 'Consolas', monospace;
+    color: #ffe082;
+}
+
+#page-settings .settings-actions {
+    display: flex;
+    gap: 16px;
+}
+
+#page-settings .settings-actions button {
+    font-size: 18px;
+    letter-spacing: 2px;
+    padding: 10px 32px;
+    border: 2px solid rgba(255, 255, 255, 0.25);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    color: white;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+#page-settings .settings-actions button:hover {
+    background: #ff6b35;
+    border-color: #ff6b35;
+    color: #0f1419;
+}
+
+#page-settings .settings-hint {
+    font-size: 13px;
+    opacity: 0.45;
+    letter-spacing: 1px;
+}

@@ -6,14 +6,20 @@
     <link rel="stylesheet" href="shared.css">
     <link rel="stylesheet" href="pages/title.css">
     <link rel="stylesheet" href="pages/hud.css">
+    <link rel="stylesheet" href="pages/pause.css">
+    <link rel="stylesheet" href="pages/settings.css">
 </head>
 <body>
-    <div id="page-title" class="page hidden"></div>
-    <div id="page-hud"   class="page hidden"></div>
+    <div id="page-title"    class="page hidden"></div>
+    <div id="page-hud"      class="page hidden"></div>
+    <div id="page-pause"    class="page hidden overlay"></div>
+    <div id="page-settings" class="page hidden overlay"></div>
 
     <!-- Page JS (IIFEs defining the PageXxx hooks) -->
     <script src="pages/title.js"></script>
     <script src="pages/hud.js"></script>
+    <script src="pages/pause.js"></script>
+    <script src="pages/settings.js"></script>
 
     <!-- Router: fetches page markup → injects into divs → shows title by default -->
     <script src="router.js"></script>

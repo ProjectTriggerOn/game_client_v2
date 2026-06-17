@@ -68,6 +68,18 @@ UILoadListener g_loadListener;
 // next Render to avoid re-entrant script evaluation.
 std::string g_deferredPage;
 
+// Pending HUD values. Push* (called from gameplay code, mid-frame) only stores;
+// the actual C++→JS call is flushed inside Render. Reason: calling JS via
+// LockJSContext/SetJSContext from outside Render (or a JSC callback) leaves the
+// global JS context dangling once the lock releases — the call silently fails
+// AND corrupts later JS interaction (observed: HUD never updated + crash when
+// opening settings). Render is the one proven-safe JS-call point per frame.
+struct PendingHud {
+    bool healthDirty = false; int health = 0, healthMax = 0;
+    bool ammoDirty   = false; int ammo = 0, ammoReserve = 0;
+};
+PendingHud g_pendingHud;
+
 std::string GetExeDirA() {
     char buf[MAX_PATH];
     GetModuleFileNameA(nullptr, buf, MAX_PATH);
@@ -152,6 +164,16 @@ void Render() {
         ShowPage(page.c_str());
     }
 
+    // Flush pending HUD pushes here (the safe JS-call point), not from gameplay code
+    if (g_pendingHud.healthDirty) {
+        UI::Bridge::PushHealth(g_pendingHud.health, g_pendingHud.healthMax);
+        g_pendingHud.healthDirty = false;
+    }
+    if (g_pendingHud.ammoDirty) {
+        UI::Bridge::PushAmmo(g_pendingHud.ammo, g_pendingHud.ammoReserve);
+        g_pendingHud.ammoDirty = false;
+    }
+
     g_renderer->Update();
 
     // Required in 1.4: drives CSS animations/transitions, smooth scrolling, rAF
@@ -184,10 +206,21 @@ void Render() {
 }
 
 void Finalize() {
+    UI::Bridge::Unbind();  // drop the bridge's cached view before we release it
     g_d3d_renderer.Finalize();
     g_view     = nullptr;  // RefPtr release
     g_renderer = nullptr;
     g_filesystem.reset();
+}
+
+// Store only; flushed to JS inside Render (see PendingHud note above).
+void PushHealth(int current, int maxHp) {
+    g_pendingHud.health = current; g_pendingHud.healthMax = maxHp;
+    g_pendingHud.healthDirty = true;
+}
+void PushAmmo(int current, int reserve) {
+    g_pendingHud.ammo = current; g_pendingHud.ammoReserve = reserve;
+    g_pendingHud.ammoDirty = true;
 }
 
 void ProcessInput() {

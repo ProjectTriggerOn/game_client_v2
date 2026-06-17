@@ -12,8 +12,9 @@
 // and injected into the matching div by this file.
 
 (function () {
-    const PAGES    = ['title', 'hud'];                  // Slice B: these two only; later slices extend
-    const OVERLAYS = new Set([]);                       // Slice B: no overlays yet
+    const PAGES = ['title', 'hud', 'pause', 'settings'];
+    // pause/settings carry a static `.overlay` class in index.html for their dim
+    // background; the router treats every page identically (show one, hide rest).
 
     const cap  = (s) => s[0].toUpperCase() + s.slice(1);
     const hook = (n) => window['Page' + cap(n)];
@@ -21,9 +22,13 @@
 
     const Router = {
         current: null,
-        stack: [],
         ready: null,           // assigned a Promise by init() below
 
+        // Show exactly one page; hide all others. C++ UIPolicy_Apply drives this
+        // with a single definitive page per (scene, GameState), so there is no
+        // multi-page stacking to manage. Overlay pages (pause/settings) carry a
+        // static `.overlay` class for their dim background; the 3D scene still
+        // shows through the transparent View underneath.
         show(name) {
             if (!PAGES.includes(name)) {
                 console.warn('[Router] unknown page:', name);
@@ -33,32 +38,11 @@
 
             if (this.current) hook(this.current)?.onExit?.();
 
-            if (!OVERLAYS.has(name)) {
-                PAGES.forEach((p) => {
-                    if (!OVERLAYS.has(p)) el(p).classList.add('hidden');
-                });
-            }
+            PAGES.forEach((p) => el(p).classList.add('hidden'));
             el(name).classList.remove('hidden');
 
-            if (this.current && !OVERLAYS.has(this.current)) {
-                this.stack.push(this.current);
-            }
             this.current = name;
             hook(name)?.onEnter?.();
-        },
-
-        closeOverlay(name) {
-            if (!OVERLAYS.has(name)) return;
-            el(name).classList.add('hidden');
-            hook(name)?.onExit?.();
-            if (this.current === name) {
-                this.current = this.stack[this.stack.length - 1] || null;
-            }
-        },
-
-        back() {
-            const prev = this.stack.pop();
-            if (prev) this.show(prev);
         },
     };
 

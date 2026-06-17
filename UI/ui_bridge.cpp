@@ -2,6 +2,7 @@
 #include "ui_manager.h"
 #include "config.h"
 #include "scene.h"
+#include "game.h"
 
 #include <Ultralight/View.h>
 #include <AppCore/JSHelpers.h>
@@ -13,6 +14,38 @@
 namespace {
 
 using namespace ultralight;
+
+// View whose JS context the push helpers target. Set in Register (OnDOMReady),
+// so it always points at the current navigation's context.
+ultralight::View* g_bridgeView = nullptr;
+
+// Call window.<fnName>(a, b) on the current JS context if it exists.
+// Fresh property lookup each call (cheap hash lookup; avoids stale JSFunction
+// refs across navigation and avoids building arg strings). No-op if the handler
+// isn't defined yet (e.g. HUD page not loaded).
+void CallJsFn2(const char* fnName, double a, double b) {
+    if (!g_bridgeView) return;
+    auto ctx = g_bridgeView->LockJSContext();
+    SetJSContext(*ctx);
+    JSObject global = JSGlobalObject();
+    if (!global.HasProperty(fnName)) return;   // handler not defined yet — silent no-op
+
+    // IMPORTANT: keep the JSPropertyValue type (use auto). operator[] returns a
+    // JSPropertyValue whose value is resolved lazily via a virtual instance().
+    // Slicing it into a plain `JSValue` (e.g. `JSValue v = global[fnName];`)
+    // copies the still-null base instance_, so IsFunction()/ToFunction() then see
+    // an empty value — the bug that left the HUD frozen ("not a function").
+    auto prop = global[fnName];
+    if (!prop.IsFunction()) return;
+
+    JSFunction fn = prop.ToFunction();
+    if (!fn.IsValid()) return;
+
+    JSArgs args;
+    args.push_back(JSValue(a));
+    args.push_back(JSValue(b));
+    fn(args);
+}
 
 std::string JSValueToStdString(const JSValue& v) {
     String s = ((JSValue&)v).ToString();
@@ -43,6 +76,7 @@ namespace Bridge {
 
 void Register(ultralight::View* view) {
     if (!view) return;
+    g_bridgeView = view;
 
     auto ctx = view->LockJSContext();
     SetJSContext(*ctx);
@@ -52,14 +86,32 @@ void Register(ultralight::View* view) {
     JSObject game = gameVal.ToObject();
 
     // --- state / app control -------------------------------------------------
+    //
+    // Menu intent verbs change GameState only; the active page + input level are
+    // derived from GameState by UIPolicy_Apply (ui_policy.h). The menus never
+    // touch the Router or InteractiveLevel directly.
 
+    game["resume"] = (JSCallback)[](const JSObject&, const JSArgs&) {
+        DebugLog("[UI:bridge] game.resume", "");
+        Game_SetState(PLAY);
+    };
+
+    game["openSettings"] = (JSCallback)[](const JSObject&, const JSArgs&) {
+        DebugLog("[UI:bridge] game.openSettings", "");
+        Game_SetState(SETTING);
+    };
+
+    game["backToPause"] = (JSCallback)[](const JSObject&, const JSArgs&) {
+        DebugLog("[UI:bridge] game.backToPause", "");
+        Game_SetState(PAUSE);
+    };
+
+    // Sandbox-only page preview (used by the ui_test title page). Does NOT drive
+    // GameState — in SCENE_GAME the policy would override it next frame anyway.
     game["setState"] = (JSCallback)[](const JSObject&, const JSArgs& args) {
         if (args.empty()) return;
         const std::string name = JSValueToStdString(args[0]);
-        DebugLog("[UI:bridge] game.setState ", name);
-        // Slice D: echo straight back to the Router (deferred to avoid JS
-        // re-entrancy). Slice E replaces this with real GameState transitions
-        // that drive Router via Push::State.
+        DebugLog("[UI:bridge] game.setState (sandbox preview) ", name);
         UI::ShowPageDeferred(name.c_str());
     };
 
@@ -70,20 +122,16 @@ void Register(ultralight::View* view) {
 
     game["startLocalGame"] = (JSCallback)[](const JSObject&, const JSArgs&) {
         DebugLog("[UI:bridge] game.startLocalGame", "");
-        // Scene transition applies at end of frame (Scene_Refresh); the HUD page
-        // switch is deferred to next Render. TODO(Slice E): full GameState wiring.
+        // Scene transition applies at end of frame (Scene_Refresh); Game_Initialize
+        // sets GameState=PLAY, and UIPolicy_Apply derives the HUD page + level.
         Scene_Change(SCENE_GAME);
-        UI::SetInteractiveLevel(UI::InteractiveLevel::Display);
-        UI::ShowPageDeferred("hud");
     };
 
     game["returnToTitle"] = (JSCallback)[](const JSObject&, const JSArgs&) {
         DebugLog("[UI:bridge] game.returnToTitle", "");
-        // Returns to the UI sandbox scene for now (the real title scene flow
-        // arrives with Slice E). TODO(Slice E): network teardown.
+        // Back to the UI sandbox scene; UIPolicy_Apply restores title + Interactive.
+        // TODO(lobby): real title scene + network teardown.
         Scene_Change(SCENE_UI_TEST);
-        UI::SetInteractiveLevel(UI::InteractiveLevel::Interactive);
-        UI::ShowPageDeferred("title");
     };
 
     // --- config ---------------------------------------------------------------
@@ -131,6 +179,20 @@ void Register(ultralight::View* view) {
     };
 
     DebugLog("[UI:bridge] game.* registered", "");
+}
+
+void Unbind() {
+    g_bridgeView = nullptr;
+}
+
+// --- C++ → JS push (docs §8.2) ----------------------------------------------
+
+void PushHealth(int current, int maxHp) {
+    CallJsFn2("onHealthChanged", (double)current, (double)maxHp);
+}
+
+void PushAmmo(int current, int reserve) {
+    CallJsFn2("onAmmoChanged", (double)current, (double)reserve);
 }
 
 }  // namespace Bridge

@@ -5,8 +5,9 @@ struct ID3D11DeviceContext;
 
 namespace UI {
 
-// How the UI layer absorbs input (docs §5.2). Slice C: one global value;
-// Slice E will drive this from OnGameStateChanged.
+// How the UI layer absorbs input (docs §5.2). Derived each frame from
+// (scene, GameState) by UIPolicy_Apply (ui_policy.h) — do not set imperatively
+// outside that single owner.
 enum class InteractiveLevel {
     Display,      // draw only, no input (HUD during PLAY)
     Interactive,  // consumes input normally (full-screen pages like TITLE)
@@ -22,12 +23,17 @@ void Render();
 // according to the current InteractiveLevel.
 void ProcessInput();
 
-void SetInteractiveLevel(InteractiveLevel level);
+void SetInteractiveLevel(InteractiveLevel level);  // owner: UIPolicy_Apply only
 InteractiveLevel GetInteractiveLevel();
-bool IsModalActive();   // == Modal. Game_Update uses this in Slice E to freeze gameplay input
+bool IsModalActive();   // == Modal. Read by MousePolicy_Apply to free the cursor.
 
-// Slice B verification helper: calls EvaluateScript("Router.show('<name>')").
-// Will be replaced by the proper JS Bridge in Slice D.
+// C++ → JS HUD data push (facade over UI::Bridge; docs §8.2). No-op if the HUD
+// page hasn't defined the matching window.on*Changed handler.
+void PushHealth(int current, int maxHp);
+void PushAmmo(int current, int reserve);
+
+// Page switch helper: calls Router.show('<name>'). UIPolicy_Apply drives this
+// for state-derived pages; the ui_test sandbox uses it directly for preview.
 void ShowPage(const char* name);
 
 // Same as ShowPage but deferred to the start of the next UI::Render — safe to
