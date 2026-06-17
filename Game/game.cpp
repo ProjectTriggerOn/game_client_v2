@@ -27,6 +27,7 @@
 #include "fade.h"
 #include "font.h"
 #include "ui_widget.h"
+#include "ui_manager.h"
 #include "mouse.h"
 #include <cwchar>
 #include <vector>
@@ -37,9 +38,7 @@ namespace{
 	double g_AccumulatedTime = 0.0;
 	MODEL* g_pModel = nullptr;
 	MODEL_ANI* g_pModel0 = nullptr;
-	int g_CrossHairTexId = -1;
-	int g_CursorTexId = -1;
-	int g_OverlayTexId = -1;  // white texture used for the settings dim overlay
+	int g_OverlayTexId = -1;  // white texture; reused to draw the native crosshair
 #if defined(_DEBUG)
 	bool isDebugCam = false;
 	bool isDebugCollision = false;
@@ -85,10 +84,10 @@ NetworkDebugInfo g_NetDebugInfo;
 
 void Game_Initialize()
 {
-	g_GameState = TITLE;
+	// Entering the game scene means we're playing. The UI page (HUD) and input
+	// level are derived from this by UIPolicy_Apply (ui_policy.h).
+	g_GameState = PLAY;
 
-	g_CrossHairTexId = Texture_LoadFromFile(L"resource/texture/arr.png");
-	g_CursorTexId    = Texture_LoadFromFile(L"resource/texture/cursor.png");
 	g_OverlayTexId   = Texture_LoadFromFile(L"resource/texture/white.png");
 	Font_Initialize();
 	Widget_Initialize();
@@ -109,25 +108,43 @@ void Game_Initialize()
 
 bool Game_WantsUICursor()
 {
-	// Free cursor while in the settings overlay or the debug TPS camera;
-	// consumed by MousePolicy_Apply each frame.
-	return g_GameState == SETTING || isDebugCam;
+	// Free cursor for the debug TPS camera. PAUSE/SETTING are handled via
+	// UI::IsModalActive() in MousePolicy_Apply (they set InteractiveLevel::Modal),
+	// so they don't need to be listed here.
+	return isDebugCam;
+}
+
+bool Game_IsGameplayActive()
+{
+	// Gameplay input/simulation runs only while actually playing in the game
+	// scene. Consumed by InputProducer (zero input otherwise) and HUD push.
+	return g_GameState == PLAY;
 }
 
 void Game_Update(double elapsed_time)
 {
 	// ========================================================================
-	// ESC: toggle settings screen
+	// ESC: single owner of the pause/settings toggle.
+	//
+	// Only gameplay handles ESC — the UI menus never bind it — so there is no
+	// dual-consumer ping-pong and the docs §5.3 frame-start modal snapshot is
+	// unnecessary. State flips only; cursor mode, UI input level and the active
+	// page all derive from GameState (mouse_policy.h / ui_policy.h).
 	// ========================================================================
-	// State flips only — cursor mode/visibility derive from state in
-	// MousePolicy_Apply (mouse_policy.h)
 	if (KeyLogger_IsTrigger(KK_ESCAPE))
 	{
-		g_GameState = (g_GameState != SETTING) ? SETTING : PLAY;
+		switch (g_GameState)
+		{
+		case PLAY:    g_GameState = PAUSE; break;
+		case PAUSE:   g_GameState = PLAY;  break;
+		case SETTING: g_GameState = PAUSE; break;  // ESC backs out of settings to pause
+		default: break;
+		}
 	}
 
-	// In settings screen: skip all gameplay update
-	if (g_GameState == SETTING)
+	// Paused / in settings: freeze all gameplay update (but keep pushing nothing;
+	// HUD retains its last values).
+	if (g_GameState == PAUSE || g_GameState == SETTING)
 	{
 		return;
 	}
@@ -143,6 +160,11 @@ void Game_Update(double elapsed_time)
 #endif
 
 	g_PlayerFps->Update(elapsed_time);
+
+	// Push live HUD data to the UI (C++ → JS). Cheap no-op if the HUD page
+	// hasn't defined the handlers yet.
+	UI::PushHealth(g_PlayerFps->GetHealth(), 200);
+	UI::PushAmmo(g_PlayerFps->GetAmmo(), g_PlayerFps->GetAmmoReserve());
 	
 	// ========================================================================
 	// Consume Snapshots from Network (works with both Mock and ENet)
@@ -385,89 +407,36 @@ void Game_Draw()
 	float sw = (float)Direct3D_GetBackBufferWidth();
 	float sh = (float)Direct3D_GetBackBufferHeight();
 
-	float x = (sw - 120.0f) / 2.0f;
-	float y = (sh - 120.0f) / 2.0f;
-
-	Sprite_Draw(g_CrossHairTexId, x, y, 120.0f, 120.0f);
-
 	Direct3D_SetDepthEnable(false);
 
-	if (MSLogger_IsUIMode()) {
-		int mouse_x = MSLogger_GetXUI();
-		int mouse_y = MSLogger_GetYUI();
-		Sprite_Draw(g_CursorTexId, (float)mouse_x, (float)mouse_y, 32.0f, 32.0f);
-	}
-
-	// ========================================================================
-	// HUD — bottom-right (hidden during settings screen)
-	// ========================================================================
-	if (g_GameState != SETTING)
+	// Crosshair — native green cross, centered. Drawn natively (not in
+	// Ultralight) because the crosshair is frame-locked and pixel-exact; see
+	// docs §12.1. Placeholder static cross for now; a spread-driven dynamic
+	// crosshair + hitmarker will replace this in the same 2D pass.
+	if (g_GameState == PLAY)
 	{
-		constexpr float HUD_W  = 260.0f;
-		constexpr float HUD_H  = 52.0f;
-		constexpr float HUD_PAD = 20.0f;
-		const XMFLOAT4  HUD_BG  = { 0.06f, 0.06f, 0.10f, 0.78f };
-
-		float hudX = sw - HUD_W - HUD_PAD;
-		float hudY = sh - HUD_H * 2.0f - HUD_PAD - 8.0f;
-
-		// HP
-		wchar_t hpBuf[32];
-		swprintf_s(hpBuf, L"HP  %d / 200", (int)g_PlayerFps->GetHealth());
-		Widget_DrawPanel(hudX, hudY, HUD_W, HUD_H, hpBuf, HUD_BG);
-
-		// Ammo
-		hudY += HUD_H + 8.0f;
-		wchar_t ammoBuf[32];
-		swprintf_s(ammoBuf, L"%d / %d", g_PlayerFps->GetAmmo(), g_PlayerFps->GetAmmoReserve());
-		Widget_DrawPanel(hudX, hudY, HUD_W, HUD_H, ammoBuf, HUD_BG);
+		const float cx = sw * 0.5f;
+		const float cy = sh * 0.5f;
+		constexpr float ARM = 10.0f;   // arm half-length (px)
+		constexpr float TH  = 2.0f;    // line thickness (px)
+		const XMFLOAT4 GREEN = { 0.1f, 1.0f, 0.1f, 0.9f };
+		// horizontal bar
+		Sprite_Draw(g_OverlayTexId, cx - ARM, cy - TH * 0.5f, ARM * 2.0f, TH, GREEN);
+		// vertical bar
+		Sprite_Draw(g_OverlayTexId, cx - TH * 0.5f, cy - ARM, TH, ARM * 2.0f, GREEN);
 	}
 
-	// ========================================================================
-	// Settings overlay (drawn when in SETTING state)
-	// ========================================================================
-	if (g_GameState == SETTING)
-	{
-		float sw = static_cast<float>(Direct3D_GetBackBufferWidth());
-		float sh = static_cast<float>(Direct3D_GetBackBufferHeight());
-
-		// Full-screen dim
-		//Sprite_Draw(g_OverlayTexId, 0.0f, 0.0f, sw, sh, { 0.04f, 0.04f, 0.06f, 0.72f });
-
-		// Settings panel — centered
-		constexpr float PW = 420.0f;
-		constexpr float PH = 360.0f;
-		float px = (sw - PW) * 0.5f;
-		float py = (sh - PH) * 0.5f;
-
-		// Panel background only (no centered title — would overlap buttons)
-		Widget_DrawPanel(px, py, PW, PH, nullptr,
-			{ 0.10f, 0.10f, 0.16f, 0.92f });
-
-		// Title pinned to top of panel
-		const wchar_t* title = L"SETTINGS";
-		float titleX = px + (PW - Font_MeasureWidth(title)) * 0.5f;
-		Font_Draw(title, titleX, py + 16.0f, { 1.0f, 1.0f, 1.0f, 1.0f });
-
-		// Sensitivity slider — long and thick, upper quarter of screen
-		constexpr float SW = 1000.0f;
-		constexpr float SH = 72.0f;
-		float sx = (sw - SW) * 0.5f;
-		float sy = sh * 0.22f;
-		float newSens = Widget_DrawSlider(sx, sy, SW, SH,
-			PlayerCamFps_GetSensitivity(), 0.001f, 0.010f, L"Sensitivity");
-		PlayerCamFps_SetSensitivity(newSens);
-
-		// Resume button / Infinite Reserve toggle / Exit
-		constexpr float BW = 260.0f;
-		constexpr float BH = 52.0f;
-		float bx = (sw - BW) * 0.5f;
-
-		if (Widget_DrawButton(bx, py + 150.0f, BW, BH, L"Exit Game"))
-		{
-			PostQuitMessage(0);
-		}
-	}
+	// NOTE: the legacy Widget_* HUD panels (HP/Ammo) and the immediate-mode
+	// settings overlay (sensitivity slider + "Exit Game") used to be drawn here.
+	// They are superseded by the Ultralight HUD/settings pages (Slice D/E) and
+	// were removed — the old "Exit Game" button's hit-rect overlapped the new
+	// settings checkboxes and quit the app on click (PostQuitMessage).
+	//
+	// The legacy arr.png crosshair sprite and the software cursor (g_CursorTexId,
+	// shown in MSLogger UI mode) were also removed: the OS cursor (MousePolicy
+	// makes it visible in menus) replaces the software cursor, and the native
+	// green cross above replaces the sprite crosshair. The Ultralight HUD's CSS
+	// crosshair was removed too — one crosshair, drawn natively.
 
 	// Fade overlay (depth off so it covers everything including crosshair)
 	Fade_Draw();

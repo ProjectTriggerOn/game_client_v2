@@ -112,31 +112,35 @@ void InputProducer::Update()
 void InputProducer::SampleInput()
 {
     // ========================================================================
-    // Movement Axis (WASD)
+    // Camera Angles (from PlayerCamFps) — always sampled so a paused player's
+    // aim direction stays where they left it (camera doesn't move while paused).
+    // ========================================================================
+    DirectX::XMFLOAT3 camFront = PlayerCamFps_GetFront();
+    m_Yaw   = atan2f(camFront.x, camFront.z);
+    m_Pitch = asinf(camFront.y);
+
+    // ========================================================================
+    // Zero movement/button intent when gameplay isn't active (paused, in a
+    // menu, or in a non-game scene). Tick still advances and camera angle is
+    // still reported, but the player neither moves nor fires. (docs §5.4)
     // ========================================================================
     m_MoveAxisX = 0.0f;
     m_MoveAxisY = 0.0f;
+    m_Buttons   = InputButtons::NONE;
 
+    if (!Game_IsGameplayActive())
+    {
+        m_JumpPending = false;  // drop any sticky jump captured before pausing
+        return;
+    }
+
+    // ========================================================================
+    // Movement Axis (WASD)
+    // ========================================================================
     if (KeyLogger_IsPressed(KK_W)) m_MoveAxisY += 1.0f;
     if (KeyLogger_IsPressed(KK_S)) m_MoveAxisY -= 1.0f;
     if (KeyLogger_IsPressed(KK_D)) m_MoveAxisX += 1.0f;
     if (KeyLogger_IsPressed(KK_A)) m_MoveAxisX -= 1.0f;
-
-    // ========================================================================
-    // Camera Angles (from PlayerCamFps)
-    // These are already computed by the camera system
-    // ========================================================================
-    DirectX::XMFLOAT3 camFront = PlayerCamFps_GetFront();
-    
-    // Convert front vector back to yaw/pitch
-    // yaw = atan2(x, z), pitch = asin(y)
-    m_Yaw = atan2f(camFront.x, camFront.z);
-    m_Pitch = asinf(camFront.y);
-
-    // ========================================================================
-    // Buttons
-    // ========================================================================
-    m_Buttons = InputButtons::NONE;
 
     // JUMP: Sticky - capture trigger and keep pending until consumed
     if (KeyLogger_IsTrigger(KK_SPACE))

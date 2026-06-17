@@ -51,6 +51,7 @@
 #include "game.h"
 #include "map.h"
 #include "mouse_policy.h"
+#include "ui_policy.h"
 #include "ui_manager.h"
 
 
@@ -267,40 +268,23 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR lpC
 			MSLogger_Update();
 
 			// UI input: drain UI_InputQueue and dispatch to Ultralight per
-			// InteractiveLevel. After Slice E this call moves into Game_Update
-			// (paired with the frame-start modal snapshot, docs §5.3).
-			// (F1/F2 page-switch shortcuts moved into SCENE_UI_TEST's UITest_Update)
+			// InteractiveLevel. Runs every frame in all scenes.
+			// (F1/F2 page-preview shortcuts live in SCENE_UI_TEST's UITest_Update)
 			UI::ProcessInput();
-
-			// Dev shortcut: F9 hot-toggles SCENE_UI_TEST ↔ SCENE_GAME at runtime
-			// (no config edit / restart). UI level + page follow the scene.
-			// Removed once Slice E drives all of this from GameState.
-			if (KeyLogger_IsTrigger(KK_F9))
-			{
-				if (Scene_GetCurrent() == SCENE_UI_TEST)
-				{
-					Scene_Change(SCENE_GAME);
-					UI::SetInteractiveLevel(UI::InteractiveLevel::Display);
-					UI::ShowPageDeferred("hud");
-				}
-				else
-				{
-					Scene_Change(SCENE_UI_TEST);
-					UI::SetInteractiveLevel(UI::InteractiveLevel::Interactive);
-					UI::ShowPageDeferred("title");
-				}
-			}
 
 			Scene_Update(elapsed_time);
 
-			// Derive cursor mode/visibility from (scene, GameState, UI modal) —
-			// runs after Scene_Update so this frame's state flips are reflected.
-			// Sole owner of Mouse_SetMode/SetVisible; see Game/mouse_policy.h.
+			// Derive cursor (mouse_policy) and UI input level + page (ui_policy)
+			// from (scene, GameState). Both run after Scene_Update so this frame's
+			// state flips are reflected; both are the SOLE owners of their domains.
 			MousePolicy_Apply();
+			UIPolicy_Apply();
 
 			// Input sampling and mock-server simulation only run during gameplay.
 			// In other scenes (ui_test): typing WASD into a UI text field must not
 			// drive the server-side player, and the mock world stays frozen.
+			// InputProducer itself zeroes movement/buttons when !Game_IsGameplayActive
+			// (e.g. paused); the scene gate here also freezes the mock simulation.
 			// ENet PollEvents always runs to keep the connection alive.
 			const bool inGameScene = (Scene_GetCurrent() == SCENE_GAME);
 

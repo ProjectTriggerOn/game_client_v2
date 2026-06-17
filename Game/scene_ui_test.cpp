@@ -5,14 +5,10 @@
 
 void UITest_Initialize()
 {
-    // UI consumes all input. Cursor mode follows automatically: MousePolicy_Apply
-    // gives every non-game scene a free, visible cursor.
-    UI::SetInteractiveLevel(UI::InteractiveLevel::Interactive);
-
-    // Note: the View's DOM is most likely not ready yet (LoadURL is async),
-    // so do NOT call UI::ShowPage here — router.js shows the title page itself
-    // once it finishes initializing. The proper "C++ waits for DOM ready, then
-    // pushes state" flow arrives with Slice D's OnDOMReady callback.
+    // Input level + cursor are derived automatically: UIPolicy_Apply forces
+    // Interactive for non-game scenes, MousePolicy_Apply gives a free visible
+    // cursor. The DOM may not be ready yet (LoadURL is async) — router.js shows
+    // the title page itself once it finishes loading.
 }
 
 void UITest_Finalize()
@@ -23,9 +19,15 @@ void UITest_Update(double elapsed_time)
 {
     (void)elapsed_time;
 
-    // Page-switch shortcuts (replaced by game.setState once Slice E lands)
-    if (KeyLogger_IsTrigger(KK_F1)) UI::ShowPage("hud");
-    if (KeyLogger_IsTrigger(KK_F2)) UI::ShowPage("title");
+    // Sandbox page preview. UIPolicy_Apply only forces a page on scene entry for
+    // non-game scenes, so these manual switches stick — handy for eyeballing any
+    // page (incl. in-game ones) without launching gameplay.
+    // Use F5-F8 (not F1-F4): F1 is the in-game debug-collision toggle, keep that
+    // key's meaning consistent across scenes.
+    if (KeyLogger_IsTrigger(KK_F5)) UI::ShowPage("title");
+    if (KeyLogger_IsTrigger(KK_F6)) UI::ShowPage("hud");
+    if (KeyLogger_IsTrigger(KK_F7)) UI::ShowPage("pause");
+    if (KeyLogger_IsTrigger(KK_F8)) UI::ShowPage("settings");
 }
 
 void UITest_Draw()
