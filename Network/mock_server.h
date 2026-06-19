@@ -47,6 +47,40 @@ public:
 
 private:
     //-------------------------------------------------------------------------
+    // Combat-bot data — every remote bot (ids 1..NUM_BOTS) is a full combat
+    // entity. Declared before the private methods so their signatures can take
+    // a Bot&.
+    //-------------------------------------------------------------------------
+    static constexpr int    NUM_BOTS = MAX_PLAYERS - 1;   // 9 remote bots
+    static constexpr size_t BOT_HISTORY_SIZE = 64;        // lag-comp ring, 2s @ 32Hz
+    static constexpr float  REWIND_TELEPORT_GUARD = 2.0f; // never lerp across a teleport
+
+    struct BotHistoryEntry {
+        uint32_t tick = 0;                 // 0 = slot never written
+        DirectX::XMFLOAT3 position{};
+        bool alive = false;
+    };
+
+    struct Bot {
+        NetPlayerState    state{};         // wire state sent in the snapshot
+        uint8_t           team = PlayerTeam::RED;
+        DirectX::XMFLOAT3 base{};          // PaceBot center (spawn point)
+        float             phase = 0.0f;    // PaceBot phase offset
+
+        double respawnTimer = 0.0;         // counts down while IS_DEAD
+
+        // Intermittent-fire AI
+        uint8_t ammo        = WeaponConfig::MAG_SIZE;
+        double  reloadTimer = 0.0;         // >0 while reloading
+        double  fireTimer   = 0.0;         // per-shot cadence inside a burst
+        double  burstTimer  = 0.0;         // time left in the current burst / gap
+        bool    firing      = false;       // currently in a firing burst
+
+        // Lag-compensation position history, written at the end of Tick()
+        BotHistoryEntry history[BOT_HISTORY_SIZE]{};
+    };
+
+    //-------------------------------------------------------------------------
     // Fixed tick logic (called at exactly 32Hz)
     //-------------------------------------------------------------------------
     void Tick();
@@ -77,23 +111,47 @@ private:
     void ProcessFiring();
 
     //-------------------------------------------------------------------------
-    // Advance the combat bot's patrol movement (gives lag compensation a
-    // moving target to demonstrate against in mock mode)
+    // Advance every remote bot one tick: shared PaceBot movement + intermittent-
+    // fire / auto-reload AI + death/respawn.
     //-------------------------------------------------------------------------
-    void UpdateCombatBot();
+    void UpdateBots();
 
     //-------------------------------------------------------------------------
-    // Lag compensation: resolve the bot capsule position at the (fractional)
-    // tick the client was viewing. Returns false if the bot was dead at that
-    // time (not hittable — the client rendered no live target there).
+    // Step one bot's weapon AI: burst firing + auto-reload when the mag empties.
+    // Each shot fires a live hitscan (BotFireShot).
     //-------------------------------------------------------------------------
-    bool GetRewoundBotPosition(uint32_t viewTick, float viewFrac,
+    void UpdateBotWeapon(Bot& bot, int index);
+
+    //-------------------------------------------------------------------------
+    // One hitscan shot from a bot along its facing — damages the closest live
+    // bot or the local player in front of the nearest wall (bots fire straight
+    // ahead; the facing layout produces RED<->BLUE crossfire and bot->player).
+    //-------------------------------------------------------------------------
+    void BotFireShot(const Bot& shooter, int shooterIndex);
+
+    //-------------------------------------------------------------------------
+    // Apply damage (kill + start respawn on lethal) to a bot / to the player.
+    //-------------------------------------------------------------------------
+    void DamageBot(Bot& bot, uint8_t dmg);
+    void DamagePlayer(uint8_t dmg);
+
+    //-------------------------------------------------------------------------
+    // Reset a bot to its spawn after the respawn delay.
+    //-------------------------------------------------------------------------
+    void RespawnBot(Bot& bot, int index);
+
+    //-------------------------------------------------------------------------
+    // Count down + apply the local player's respawn (bots can now kill it).
+    //-------------------------------------------------------------------------
+    void UpdatePlayerRespawn();
+
+    //-------------------------------------------------------------------------
+    // Lag compensation: resolve a bot's capsule position at the (fractional)
+    // tick the client was viewing. Returns false if the bot was dead then
+    // (not hittable — the client rendered no live target there).
+    //-------------------------------------------------------------------------
+    bool GetRewoundBotPosition(const Bot& bot, uint32_t viewTick, float viewFrac,
                                DirectX::XMFLOAT3& outPos) const;
-
-    //-------------------------------------------------------------------------
-    // Advance the display-only dummy bots (mock-mode many-player render test)
-    //-------------------------------------------------------------------------
-    void UpdateDummyBots();
 
 private:
     INetwork* m_pNetwork;
@@ -114,37 +172,15 @@ private:
     // Collision world for gravity
     CollisionWorld* m_pCollisionWorld = nullptr;
 
-    // Remote bot player (standalone, not mirrored)
-    NetPlayerState m_RemotePlayerState{};
-    uint8_t  m_RemoteHealth = 200;
-    double   m_RemoteRespawnTimer = 0.0;
-    float    m_BotDirX = 1.0f;       // patrol direction (+X / -X)
-
-    // Lag compensation: per-tick bot position history (mirrors GameServer's
-    // PlayerData::history), written at the end of Tick() — exactly the state
-    // BroadcastSnapshot() sends. Indexed by tick % BOT_HISTORY_SIZE.
-    struct BotHistoryEntry {
-        uint32_t tick = 0;           // 0 = slot never written
-        DirectX::XMFLOAT3 position{};
-        bool alive = false;
-    };
-    static constexpr size_t BOT_HISTORY_SIZE = 64;   // 2s @ 32Hz
-    BotHistoryEntry m_BotHistory[BOT_HISTORY_SIZE]{};
-
-    // Never lerp history across a jump larger than this (respawn teleport)
-    static constexpr float REWIND_TELEPORT_GUARD = 2.0f;
-
-    // Display-only bots (no combat) to exercise many-player rendering in mock
-    // mode. Player ids 2..(MOCK_DUMMY_BOTS+1); the combat bot above keeps id 1
-    // and the local player is id 0 → 8 dummies + 1 combat bot + local = 10.
-    static constexpr int MOCK_DUMMY_BOTS = 8;
-    NetPlayerState    m_DummyBots[MOCK_DUMMY_BOTS]{};
-    uint8_t           m_DummyTeams[MOCK_DUMMY_BOTS]{};
-    DirectX::XMFLOAT3 m_DummyBase[MOCK_DUMMY_BOTS]{};
+    // All remote bots (ids 1..NUM_BOTS). The Bot type is defined above so the
+    // private methods can take a Bot&. Movement matches the old layout; each is
+    // now a shootable, intermittently-firing, auto-reloading combat bot.
+    Bot m_Bots[NUM_BOTS]{};
 
     // Local player combat state
     double   m_FireTimer = 0.0;
     uint16_t m_FireCounter = 0;
+    double   m_PlayerRespawnTimer = 0.0;  // counts down while the player IS_DEAD
 
     // Ammo
     uint8_t m_Ammo = WeaponConfig::MAG_SIZE;
@@ -155,8 +191,16 @@ private:
     static constexpr float CAPSULE_RADIUS = 0.3f;
 
     // Weapon parameters (local player = RED team)
+    static constexpr uint8_t LOCAL_PLAYER_TEAM = PlayerTeam::RED;  // for friendly-fire checks
     static constexpr double RED_RPM = 600.0;
     static constexpr uint8_t RED_DAMAGE = 34;
     static constexpr uint8_t MAX_HEALTH = 200;
     static constexpr double RESPAWN_TIME = 2.0;
+
+    // Bot intermittent-fire cadence (mock combat bots)
+    static constexpr double BOT_FIRE_RPM   = 600.0;   // ammo-burn rate while firing
+    static constexpr double BOT_BURST_TIME = 0.5;     // hold fire this long per burst
+    static constexpr double BOT_GAP_TIME   = 1.5;     // pause between bursts
+    static constexpr float   BOT_EYE_HEIGHT = 1.4f;   // muzzle height for bot hitscan
+    static constexpr uint8_t BOT_DAMAGE     = 25;     // damage a bot deals per hit
 };
