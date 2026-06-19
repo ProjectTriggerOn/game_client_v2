@@ -48,6 +48,7 @@ PlayerFps::PlayerFps()
 	, m_Health(200)
 	, m_IsDead(false)
 	, m_WasDead(true)   // treat first connection as respawn so yaw is initialized
+	, m_RespawnLockTimer(0.0)
 {
 }
 
@@ -152,6 +153,23 @@ void PlayerFps::Update(double elapsed_time)
 	// ========================================================================
 	if (m_IsDead)
 	{
+		return;
+	}
+
+	// ========================================================================
+	// Respawn transition — keep rendering the player and play the "taking out"
+	// draw, but lock gameplay input until the trimmed fade ends. The InputProducer
+	// sends neutral input while locked (Game_IsPlayerInputLocked), so the server
+	// holds us at the spawn point — no prediction desync. Camera stays live, so
+	// when the fade is over control returns instantly.
+	// ========================================================================
+	if (m_RespawnLockTimer > 0.0)
+	{
+		m_RespawnLockTimer -= elapsed_time;
+		m_ModelFront = PlayerCamFps_GetFront();
+		m_StateMachine->SetPlayerState(PlayerState::IDLE);
+		if (m_Model && m_Animator)
+			m_StateMachine->Update(elapsed_time, m_Animator);
 		return;
 	}
 
@@ -756,9 +774,22 @@ void PlayerFps::ApplyServerCorrection(const NetPlayerState& serverState)
 	}
 	else if (!isDead && m_WasDead)
 	{
-		// Just respawned — fade in from black, snap to spawn position
-		Fade_Start(0.5, false, { 0.0f, 0.0f, 0.0f });
+		// Just respawned — trimmed fade-in from black. Gameplay input is locked
+		// for the same duration (m_RespawnLockTimer), so control returns exactly
+		// when the fade is over.
+		//
+		// NOTE: this lock is CLIENT-SIDE presentation only — it just withholds
+		// input (InputProducer sends neutral) so we predict no movement while the
+		// fade plays. It is NOT server-enforced: the server already considers the
+		// player alive and would accept input immediately. Authority is unaffected
+		// (the server still owns position/health/death). If a respawn-protection
+		// window ever needs to be authoritative for all players, enforce it on the
+		// server (ignore the player's input for a short window after respawn).
+		constexpr double RESPAWN_FADE_TIME = 0.25;
+		Fade_Start(RESPAWN_FADE_TIME, false, { 0.0f, 0.0f, 0.0f });
+		m_RespawnLockTimer = RESPAWN_FADE_TIME;
 		m_IsDead = false;
+		m_JumpPending = false;
 		m_Position = serverState.position;
 		m_PrevPhysicsPosition = serverState.position;
 		m_Velocity = serverState.velocity;
@@ -772,8 +803,9 @@ void PlayerFps::ApplyServerCorrection(const NetPlayerState& serverState)
 		PlayerCamFps_SetYaw(yaw);
 		PlayerCamFps_SetPitch(0.0f);
 
-		// Weapon state reset on respawn
-		m_StateMachine->SetWeaponState(WeaponState::HIP);
+		// Play the "taking out" draw on respawn (auto-transitions to HIP),
+		// matching match-start instead of snapping straight to hip-idle.
+		m_StateMachine->SetWeaponState(WeaponState::TAKING_OUT);
 
 		// Clear input history and sync tick on respawn
 		ClearInputHistory();

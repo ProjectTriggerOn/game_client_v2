@@ -497,6 +497,11 @@ uint32_t Game_GetClientTick()
 	return g_PlayerFps ? g_PlayerFps->GetClientTick() : 0;
 }
 
+bool Game_IsPlayerInputLocked()
+{
+	return g_PlayerFps ? g_PlayerFps->IsInputLocked() : false;
+}
+
 void Game_GetViewTick(uint32_t& outTick, float& outFrac)
 {
 	// Map the interp-delayed render time (what the player actually SEES of

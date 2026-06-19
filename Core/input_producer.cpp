@@ -128,9 +128,9 @@ void InputProducer::SampleInput()
     m_MoveAxisY = 0.0f;
     m_Buttons   = InputButtons::NONE;
 
-    if (!Game_IsGameplayActive())
+    if (!Game_IsGameplayActive() || Game_IsPlayerInputLocked())
     {
-        m_JumpPending = false;  // drop any sticky jump captured before pausing
+        m_JumpPending = false;  // drop sticky jump while paused / during respawn lock
         return;
     }
 
