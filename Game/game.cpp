@@ -142,30 +142,31 @@ void Game_Update(double elapsed_time)
 		}
 	}
 
-	// Paused / in settings: freeze all gameplay update (but keep pushing nothing;
-	// HUD retains its last values).
-	if (g_GameState == PAUSE || g_GameState == SETTING)
+	// Pause / settings freezes the LOCAL player only. We deliberately do NOT
+	// early-return: the network must keep being drained below or the server's
+	// snapshot stream backs up (unbounded memory growth), and remote players
+	// must keep interpolating — an MP pause is a menu overlay, not a world
+	// freeze for everyone else.
+	//
+	// PlayerFps::Update reads keyboard/mouse directly (jump/fire/reload), so it
+	// and the camera only run while actually playing; InputProducer already
+	// sends zero input when paused, so the server keeps the local player still.
+	const bool gameplayActive = (g_GameState == PLAY);
+
+	if (gameplayActive)
 	{
-		return;
-	}
-
-
 #if defined(_DEBUG)
-	if (KeyLogger_IsTrigger(KK_C)) {
-		isDebugCam = !isDebugCam;
-	}
-	if (KeyLogger_IsTrigger(KK_F1)) {
-		isDebugCollision = !isDebugCollision;
-	}
+		if (KeyLogger_IsTrigger(KK_C))  isDebugCam = !isDebugCam;
+		if (KeyLogger_IsTrigger(KK_F1)) isDebugCollision = !isDebugCollision;
 #endif
 
-	g_PlayerFps->Update(elapsed_time);
+		g_PlayerFps->Update(elapsed_time);
 
-	// Push live HUD data to the UI (C++ → JS). Cheap no-op if the HUD page
-	// hasn't defined the handlers yet.
-	UI::PushHealth(g_PlayerFps->GetHealth(), 200);
-	UI::PushAmmo(g_PlayerFps->GetAmmo(), g_PlayerFps->GetAmmoReserve());
-	
+		// Push live HUD data to the UI (C++ → JS).
+		UI::PushHealth(g_PlayerFps->GetHealth(), 200);
+		UI::PushAmmo(g_PlayerFps->GetAmmo(), g_PlayerFps->GetAmmoReserve());
+	}
+
 	// ========================================================================
 	// Consume Snapshots from Network (works with both Mock and ENet)
 	//
@@ -183,14 +184,18 @@ void Game_Update(double elapsed_time)
 	Snapshot snap;
 	while (g_pNetwork && g_pNetwork->ReceiveSnapshot(snap))
 	{
-		// Apply server correction to local player
-		g_PlayerFps->ApplyServerCorrection(snap.localPlayer);
-		g_PlayerFps->SetTeam(snap.localPlayerTeam);
-
-		// Feed server state to InputProducer (for jump-pending logic)
-		if (g_pInputProducer)
+		// Local-player reconciliation only while playing — frozen when paused
+		// (we still drain the snapshot below for remote players / no backlog).
+		if (gameplayActive)
 		{
-			g_pInputProducer->SetLastServerState(snap.localPlayer);
+			g_PlayerFps->ApplyServerCorrection(snap.localPlayer);
+			g_PlayerFps->SetTeam(snap.localPlayerTeam);
+
+			// Feed server state to InputProducer (for jump-pending logic)
+			if (g_pInputProducer)
+			{
+				g_pInputProducer->SetLastServerState(snap.localPlayer);
+			}
 		}
 
 		// Dispatch remote players from snapshot.
@@ -260,12 +265,17 @@ void Game_Update(double elapsed_time)
 
 	SkyDome_SetPosition(g_PlayerFps->GetPosition());
 
-	if (isDebugCam)
+	// Camera follows the local player — frozen while paused (player isn't moving
+	// and modal mouse delta is zero anyway).
+	if (gameplayActive)
 	{
-		PlayerCamTps_Update_Maya(elapsed_time, g_PlayerFps->GetPosition());
-	}
-	else {
-		PlayerCamFps_Update(elapsed_time, g_PlayerFps->GetEyePosition());
+		if (isDebugCam)
+		{
+			PlayerCamTps_Update_Maya(elapsed_time, g_PlayerFps->GetPosition());
+		}
+		else {
+			PlayerCamFps_Update(elapsed_time, g_PlayerFps->GetEyePosition());
+		}
 	}
 
 	// (KK_U manual MSLogger UI-mode toggle removed — MousePolicy_Apply now owns
