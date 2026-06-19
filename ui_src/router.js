@@ -1,36 +1,40 @@
 // router.js — SPA show/hide switching + page lifecycle hooks + fetch-preloading
-// of page HTML at startup
 //
-// Exposes:
-//   Router.show(name)         switch to page `name`; overlays stack on top instead
-//   Router.closeOverlay(name) close an overlay
-//   Router.back()             return to the previous non-overlay page
-//   Router.ready              Promise resolved once all page HTML is loaded
+// Two switching modes (see docs §5.6 + the native-vs-Ultralight design notes):
+//   - State-driven (game scene): C++ UIPolicy_Apply calls Router.show(name)
+//     directly; the page is a pure function of GameState, no nav stack.
+//   - Navigation-driven (menus/lobby): JS uses Router.navigate(name) / back()
+//     for free user navigation between sibling pages, with a small history stack
+//     so a shared page (e.g. settings) can return to wherever it was opened from.
 //
-// Convention: each page owns a <div id="page-XXX"> plus window.PageXxx =
-// { onEnter, onExit }. Page markup lives in pages/<name>.html and is fetched
-// and injected into the matching div by this file.
+// PAGES maps a logical page NAME → its markup PATH under pages/. The logical name
+// is what everything else uses (the <div id="page-NAME">, window.PageName hooks,
+// Router.show(name), C++ ShowPage(name)); only the file location lives in PAGES,
+// so pages can be foldered by scene without touching call sites.
 
 (function () {
-    const PAGES = ['title', 'hud', 'pause', 'settings'];
-    // pause/settings carry a static `.overlay` class in index.html for their dim
-    // background; the router treats every page identically (show one, hide rest).
+    const PAGES = {
+        'title':    'title',        // top-level / title scene
+        'settings': 'settings',     // shared (game pause + future lobby)
+        'hud':      'game/hud',     // game scene
+        'pause':    'game/pause',   // game scene
+        // future: 'lobby-home': 'lobby/home', 'armory': 'lobby/armory', ...
+    };
 
-    const cap  = (s) => s[0].toUpperCase() + s.slice(1);
-    const hook = (n) => window['Page' + cap(n)];
-    const el   = (n) => document.getElementById('page-' + n);
+    const names = () => Object.keys(PAGES);
+    const cap   = (s) => s.split('-').map(w => w[0].toUpperCase() + w.slice(1)).join('');
+    const hook  = (n) => window['Page' + cap(n)];   // 'lobby-home' → window.PageLobbyHome
+    const el    = (n) => document.getElementById('page-' + n);
 
     const Router = {
         current: null,
-        ready: null,           // assigned a Promise by init() below
+        stack: [],              // navigation history (navigation-driven scenes only)
+        ready: null,            // Promise resolved once all page markup is loaded
 
-        // Show exactly one page; hide all others. C++ UIPolicy_Apply drives this
-        // with a single definitive page per (scene, GameState), so there is no
-        // multi-page stacking to manage. Overlay pages (pause/settings) carry a
-        // static `.overlay` class for their dim background; the 3D scene still
-        // shows through the transparent View underneath.
+        // Low-level switch: show exactly one page, hide the rest. Does NOT touch
+        // the nav stack. C++ (state-driven) and the boot/reload path use this.
         show(name) {
-            if (!PAGES.includes(name)) {
+            if (!(name in PAGES)) {
                 console.warn('[Router] unknown page:', name);
                 return;
             }
@@ -38,15 +42,34 @@
 
             if (this.current) hook(this.current)?.onExit?.();
 
-            PAGES.forEach((p) => el(p).classList.add('hidden'));
+            names().forEach((p) => el(p).classList.add('hidden'));
             el(name).classList.remove('hidden');
 
             this.current = name;
             hook(name)?.onEnter?.();
         },
+
+        // Navigation-driven: remember where we are, then go to `name`.
+        // Use this from menu/lobby buttons so back() can return here.
+        navigate(name) {
+            if (this.current && this.current !== name) this.stack.push(this.current);
+            this.show(name);
+        },
+
+        // Pop the nav history and return there. No-op if the stack is empty.
+        back() {
+            const prev = this.stack.pop();
+            if (prev) this.show(prev);
+        },
+
+        // Clear nav history (call when a scene takes over via state-driven control).
+        resetNav() {
+            this.stack.length = 0;
+        },
     };
 
-    // Slice F hot-reload placeholder
+    // Hot-reload helper (Slice F): re-insert a stylesheet <link> with a cache-bust
+    // query so an edited CSS file is re-fetched without a full page reload.
     window.reloadCSS = function (path) {
         const links = document.querySelectorAll('link[rel=stylesheet]');
         for (const l of links) {
@@ -61,13 +84,15 @@
 
     window.Router = Router;
 
-    // Startup: fetch all pages/*.html → inject into their divs → show title by default
+    // Startup: fetch every page's markup → inject into its div → show title.
+    // (Slice F will replace the hardcoded 'title' with the C++-derived boot page.)
     Router.ready = (async function init() {
         try {
-            await Promise.all(PAGES.map(async (name) => {
-                const res = await fetch('pages/' + name + '.html');
+            await Promise.all(names().map(async (name) => {
+                const path = 'pages/' + PAGES[name] + '.html';
+                const res = await fetch(path);
                 if (!res.ok) {
-                    console.error('[Router] failed to load pages/' + name + '.html', res.status);
+                    console.error('[Router] failed to load ' + path, res.status);
                     return;
                 }
                 el(name).innerHTML = await res.text();
