@@ -73,7 +73,10 @@
     window.reloadCSS = function (path) {
         const links = document.querySelectorAll('link[rel=stylesheet]');
         for (const l of links) {
-            if (l.href.endsWith(path)) {
+            // Compare against the query-stripped href: after the first reload the
+            // link already carries a ?t=… cache-bust, so matching the raw href
+            // would fail every time after the first (hot reload "only works once").
+            if (l.href.split('?')[0].endsWith(path)) {
                 const clone = l.cloneNode();
                 clone.href = l.href.split('?')[0] + '?t=' + Date.now();
                 l.parentNode.replaceChild(clone, l);
@@ -84,8 +87,11 @@
 
     window.Router = Router;
 
-    // Startup: fetch every page's markup → inject into its div → show title.
-    // (Slice F will replace the hardcoded 'title' with the C++-derived boot page.)
+    // Startup: fetch every page's markup → inject into its div → show the boot
+    // page. The boot page comes from C++ (game.getBootPage) so a hot-reload
+    // View::Reload lands back on the page matching the current GameState instead
+    // of always 'title' (docs §10). Falls back to 'title' in the browser dev
+    // harness or before the bridge is bound.
     Router.ready = (async function init() {
         try {
             await Promise.all(names().map(async (name) => {
@@ -98,7 +104,7 @@
                 el(name).innerHTML = await res.text();
             }));
             console.log('[Router] all pages loaded');
-            Router.show('title');
+            Router.show(window.game?.getBootPage?.() || 'title');
         } catch (e) {
             console.error('[Router] init failed:', e);
         }

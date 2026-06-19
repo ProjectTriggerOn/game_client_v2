@@ -231,6 +231,7 @@ if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ui_src" "
     <ClCompile Include="UI\ui_filesystem.cpp" />
     <ClCompile Include="UI\ui_input_queue.cpp" />
     <ClCompile Include="UI\ui_bridge.cpp" />
+    <ClCompile Include="UI\ui_hot_reload.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Core\font.h" />
@@ -299,6 +300,7 @@ if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ui_src" "
     <ClInclude Include="UI\ui_filesystem.h" />
     <ClInclude Include="UI\ui_input_queue.h" />
     <ClInclude Include="UI\ui_bridge.h" />
+    <ClInclude Include="UI\ui_hot_reload.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\infinite_grid_pixel.hlsl">

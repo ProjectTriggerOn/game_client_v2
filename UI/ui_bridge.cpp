@@ -1,5 +1,6 @@
 #include "ui_bridge.h"
 #include "ui_manager.h"
+#include "ui_policy.h"
 #include "config.h"
 #include "scene.h"
 #include "game.h"
@@ -171,6 +172,15 @@ void Register(ultralight::View* view) {
 
     game["getVersion"] = (JSCallbackWithRetval)[](const JSObject&, const JSArgs&) -> JSValue {
         return JSValue(__DATE__ " " __TIME__);
+    };
+
+    // Boot/reload page authority (Slice F). router.js calls this at startup —
+    // including after a hot-reload View::Reload — to land on the page that matches
+    // the current (scene, GameState) rather than always 'title'. UIPolicy's static
+    // transition trackers survive a reload, so without this a reload would leave
+    // the view stuck on the boot default (docs §10).
+    game["getBootPage"] = (JSCallbackWithRetval)[](const JSObject&, const JSArgs&) -> JSValue {
+        return JSValue(UIPolicy_DerivePage());
     };
 
     game["log"] = (JSCallback)[](const JSObject&, const JSArgs& args) {

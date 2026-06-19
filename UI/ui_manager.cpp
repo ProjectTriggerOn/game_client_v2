@@ -3,6 +3,7 @@
 #include "ui_filesystem.h"
 #include "ui_input_queue.h"
 #include "ui_bridge.h"
+#include "ui_hot_reload.h"
 
 #include <Ultralight/Ultralight.h>
 #include <Ultralight/platform/Platform.h>
@@ -152,10 +153,22 @@ void Initialize(ID3D11Device* dev, ID3D11DeviceContext* ctx, int w, int h) {
     if (!g_d3d_renderer.Initialize(dev, ctx, w, h)) {
         OutputDebugStringA("[UI] D3D11BitmapRenderer::Initialize failed\n");
     }
+
+    // 7. Hot reload (Debug only; no-op stub in Release). Watch the same dir the
+    //    FileSystem reads, so edits to the live source are picked up (docs §10).
+#if defined(_DEBUG) || defined(DEBUG)
+    HotReload::Start(GetUiRoot().c_str());
+#endif
 }
 
 void Render() {
     if (!g_renderer || !g_view) return;
+
+    // Hot reload: drain watched-file changes on the main thread before any other
+    // JS interaction this frame (Debug only; no-op stub in Release).
+#if defined(_DEBUG) || defined(DEBUG)
+    HotReload::Poll();
+#endif
 
     // Apply a page switch requested from a JS callback (game.setState)
     if (!g_deferredPage.empty()) {
@@ -206,6 +219,9 @@ void Render() {
 }
 
 void Finalize() {
+#if defined(_DEBUG) || defined(DEBUG)
+    HotReload::Stop();     // join the watcher thread before we tear down the view
+#endif
     UI::Bridge::Unbind();  // drop the bridge's cached view before we release it
     g_d3d_renderer.Finalize();
     g_view     = nullptr;  // RefPtr release
@@ -315,6 +331,25 @@ void ShowPage(const char* name) {
     // Minimal escaping to guard against stray quotes. Replaced by the real Bridge in Slice D.
     std::string js = "Router.show('";
     for (const char* p = name; *p; ++p) {
+        if (*p == '\'' || *p == '\\') js += '\\';
+        js += *p;
+    }
+    js += "')";
+    g_view->EvaluateScript(ultralight::String(js.c_str()));
+}
+
+// --- Hot reload helpers (Slice F) -------------------------------------------
+
+void ReloadView() {
+    if (!g_view) return;
+    // OnDOMReady re-binds the bridge; router.js re-boots via game.getBootPage().
+    g_view->Reload();
+}
+
+void ReloadStyles(const char* relPath) {
+    if (!g_view || !relPath) return;
+    std::string js = "window.reloadCSS && window.reloadCSS('";
+    for (const char* p = relPath; *p; ++p) {
         if (*p == '\'' || *p == '\\') js += '\\';
         js += *p;
     }

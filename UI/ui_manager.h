@@ -40,4 +40,18 @@ void ShowPage(const char* name);
 // call from inside a JS callback (avoids re-entrant script evaluation).
 void ShowPageDeferred(const char* name);
 
+// --- Hot reload helpers (Slice F, docs §10) ---------------------------------
+// Called by UI::HotReload::Poll (main thread) when watched files change. These
+// own the View, so the hot-reload module stays free of Ultralight headers.
+
+// Full View::Reload. The JSContext is rebuilt, so OnDOMReady re-binds the bridge
+// and router.js re-boots onto game.getBootPage() (the page for the current
+// GameState) instead of always 'title'.
+void ReloadView();
+
+// Non-destructive stylesheet refresh: calls window.reloadCSS('<relPath>') which
+// re-inserts the <link> with a cache-busting query. `relPath` is forward-slashed
+// and relative to ui_src (e.g. "pages/game/hud.css").
+void ReloadStyles(const char* relPath);
+
 }  // namespace UI

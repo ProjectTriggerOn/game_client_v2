@@ -3,25 +3,29 @@
 // The pause menu only changes GameState via game.* verbs; the active page and
 // input level are derived from GameState by UIPolicy_Apply (C++). ESC is owned
 // by gameplay (no key handler here) to avoid dual-consumer ping-pong (docs §5.3).
+//
+// Clicks use event delegation on the always-present #page-pause container
+// (declared in index.html — only its innerHTML is injected/replaced). Binding
+// once at load means we never depend on the injected buttons existing yet, so
+// there is no "bind on first onEnter, retry if not ready" path. That old retry
+// was unsound: Router.show short-circuits when the page is already current, so a
+// failed first bind would not re-fire onEnter and the menu could stay dead.
 
 (function () {
-    let bound = false;
+    const VERBS = {
+        'pause-resume':   () => window.game?.resume?.(),
+        'pause-settings': () => window.game?.openSettings?.(),
+        'pause-quit':     () => window.game?.returnToTitle?.(),
+    };
 
-    function bindOnce() {
-        if (bound) return;
-        const resume = document.getElementById('pause-resume');
-        if (!resume) return;            // markup not injected yet; retry on next onEnter
-        bound = true;
+    document.getElementById('page-pause')?.addEventListener('click', (e) => {
+        for (const id in VERBS) {
+            if (e.target.closest('#' + id)) { VERBS[id](); return; }
+        }
+    });
 
-        resume.addEventListener('click', () => window.game?.resume?.());
-        document.getElementById('pause-settings')
-            ?.addEventListener('click', () => window.game?.openSettings?.());
-        document.getElementById('pause-quit')
-            ?.addEventListener('click', () => window.game?.returnToTitle?.());
-    }
-
-    function onEnter() { console.log('[PagePause] enter'); bindOnce(); }
-    function onExit()  { console.log('[PagePause] exit'); }
-
-    window.PagePause = { onEnter, onExit };
+    window.PagePause = {
+        onEnter() { console.log('[PagePause] enter'); },
+        onExit()  { console.log('[PagePause] exit'); },
+    };
 })();

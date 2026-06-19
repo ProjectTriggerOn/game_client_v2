@@ -85,6 +85,11 @@
         getVersion() {
             return 'mock-dev / ' + new Date().toISOString().slice(0, 10);
         },
+        // Mirrors C++ UIPolicy_DerivePage: the browser harness has no scene/
+        // GameState, so it always boots to the title sandbox.
+        getBootPage() {
+            return 'title';
+        },
         log(msg) {
             console.log('[ui]', msg);
         },
