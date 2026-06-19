@@ -30,9 +30,21 @@ void MSLogger_Finalize()
 
 void MSLogger_Update()
 {
-	ModeState& m = g_Mode[g_isUIMode ? MODE_UI : MODE_GAME];
+	Mouse_State sampled = {};
+	Mouse_GetState(&sampled);
 
-	Mouse_GetState(&m.current);
+	// Route by the mode the sample was ACTUALLY taken in, not by g_isUIMode.
+	//
+	// Mouse_SetMode only signals an event; the hardware switch happens inside
+	// Mouse_ProcessMessage when the next MOUSE message arrives. Toggling modes
+	// from a keyboard event (ESC) therefore leaves a multi-frame window where
+	// the sample still carries ABSOLUTE pixel coordinates — if those were
+	// written into MODE_GAME, PlayerCamFps would consume e.g. (960, 540) as a
+	// mouse delta and slam the pitch straight into the ground.
+	const bool isRelative = (sampled.positionMode == MOUSE_POSITION_MODE_RELATIVE);
+
+	ModeState& m = g_Mode[isRelative ? MODE_GAME : MODE_UI];
+	m.current = sampled;
 
 	LPBYTE pCurrent = (LPBYTE)&m.current;
 	LPBYTE pPrev    = (LPBYTE)&m.prev;
@@ -46,6 +58,15 @@ void MSLogger_Update()
 	}
 
 	m.prev = m.current;
+
+	// Neutralize the inactive slot's motion values: while in absolute mode the
+	// GAME slot must read as "no movement" (deltas), not stale/foreign data.
+	// (The UI slot keeps its last absolute position — frozen cursor is correct.)
+	if (!isRelative)
+	{
+		g_Mode[MODE_GAME].current.x = 0;
+		g_Mode[MODE_GAME].current.y = 0;
+	}
 }
 
 bool MSLogger_IsPressed(MSLogger_Buttons btn)    { return isButtonDown(btn, &g_Mode[MODE_GAME].current); }
@@ -92,7 +113,9 @@ bool isButtonDown(MSLogger_Buttons btn)
 
 void MSLogger_SetUIMode(bool isUIMode)
 {
-	Mouse_SetMode(isUIMode ? MOUSE_POSITION_MODE_ABSOLUTE : MOUSE_POSITION_MODE_RELATIVE);
+	// Only flips MSLogger's coordinate-source flag. The hardware cursor mode is
+	// owned by MousePolicy_Apply (Game/mouse_policy.h), which also calls this —
+	// keeping both in sync from a single place.
 	g_isUIMode = isUIMode;
 }
 

@@ -108,6 +108,11 @@ void Mouse_ResetScrollWheelValue(void)
     SetEvent(gScrollWheelValue);
 }
 
+Mouse_PositionMode Mouse_GetMode(void)
+{
+    return gMode;
+}
+
 void Mouse_SetMode(Mouse_PositionMode mode)
 {
     if (gMode == mode)

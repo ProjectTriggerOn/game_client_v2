@@ -32,6 +32,9 @@ root    = "logs"
 # Gameplay diagnostic filters consumed by callers of DebugLog_Printf.
 # =============================================================================
 [debug]
+# Boot scene: "game" (default) | "title" | "ui_test"
+#   ui_test — UI development sandbox: no gameplay, no 3D, all input to Ultralight
+start_scene             = "game"
 error_threshold         = 0.5    # CORR rows with err <= this are skipped (unless log_every_correction)
 log_every_correction    = false  # log every server correction (noisy)
 log_jump_events         = true

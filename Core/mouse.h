@@ -59,6 +59,9 @@ void Mouse_ResetScrollWheelValue(void);
 // �}�E�X�̃|�W�V�������[�h��ݒ肷��i�f�t�H���g�͐�΍��W���[�h�j
 void Mouse_SetMode(Mouse_PositionMode mode);
 
+// Get current position mode (used by UI input tap to flag relative-mode mouse events)
+Mouse_PositionMode Mouse_GetMode(void);
+
 // �}�E�X�̐ڑ�����o����
 bool Mouse_IsConnected(void);
 

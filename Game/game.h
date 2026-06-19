@@ -25,9 +25,18 @@ void Game_Draw();
 
 void Game_Finalize();
 
-void Game_SetState(GameState state);	
+void Game_SetState(GameState state);
 
 GameState Game_GetState();
+
+// True while gameplay needs a free cursor (debug TPS cam). PAUSE/SETTING go
+// through UI::IsModalActive instead. Consumed by MousePolicy_Apply each frame —
+// do not call Mouse_SetMode directly.
+bool Game_WantsUICursor();
+
+// True only while actively playing (SCENE_GAME + GameState PLAY). Consumed by
+// InputProducer (zero input otherwise) and the HUD data push.
+bool Game_IsGameplayActive();
 
 // Correction debug info
 const char* Game_GetCorrectionMode();

@@ -49,6 +49,10 @@
 #include "config.h"
 #include "debug_log.h"
 #include "game.h"
+#include "map.h"
+#include "mouse_policy.h"
+#include "ui_policy.h"
+#include "ui_manager.h"
 
 
 //Window procedure prototype claim
@@ -111,6 +115,23 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR lpC
 
 	Fade_Initialize();
 
+	// UI (Ultralight): per docs §6.3, init after Fade and before Scene.
+	// Use GetClientRect (physical pixels) — see docs §6.4 DPI constraints.
+	{
+		RECT rc{};
+		GetClientRect(hWnd, &rc);
+		UI::Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext(),
+		               rc.right - rc.left, rc.bottom - rc.top);
+	}
+
+	// Boot scene selection (config.toml [debug].start_scene = "game" | "title" | "ui_test")
+	{
+		const std::string bootScene = Config::GetInstance().GetString("debug", "start_scene", "game");
+		if      (bootScene == "ui_test") Scene_SetBootScene(SCENE_UI_TEST);
+		else if (bootScene == "title")   Scene_SetBootScene(SCENE_TITLE);
+		else                             Scene_SetBootScene(SCENE_GAME);
+	}
+
 	Scene_Initialize();
 
 	// ========================================================================
@@ -142,6 +163,17 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR lpC
 	else
 	{
 		// Mock mode: local in-process server (default)
+		//
+		// Register map colliders BEFORE the mock server starts. Game_Initialize
+		// also does this on game-scene entry, but when booting into another scene
+		// (e.g. ui_test) that hasn't happened yet — the mock server would simulate
+		// the player in an EMPTY collision world (no floor), and by the time the
+		// game scene starts the authoritative position is thousands of meters
+		// below the map (symptom: only sky + FP model visible, skybox jitters
+		// from float precision at huge coordinates).
+		// Map_RegisterColliders is pure static data and idempotent (Clear+add).
+		Map_RegisterColliders(*Game_GetCollisionWorld());
+
 		g_MockNetwork.Initialize();
 		g_MockServer.Initialize(&g_MockNetwork, Game_GetCollisionWorld());
 		g_pNetwork = &g_MockNetwork;
@@ -209,10 +241,13 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR lpC
 
 
 	do{
-		if (PeekMessage(&msg,nullptr,0,0,PM_REMOVE))
+		// W message pump: WM_CHAR encoding is decided by the function that
+		// RETRIEVES the message — the A variant converts character messages of a
+		// Unicode window to ANSI (non-ASCII becomes '?')
+		if (PeekMessageW(&msg,nullptr,0,0,PM_REMOVE))
 		{
 			TranslateMessage(&msg);
-			DispatchMessage(&msg);
+			DispatchMessageW(&msg);
 		}
 		else {
 
@@ -232,15 +267,37 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR lpC
 			KeyLogger_Update();
 			MSLogger_Update();
 
+			// UI input: drain UI_InputQueue and dispatch to Ultralight per
+			// InteractiveLevel. Runs every frame in all scenes.
+			// (F1/F2 page-preview shortcuts live in SCENE_UI_TEST's UITest_Update)
+			UI::ProcessInput();
+
 			Scene_Update(elapsed_time);
 
-			g_InputProducer.Update();
+			// Derive cursor (mouse_policy) and UI input level + page (ui_policy)
+			// from (scene, GameState). Both run after Scene_Update so this frame's
+			// state flips are reflected; both are the SOLE owners of their domains.
+			MousePolicy_Apply();
+			UIPolicy_Apply();
+
+			// Input sampling and mock-server simulation only run during gameplay.
+			// In other scenes (ui_test): typing WASD into a UI text field must not
+			// drive the server-side player, and the mock world stays frozen.
+			// InputProducer itself zeroes movement/buttons when !Game_IsGameplayActive
+			// (e.g. paused); the scene gate here also freezes the mock simulation.
+			// ENet PollEvents always runs to keep the connection alive.
+			const bool inGameScene = (Scene_GetCurrent() == SCENE_GAME);
+
+			if (inGameScene)
+			{
+				g_InputProducer.Update();
+			}
 
 			if (g_NetworkMode == "local" || g_NetworkMode == "remote")
 			{
 				g_ENetNetwork.PollEvents();
 			}
-			else
+			else if (inGameScene)
 			{
 				g_MockServer.Update(elapsed_time);
 			}
@@ -254,6 +311,9 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR lpC
 			Sprite_Begin();
 
 			Scene_Draw();
+
+			UI::Render();   // above 3D/2D, below Fade (Fade is the scene transition; covers everything)
+
 			Fade_Draw();
 
 
@@ -294,6 +354,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR lpC
 	Cube_Finalize();
 
 	Scene_Finalize();
+
+	UI::Finalize();
 
 	Fade_Finalize();
 

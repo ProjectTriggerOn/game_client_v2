@@ -2,14 +2,25 @@
 
 #include "game.h"
 #include "title.h"
+#include "scene_ui_test.h"
 
-namespace 
+namespace
 {
 	scene g_CurrentScene = SCENE_GAME;// 現在のシーン
 	scene g_NextScene = g_CurrentScene; // 次のシーン
+	bool g_BootSceneLocked = false;     // boot scene can no longer change after Scene_Initialize
 }
+
+void Scene_SetBootScene(scene scene)
+{
+	if (g_BootSceneLocked) return;
+	g_CurrentScene = scene;
+	g_NextScene = scene;
+}
+
 void Scene_Initialize()
 {
+	g_BootSceneLocked = true;
 	switch (g_CurrentScene)
 	{
 	case SCENE_TITLE:
@@ -20,6 +31,9 @@ void Scene_Initialize()
 		break;
 	case SCENE_RESULT:
 
+		break;
+	case SCENE_UI_TEST:
+		UITest_Initialize();
 		break;
 	default:
 		break;
@@ -39,6 +53,9 @@ void Scene_Finalize()
 	case SCENE_RESULT:
 
 		break;
+	case SCENE_UI_TEST:
+		UITest_Finalize();
+		break;
 	default:
 		break;
 	}
@@ -56,6 +73,9 @@ void Scene_Update(double elapsed_time)
 		break;
 	case SCENE_RESULT:
 
+		break;
+	case SCENE_UI_TEST:
+		UITest_Update(elapsed_time);
 		break;
 	default:
 		break;
@@ -76,6 +96,9 @@ void Scene_Draw()
 	case SCENE_RESULT:
 
 		break;
+	case SCENE_UI_TEST:
+		UITest_Draw();
+		break;
 	default:
 		break;
 	}
@@ -94,6 +117,11 @@ void Scene_Refresh()
 void Scene_Change(scene scene)
 {
 	g_NextScene = scene; // 現在のシーンを更新
+}
+
+scene Scene_GetCurrent()
+{
+	return g_CurrentScene;
 }
 
 void Restart_Game()

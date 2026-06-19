@@ -1,0 +1,153 @@
+/* title.css */
+
+#page-title {
+    background: linear-gradient(180deg, #0f1419 0%, #1a2332 100%);
+}
+
+#page-title .title-root {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+#page-title .title-logo {
+    font-size: 96px;
+    font-weight: 900;
+    letter-spacing: 12px;
+    color: #ff6b35;
+    text-shadow: 0 0 24px rgba(255, 107, 53, 0.6);
+    margin-bottom: 24px;
+}
+
+#page-title .title-hint {
+    font-size: 18px;
+    opacity: 0.6;
+    letter-spacing: 2px;
+}
+
+/* ---- Slice C input verification area (delete once verified) ---- */
+
+#page-title .input-test {
+    margin-top: 48px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+
+#page-title #btn-test {
+    font-size: 20px;
+    padding: 12px 36px;
+    border: 2px solid #ff6b35;
+    border-radius: 6px;
+    background: transparent;
+    color: #ff6b35;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+#page-title #btn-test:hover {
+    background: #ff6b35;
+    color: #0f1419;
+}
+
+#page-title #btn-test:active {
+    background: #cc4f22;
+}
+
+#page-title #btn-test:focus {
+    outline: 2px dashed #ffaa80;
+    outline-offset: 4px;
+}
+
+#page-title #input-test {
+    font-size: 18px;
+    padding: 10px 16px;
+    width: 280px;
+    border: 1px solid #44546a;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    color: white;
+}
+
+#page-title #input-test:focus {
+    border-color: #ff6b35;
+    outline: none;
+}
+
+#page-title #scroll-test {
+    width: 320px;
+    height: 140px;
+    overflow-y: scroll;
+    border: 1px solid #44546a;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.3);
+}
+
+#page-title #scroll-test .row {
+    padding: 8px 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    font-size: 15px;
+}
+
+#page-title #scroll-test .row:hover {
+    background: rgba(255, 107, 53, 0.15);
+}
+
+/* ---- Slice D bridge verification area (delete once verified) ---- */
+
+#page-title .bridge-test {
+    margin-top: 32px;
+    padding: 14px 18px;
+    border: 1px dashed #44546a;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    font-size: 14px;
+}
+
+#page-title .bridge-test .bt-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#page-title .bridge-test .bt-label {
+    width: 90px;
+    opacity: 0.6;
+    text-align: right;
+}
+
+#page-title .bridge-test button {
+    font-size: 14px;
+    padding: 6px 14px;
+    border: 1px solid #6c9;
+    border-radius: 4px;
+    background: transparent;
+    color: #6c9;
+    cursor: pointer;
+}
+
+#page-title .bridge-test button:hover {
+    background: #6c9;
+    color: #0f1419;
+}
+
+#page-title .bridge-test #bt-start {
+    border-color: #ff6b35;
+    color: #ff6b35;
+}
+
+#page-title .bridge-test #bt-start:hover {
+    background: #ff6b35;
+    color: #0f1419;
+}
+
+#page-title .bridge-test .bt-note {
+    font-size: 12px;
+    opacity: 0.45;
+}

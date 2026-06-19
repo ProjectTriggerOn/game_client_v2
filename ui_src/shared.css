@@ -1,0 +1,31 @@
+/* shared.css — global atomic styles, no page-id prefix */
+
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    font-family: sans-serif;
+    color: white;
+}
+
+body {
+    /* Keep the UI transparent overall so the 3D scene shows through;
+       each page decides its own background */
+    background: transparent;
+}
+
+.page {
+    position: absolute;
+    inset: 0;
+}
+
+.page.hidden {
+    display: none;
+}
+
+.page.overlay {
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 10;
+}

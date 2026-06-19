@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<!--
+  dev.html — browser-side development entry point
+  ===============================================
+  The only difference from index.html is that dev/mock_bridge.js loads first,
+  stubbing out the game.* API in the browser and adding a dev overlay.
+
+  How to open (VS Code Live Server extension recommended):
+    1. Install the "Live Server" extension in VS Code
+    2. Right-click this file → "Open with Live Server"
+    3. Browser opens http://127.0.0.1:5500/.../dev.html automatically
+
+  Or from the command line:
+    cd game_client/ui_src
+    python -m http.server 8000
+    # browse to http://127.0.0.1:8000/dev.html
+
+  NEVER double-click dev.html directly — under the file:// protocol,
+  fetch('pages/...') is rejected by CORS, every page-markup load in router.js
+  fails, and the screen stays blank.
+-->
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>TriggerOn UI [DEV]</title>
+    <link rel="stylesheet" href="shared.css">
+    <link rel="stylesheet" href="pages/title.css">
+    <link rel="stylesheet" href="pages/settings.css">
+    <link rel="stylesheet" href="pages/game/hud.css">
+    <link rel="stylesheet" href="pages/game/pause.css">
+    <style>
+        /* No 3D scene underneath in the browser — dark grey backdrop makes
+           the transparent UI visible */
+        html, body { background: #2a2a2a; }
+    </style>
+</head>
+<body>
+    <div id="page-title"    class="page hidden"></div>
+    <div id="page-settings" class="page hidden overlay"></div>
+    <div id="page-hud"      class="page hidden"></div>
+    <div id="page-pause"    class="page hidden overlay"></div>
+
+    <!-- The mock bridge must load before router.js and the page JS so they
+         can call game.* from the moment they start without throwing -->
+    <script src="dev/mock_bridge.js"></script>
+
+    <script src="pages/title.js"></script>
+    <script src="pages/settings.js"></script>
+    <script src="pages/game/hud.js"></script>
+    <script src="pages/game/pause.js"></script>
+    <script src="router.js"></script>
+</body>
+</html>

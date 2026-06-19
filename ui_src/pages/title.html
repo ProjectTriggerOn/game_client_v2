@@ -1,0 +1,39 @@
+<!-- title.html — bare markup injected into #page-title -->
+<div class="title-root">
+    <div class="title-logo">TRIGGER ON</div>
+    <div class="title-hint">Slice C — input test playground</div>
+
+    <!-- Slice C input verification area: button (hover/click), text input (WM_CHAR),
+         scrollable list (wheel). Delete the whole .input-test block once verified
+         and replace it with the real menu. -->
+    <div class="input-test">
+        <button id="btn-test" type="button">CLICK ME — 0</button>
+        <input id="input-test" type="text" placeholder="type here...">
+        <div id="scroll-test">
+            <!-- rows populated by title.js -->
+        </div>
+    </div>
+
+    <!-- Slice D bridge verification: realtime config roundtrip + save + state.
+         Delete together with .input-test when the real menu lands. -->
+    <div class="bridge-test">
+        <div class="bt-row">
+            <span class="bt-label">version</span>
+            <span id="bt-version">?</span>
+        </div>
+        <div class="bt-row">
+            <span class="bt-label">sensitivity</span>
+            <input id="bt-sens" type="range" min="0.001" max="0.010" step="0.0005">
+            <span id="bt-sens-val">?</span>
+        </div>
+        <div class="bt-row">
+            <button id="bt-save" type="button">Save config</button>
+            <button id="bt-state" type="button">setState('hud')</button>
+            <button id="bt-start" type="button">START GAME</button>
+        </div>
+        <div class="bt-row">
+            <span class="bt-label"></span>
+            <span class="bt-note">F9 toggles back to this scene from the game</span>
+        </div>
+    </div>
+</div>

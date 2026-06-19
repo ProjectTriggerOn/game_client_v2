@@ -103,7 +103,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>.;./Core;./Graphics;./Game;./Network;./ThirdParty/enet/include;./ThirdParty/assimp/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.;./Core;./Graphics;./Game;./Network;./UI;./ThirdParty/enet/include;./ThirdParty/assimp/include;./ThirdParty/ultralight/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <WarningLevel>Level4</WarningLevel>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -115,11 +115,15 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>d3d11.lib;ws2_32.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>./ThirdParty/assimp/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>d3d11.lib;ws2_32.lib;winmm.lib;Ultralight.lib;UltralightCore.lib;WebCore.lib;AppCore.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>./ThirdParty/assimp/lib;./ThirdParty/ultralight/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /D /Y "$(TargetDir)*.cso" "$(ProjectDir)resource/shader"</Command>
+      <Command>xcopy /D /Y "$(TargetDir)*.cso" "$(ProjectDir)resource/shader"
+xcopy /D /Y /I "$(TargetDir)ui\*.cso" "$(ProjectDir)resource\shader\ui\"
+xcopy /Y /D "$(ProjectDir)ThirdParty\ultralight\bin\*.dll" "$(TargetDir)"
+xcopy /Y /D /E /I "$(ProjectDir)ThirdParty\ultralight\resources" "$(TargetDir)resources\"
+if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ui_src" "$(ProjectDir)resource\ui\"</Command>
     </PostBuildEvent>
     <FxCompile>
       <ShaderType>Pixel</ShaderType>
@@ -130,7 +134,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>.;./Core;./Graphics;./Game;./Network;./ThirdParty/enet/include;./ThirdParty/assimp/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.;./Core;./Graphics;./Game;./Network;./UI;./ThirdParty/enet/include;./ThirdParty/assimp/include;./ThirdParty/ultralight/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <WarningLevel>Level4</WarningLevel>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -146,11 +150,15 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>d3d11.lib;ws2_32.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>./ThirdParty/assimp/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>d3d11.lib;ws2_32.lib;winmm.lib;Ultralight.lib;UltralightCore.lib;WebCore.lib;AppCore.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>./ThirdParty/assimp/lib;./ThirdParty/ultralight/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /D /Y "$(TargetDir)*.cso" "$(ProjectDir)resource/shader"</Command>
+      <Command>xcopy /D /Y "$(TargetDir)*.cso" "$(ProjectDir)resource/shader"
+xcopy /D /Y /I "$(TargetDir)ui\*.cso" "$(ProjectDir)resource\shader\ui\"
+xcopy /Y /D "$(ProjectDir)ThirdParty\ultralight\bin\*.dll" "$(TargetDir)"
+xcopy /Y /D /E /I "$(ProjectDir)ThirdParty\ultralight\resources" "$(TargetDir)resources\"
+if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ui_src" "$(ProjectDir)resource\ui\"</Command>
     </PostBuildEvent>
     <FxCompile>
       <ShaderType>Pixel</ShaderType>
@@ -200,6 +208,9 @@
     <ClCompile Include="Graphics\polygon.cpp" />
     <ClCompile Include="Graphics\sampler.cpp" />
     <ClCompile Include="Game\scene.cpp" />
+    <ClCompile Include="Game\scene_ui_test.cpp" />
+    <ClCompile Include="Game\mouse_policy.cpp" />
+    <ClCompile Include="Game\ui_policy.cpp" />
     <ClCompile Include="Game\score.cpp" />
     <ClCompile Include="Graphics\shader.cpp" />
     <ClCompile Include="Graphics\shader_3d.cpp" />
@@ -215,6 +226,12 @@
     <ClCompile Include="Graphics\ui_widget.cpp" />
     <ClCompile Include="Game\title.cpp" />
     <ClCompile Include="Graphics\WICTextureLoader11.cpp" />
+    <ClCompile Include="UI\ui_manager.cpp" />
+    <ClCompile Include="UI\ui_d3d11_renderer.cpp" />
+    <ClCompile Include="UI\ui_filesystem.cpp" />
+    <ClCompile Include="UI\ui_input_queue.cpp" />
+    <ClCompile Include="UI\ui_bridge.cpp" />
+    <ClCompile Include="UI\ui_hot_reload.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Core\font.h" />
@@ -259,6 +276,9 @@
     <ClInclude Include="Graphics\polygon.h" />
     <ClInclude Include="Graphics\sampler.h" />
     <ClInclude Include="Game\scene.h" />
+    <ClInclude Include="Game\scene_ui_test.h" />
+    <ClInclude Include="Game\mouse_policy.h" />
+    <ClInclude Include="Game\ui_policy.h" />
     <ClInclude Include="Game\score.h" />
     <ClInclude Include="Graphics\shader.h" />
     <ClInclude Include="Graphics\shader_3d.h" />
@@ -275,6 +295,12 @@
     <ClInclude Include="Game\title.h" />
     <ClInclude Include="Graphics\WICTextureLoader11.h" />
     <ClInclude Include="ThirdParty\enet\include\enet\enet.h" />
+    <ClInclude Include="UI\ui_manager.h" />
+    <ClInclude Include="UI\ui_d3d11_renderer.h" />
+    <ClInclude Include="UI\ui_filesystem.h" />
+    <ClInclude Include="UI\ui_input_queue.h" />
+    <ClInclude Include="UI\ui_bridge.h" />
+    <ClInclude Include="UI\ui_hot_reload.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\infinite_grid_pixel.hlsl">
@@ -340,6 +366,22 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="Shaders\ui_vs.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)ui\%(Filename).cso</ObjectFileOutput>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)ui\%(Filename).cso</ObjectFileOutput>
+    </FxCompile>
+    <FxCompile Include="Shaders\ui_ps.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)ui\%(Filename).cso</ObjectFileOutput>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)ui\%(Filename).cso</ObjectFileOutput>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
