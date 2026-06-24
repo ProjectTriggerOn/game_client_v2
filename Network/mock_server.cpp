@@ -106,6 +106,14 @@ void MockServer::Finalize()
     m_pNetwork = nullptr;
 }
 
+void MockServer::ResetSession()
+{
+    // Initialize() already performs a complete state reset (timing, player, bots,
+    // ammo) and allocates nothing, so routing through it with the stored pointers
+    // gives a clean new match without re-wiring the network.
+    Initialize(m_pNetwork, m_pCollisionWorld);
+}
+
 //-----------------------------------------------------------------------------
 // Update - Called every render frame
 // 

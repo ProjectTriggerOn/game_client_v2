@@ -8,6 +8,11 @@ void Fade_Finalize();
 void Fade_Update(double elapsed_time);
 void Fade_Draw();
 
+// Clear any active/finished fade (state -> NONE) WITHOUT reloading the texture
+// (unlike Fade_Initialize). Used to drop a lingering death/respawn overlay so it
+// can't bleed across a scene transition.
+void Fade_Reset();
+
 void Fade_Start(double time, bool isFadeout, DirectX::XMFLOAT3 color = { 0.0f,0.0f,0.0f });
 
 enum FadeState : int

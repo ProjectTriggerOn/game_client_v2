@@ -87,6 +87,16 @@
 
     window.Router = Router;
 
+    // Loading curtain — a top-most black overlay (NOT a Router page, so it
+    // persists across the page/scene switch happening underneath it). Toggled by
+    // C++ (UI::SetCurtain) to mask the scene-transition init hitch; the opacity
+    // fade is pure CSS (#curtain in shared.css). The #curtain element is static
+    // markup in index.html, so it exists from DOMReady — no fetch/inject race.
+    window.Curtain = {
+        show() { document.getElementById('curtain')?.classList.add('visible'); },
+        hide() { document.getElementById('curtain')?.classList.remove('visible'); },
+    };
+
     // Startup: fetch every page's markup → inject into its div → show the boot
     // page. The boot page comes from C++ (game.getBootPage) so a hot-reload
     // View::Reload lands back on the page matching the current GameState instead

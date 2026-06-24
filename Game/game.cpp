@@ -1,5 +1,6 @@
 #include "game.h"
 
+#include "scene.h"
 #include "collision_world.h"
 #include "cube.h"
 #include "map.h"
@@ -19,6 +20,7 @@
 #include "player_cam_fps.h"
 #include "player_fps.h"
 #include "i_network.h"
+#include "mock_server.h"
 #include "remote_player.h"
 #include "input_producer.h"
 #include "sky_dome.h"
@@ -104,6 +106,15 @@ void Game_Initialize()
 	PlayerCamFps_SetInvertY(true);
 	// Mouse mode is owned by MousePolicy_Apply (mouse_policy.h) — no direct calls here
 	Fade_Initialize();
+
+	// Mock mode: re-arm the authoritative session so each game-scene entry (PLAY
+	// from the title, or Restart_Game) starts a FRESH match instead of resuming
+	// the frozen state of the previous round. ENet modes own the match
+	// server-side (g_pMockServer == nullptr) and are left untouched. On the very
+	// first boot into the game scene the mock server isn't created yet (still
+	// nullptr); main() initializes it fresh right after, so the guard skips it.
+	extern MockServer* g_pMockServer;
+	if (g_pMockServer) g_pMockServer->ResetSession();
 }
 
 bool Game_WantsUICursor()
@@ -131,7 +142,10 @@ void Game_Update(double elapsed_time)
 	// unnecessary. State flips only; cursor mode, UI input level and the active
 	// page all derive from GameState (mouse_policy.h / ui_policy.h).
 	// ========================================================================
-	if (KeyLogger_IsTrigger(KK_ESCAPE))
+	// Ignore ESC while a masked scene transition is running: the loading curtain is
+	// up and gameplay is frozen, so a PAUSE<->PLAY flip here would re-enable local
+	// prediction behind the curtain (e.g. ESC during a return-to-title transition).
+	if (!SceneTransition_IsActive() && KeyLogger_IsTrigger(KK_ESCAPE))
 	{
 		switch (g_GameState)
 		{
@@ -151,7 +165,10 @@ void Game_Update(double elapsed_time)
 	// PlayerFps::Update reads keyboard/mouse directly (jump/fire/reload), so it
 	// and the camera only run while actually playing; InputProducer already
 	// sends zero input when paused, so the server keeps the local player still.
-	const bool gameplayActive = (g_GameState == PLAY);
+	// Freeze local prediction (PlayerFps::Update reads input directly) while a
+	// masked transition's curtain is up, matching the InputProducer gate — the
+	// player must not move/fire behind the black loading screen.
+	const bool gameplayActive = (g_GameState == PLAY) && !SceneTransition_IsActive();
 
 	if (gameplayActive)
 	{
@@ -459,11 +476,21 @@ void Game_Finalize()
 	Camera_Finalize();
 	PlayerCamTps_Finalize();
 	PlayerCamFps_Finalize();
+	// Game_Initialize new's a fresh PlayerFps every game-scene entry; delete it
+	// here so the now-reachable game->title->game cycle doesn't leak one per round.
+	// (Only Game_IsPlayerInputLocked derefs it outside the game scene, and that is
+	// null-guarded.)
 	g_PlayerFps->Finalize();
+	delete g_PlayerFps;
+	g_PlayerFps = nullptr;
 	ModelAni_Release(g_pModel0);
 	Map_Finalize();
 	Font_Finalize();
 	Widget_Finalize();
+	// Clear any active death/respawn fade so a full-screen tint can't persist onto
+	// the next scene (e.g. quitting to title while dead). Covers a fade that
+	// started after SceneTransition_To's reset, during the cover phase.
+	Fade_Reset();
 	Fade_Finalize();
 }
 

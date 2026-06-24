@@ -326,6 +326,15 @@ void ShowPageDeferred(const char* name) {
     if (name) g_deferredPage = name;
 }
 
+void SetCurtain(bool visible) {
+    if (!g_view) return;
+    // Toggle the #curtain overlay; CSS animates the opacity fade (driven by
+    // RefreshDisplay in Render). Called from the main loop (SceneTransition_Update),
+    // never from inside a JS callback, so a direct EvaluateScript is safe — no
+    // re-entrant script evaluation (cf. ShowPageDeferred).
+    g_view->EvaluateScript(ultralight::String(visible ? "Curtain.show()" : "Curtain.hide()"));
+}
+
 void ShowPage(const char* name) {
     if (!g_view || !name) return;
     // Minimal escaping to guard against stray quotes. Replaced by the real Bridge in Slice D.

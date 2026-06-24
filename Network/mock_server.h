@@ -32,6 +32,12 @@ public:
     void Initialize(INetwork* pNetwork, CollisionWorld* pCollisionWorld = nullptr);
     void Finalize();
 
+    // Re-arm a fresh match: player back to spawn at full health, all bots reset,
+    // tick/timers zeroed — reusing the network + collision pointers from
+    // Initialize. Call on every game-scene (re)entry so a new game starts a clean
+    // round instead of resuming the frozen state of the previous one.
+    void ResetSession();
+
     //-------------------------------------------------------------------------
     // Called every render frame - uses accumulator for fixed tick
     //-------------------------------------------------------------------------

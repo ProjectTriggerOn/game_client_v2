@@ -29,6 +29,14 @@ void Fade_Finalize()
 {
 }
 
+void Fade_Reset()
+{
+	// Drop any active or finished fade so Fade_Draw early-returns. Keeps the
+	// loaded texture (cheap, unlike Fade_Initialize).
+	g_State = FADE_STATE_NONE;
+	g_Alpha = 0.0f;
+}
+
 void Fade_Update(double elapsed_time)
 {
 	if (g_State <= FADE_STATE_FINISHED_OUT)return;

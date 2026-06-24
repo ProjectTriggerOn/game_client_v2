@@ -40,6 +40,12 @@ void ShowPage(const char* name);
 // call from inside a JS callback (avoids re-entrant script evaluation).
 void ShowPageDeferred(const char* name);
 
+// Toggle the #curtain loading overlay (window.Curtain.show/hide; CSS fades the
+// black opacity). Driven by the SceneTransition coordinator (scene.h) to mask
+// the scene-swap init hitch. MUST be called from the main loop, never from
+// inside a JS callback (it EvaluateScripts synchronously — see ShowPageDeferred).
+void SetCurtain(bool visible);
+
 // --- Hot reload helpers (Slice F, docs §10) ---------------------------------
 // Called by UI::HotReload::Poll (main thread) when watched files change. These
 // own the View, so the hot-reload module stays free of Ultralight headers.

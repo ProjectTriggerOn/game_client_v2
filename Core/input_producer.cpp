@@ -9,6 +9,7 @@
 #include "input_producer.h"
 #include "debug_log.h"
 #include "game.h"
+#include "scene.h"
 #include "i_network.h"
 #include "key_logger.h"
 #include "ms_logger.h"
@@ -128,9 +129,12 @@ void InputProducer::SampleInput()
     m_MoveAxisY = 0.0f;
     m_Buttons   = InputButtons::NONE;
 
-    if (!Game_IsGameplayActive() || Game_IsPlayerInputLocked())
+    // Also neutralize input while a masked scene transition is up (loading
+    // curtain): after the swap the scene is SCENE_GAME / PLAY, so without this the
+    // player would move/fire behind the black curtain.
+    if (!Game_IsGameplayActive() || Game_IsPlayerInputLocked() || SceneTransition_IsActive())
     {
-        m_JumpPending = false;  // drop sticky jump while paused / during respawn lock
+        m_JumpPending = false;  // drop sticky jump while paused / locked / transitioning
         return;
     }
 

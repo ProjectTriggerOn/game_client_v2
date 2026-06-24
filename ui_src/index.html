@@ -15,6 +15,15 @@
     <div id="page-hud"      class="page hidden"></div>
     <div id="page-pause"    class="page hidden overlay"></div>
 
+    <!-- Loading curtain: top-most transition overlay, toggled by C++ via
+         UI::SetCurtain (window.Curtain in router.js). NOT a .page — it persists
+         above whatever page is shown while a scene swaps behind it, masking the
+         Scene_Initialize hitch. CSS animates the black opacity fade. -->
+    <div id="curtain">
+        <div class="curtain-spinner"></div>
+        <div class="curtain-label">LOADING</div>
+    </div>
+
     <!-- Page JS (IIFEs defining the PageXxx hooks) -->
     <script src="pages/title.js"></script>
     <script src="pages/settings.js"></script>
