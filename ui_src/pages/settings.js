@@ -2,7 +2,9 @@
 //
 // Realtime config keys (sensitivity, invert_y) apply immediately via
 // game.setConfig (C++ subscribers fire on the spot). SAVE persists the user
-// layer to user_settings.toml. BACK returns to the pause menu (game.backToPause).
+// layer to user_settings.toml. BACK is context-aware: it returns to the title
+// when opened there via Router.navigate (pop the nav stack), or to the pause
+// menu when opened in-game via the state-driven Router.show (game.backToPause).
 // onEnter re-reads current values so the controls reflect persisted state.
 //
 // Listeners are delegated on the always-present #page-settings container (see
@@ -30,7 +32,15 @@
 
     root?.addEventListener('click', (e) => {
         if (e.target.closest('#set-save')) window.game?.saveConfig?.();
-        else if (e.target.closest('#set-back')) window.game?.backToPause?.();
+        else if (e.target.closest('#set-back')) {
+            // Settings is a SHARED page reached two ways:
+            //   - from the title via Router.navigate (nav-driven) -> a nav-stack
+            //     entry exists, so pop it to return to the title.
+            //   - from the in-game pause menu via state-driven Router.show (no
+            //     stack entry) -> hand control back to the GameState machine.
+            if (window.Router && Router.stack.length) Router.back();
+            else window.game?.backToPause?.();
+        }
     });
 
     // Re-read current values into the controls every time the page is shown.
