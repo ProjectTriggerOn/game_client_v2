@@ -123,16 +123,19 @@ void Register(ultralight::View* view) {
 
     game["startLocalGame"] = (JSCallback)[](const JSObject&, const JSArgs&) {
         DebugLog("[UI:bridge] game.startLocalGame", "");
-        // Scene transition applies at end of frame (Scene_Refresh); Game_Initialize
-        // sets GameState=PLAY, and UIPolicy_Apply derives the HUD page + level.
-        Scene_Change(SCENE_GAME);
+        // Masked transition: the loading curtain covers the screen, the swap to
+        // SCENE_GAME (and its heavy Game_Initialize) happens while black, then the
+        // game is revealed. Game_Initialize sets GameState=PLAY and re-arms the
+        // mock session; UIPolicy_Apply derives the HUD page + level.
+        SceneTransition_To(SCENE_GAME);
     };
 
     game["returnToTitle"] = (JSCallback)[](const JSObject&, const JSArgs&) {
         DebugLog("[UI:bridge] game.returnToTitle", "");
-        // Back to the UI sandbox scene; UIPolicy_Apply restores title + Interactive.
-        // TODO(lobby): real title scene + network teardown.
-        Scene_Change(SCENE_UI_TEST);
+        // Same masked transition back to the title; UIPolicy_Apply restores the
+        // title page + Interactive once revealed.
+        // TODO(lobby): network teardown when leaving a live game.
+        SceneTransition_To(SCENE_TITLE);
     };
 
     // --- config ---------------------------------------------------------------

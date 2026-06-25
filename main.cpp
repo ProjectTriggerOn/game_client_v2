@@ -304,6 +304,11 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR lpC
 
 			Fade_Update(elapsed_time);
 
+			// Advance the masked scene-transition coordinator (curtain fade +
+			// scene swap). Runs before Scene_Refresh so a swap it requests this
+			// frame is applied at end-of-frame, behind the opaque curtain.
+			SceneTransition_Update(elapsed_time);
+
 			SpriteAnime_Update(elapsed_time);
 
 			Direct3D_Clear();
@@ -312,9 +317,14 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR lpC
 
 			Scene_Draw();
 
-			UI::Render();   // above 3D/2D, below Fade (Fade is the scene transition; covers everything)
+			UI::Render();   // above 3D/2D
 
-			Fade_Draw();
+			// Native fade overlay (in-game death/respawn tint), drawn above the UI
+			// for a full-screen effect. Suppressed during a masked scene transition
+			// so it can't paint over the loading curtain — the curtain owns the
+			// transition visual (and SceneTransition_To clears any lingering fade).
+			if (!SceneTransition_IsActive())
+				Fade_Draw();
 
 
 

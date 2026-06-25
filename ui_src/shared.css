@@ -29,3 +29,50 @@ body {
     background: rgba(0, 0, 0, 0.6);
     z-index: 10;
 }
+
+/* ---------------------------------------------------------------------------
+   Loading curtain — generic masked scene-transition overlay.
+   Sits above every .page (z-index) and is toggled by C++ (UI::SetCurtain →
+   window.Curtain). The C++ SceneTransition coordinator's fade duration
+   (TRANS_FADE_TIME) must stay >= this opacity transition so the curtain is
+   fully opaque before the scene swaps and fully clear before input unlocks.
+   --------------------------------------------------------------------------- */
+#curtain {
+    position: absolute;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    background: #000;
+    opacity: 0;
+    pointer-events: none;          /* click-through while hidden */
+    transition: opacity 0.3s ease;
+}
+
+#curtain.visible {
+    opacity: 1;
+    pointer-events: auto;          /* swallow input while the loading screen is up */
+}
+
+#curtain .curtain-spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid rgba(255, 107, 53, 0.25);
+    border-top-color: #ff6b35;
+    border-radius: 50%;
+    animation: curtain-spin 0.9s linear infinite;
+}
+
+#curtain .curtain-label {
+    font-size: 18px;
+    letter-spacing: 6px;
+    color: #ff6b35;
+    opacity: 0.85;
+}
+
+@keyframes curtain-spin {
+    to { transform: rotate(360deg); }
+}

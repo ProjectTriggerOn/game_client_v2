@@ -49,51 +49,69 @@ void MockServer::Initialize(INetwork* pNetwork, CollisionWorld* pCollisionWorld)
     // Initialize last input
     m_LastInputCmd = {};
 
-    // Spawn remote bot player at a different corner
-    m_RemotePlayerState = {};
-    m_RemotePlayerState.tickId = 0;
-    m_RemotePlayerState.position = { 7.0f, 0.0f, 7.0f };
-    m_RemotePlayerState.velocity = { 0.0f, 0.0f, 0.0f };
-    m_RemotePlayerState.yaw = 0.0f;
-    m_RemotePlayerState.pitch = 0.0f;
-    m_RemotePlayerState.stateFlags = NetStateFlags::IS_GROUNDED;
-    m_RemotePlayerState.health = MAX_HEALTH;
-    m_RemotePlayerState.hitByPlayerId = 0xFF;
-    m_RemotePlayerState.fireCounter = 0;
-    m_RemoteHealth = MAX_HEALTH;
-    m_RemoteRespawnTimer = 0.0;
     m_FireTimer = 0.0;
     m_FireCounter = 0;
 
-    // Initialize display-only dummy bots on the team strips (matches the server
-    // GetSpawnPosition layout): RED on the -Z side, BLUE on the +Z side. Even
-    // indices are RED, odd are BLUE, so both team models appear on screen.
-    for (int i = 0; i < MOCK_DUMMY_BOTS; i++)
+    // Initialize all remote bots as combat bots. Bot 0 (id 1) keeps the former
+    // combat bot's slot (BLUE, base {7,0,7}, phase 7); bots 1..8 (ids 2..9) keep
+    // the former display-bot strip layout (even = RED on -Z, odd = BLUE on +Z).
+    // Movement is unchanged — every bot is now shootable, fires intermittently,
+    // and auto-reloads (see UpdateBots / UpdateBotWeapon).
+    for (int i = 0; i < NUM_BOTS; i++)
     {
-        uint8_t team  = (i % 2 == 0) ? PlayerTeam::RED : PlayerTeam::BLUE;
-        int     k     = i / 2;                 // 0..3 within each team
-        float   baseX = -6.0f + k * 4.0f;      // -6, -2, 2, 6
-        float   baseZ = (team == PlayerTeam::RED) ? -7.0f : 7.0f;
+        Bot& b = m_Bots[i];
+        b = Bot{};
 
-        m_DummyTeams[i] = team;
-        m_DummyBase[i]  = { baseX, 0.0f, baseZ };
+        uint8_t           team;
+        DirectX::XMFLOAT3 base;
+        float             phase;
+        if (i == 0)
+        {
+            team  = PlayerTeam::BLUE;       // former combat bot
+            base  = { 7.0f, 0.0f, 7.0f };
+            phase = 7.0f;                   // locked 1m off the adjacent BLUE bot
+        }
+        else
+        {
+            int   k     = i - 1;            // 0..7 former display-bot index
+            team        = (k % 2 == 0) ? PlayerTeam::RED : PlayerTeam::BLUE;
+            int   col   = k / 2;            // 0..3 within each team
+            float baseX = -6.0f + col * 4.0f;  // -6, -2, 2, 6
+            float baseZ = (team == PlayerTeam::RED) ? -7.0f : 7.0f;
+            base  = { baseX, 0.0f, baseZ };
+            phase = static_cast<float>(k);
+        }
 
-        NetPlayerState& s = m_DummyBots[i];
-        s = {};
-        s.position = m_DummyBase[i];
-        // Face the battlefield: RED (-Z side) looks +Z (yaw 0), BLUE looks -Z.
+        b.team  = team;
+        b.base  = base;
+        b.phase = phase;
+
+        NetPlayerState& s = b.state;
+        s.position = base;
+        // RED (-Z side) faces +Z (yaw 0); BLUE (+Z side) faces -Z (yaw pi).
         s.yaw = (team == PlayerTeam::RED) ? 0.0f : 3.14159265f;
         s.stateFlags = NetStateFlags::IS_GROUNDED;
         s.health = MAX_HEALTH;
         s.hitByPlayerId = 0xFF;
         s.ammo = WeaponConfig::MAG_SIZE;
         s.ammoReserve = WeaponConfig::MAX_RESERVE;
+
+        // Stagger the fire cadence so the bots don't all shoot in unison.
+        b.burstTimer = BOT_GAP_TIME + 0.2 * i;
     }
 }
 
 void MockServer::Finalize()
 {
     m_pNetwork = nullptr;
+}
+
+void MockServer::ResetSession()
+{
+    // Initialize() already performs a complete state reset (timing, player, bots,
+    // ammo) and allocates nothing, so routing through it with the stored pointers
+    // gives a clean new match without re-wiring the network.
+    Initialize(m_pNetwork, m_pCollisionWorld);
 }
 
 //-----------------------------------------------------------------------------
@@ -140,67 +158,55 @@ void MockServer::Tick()
     m_CurrentTick++;
     m_ServerTime += TICK_DURATION;
 
+    // 0. Local player respawn — bots can now kill the player (see BotFireShot).
+    if (m_PlayerState.stateFlags & NetStateFlags::IS_DEAD)
+        UpdatePlayerRespawn();
+    const bool playerAlive = (m_PlayerState.stateFlags & NetStateFlags::IS_DEAD) == 0;
+
     // 1. Update reload timer once per tick (BEFORE input so newly-started reloads
     //    this tick last exactly RELOAD_DURATION rather than RELOAD_DURATION - TICK_DURATION)
-    UpdateReloadTimer();
+    if (playerAlive)
+        UpdateReloadTimer();
 
-    // 2. Consume all pending input commands
+    // 2. Consume all pending input commands (ProcessInputCmd freezes a dead
+    //    player's actions to camera-only)
     InputCmd cmd;
     while (m_pNetwork->ReceiveInputCmd(cmd))
     {
         ProcessInputCmd(cmd);
     }
 
-    // 3. Simulate physics for this tick
-    SimulatePhysics();
+    // 3. Simulate physics for this tick (frozen while dead)
+    if (playerAlive)
+        SimulatePhysics();
 
-    // 3b. Move the combat bot BEFORE firing (mirrors GameServer's physics-
-    // before-combat order, so a shot at viewTick == m_CurrentTick tests the
-    // bot's post-move live position)
-    UpdateCombatBot();
+    // 3b. Advance all bots BEFORE firing (mirrors GameServer's physics-before-
+    // combat order, so a shot at viewTick == m_CurrentTick tests each bot's
+    // post-move live position). Movement + intermittent fire + reload + respawn.
+    UpdateBots();
 
-    // 4. Clear hit marker, then process combat
+    // 4. Clear the local hit marker, then resolve the local player's shots
+    // against every bot. Skip if a bot just killed the player this tick.
     m_PlayerState.hitByPlayerId = 0xFF;
-    m_RemotePlayerState.hitByPlayerId = 0xFF;
-
-    if (m_RemotePlayerState.stateFlags & NetStateFlags::IS_DEAD)
-    {
-        // Respawn timer
-        m_RemoteRespawnTimer -= TICK_DURATION;
-        if (m_RemoteRespawnTimer <= 0.0)
-        {
-            m_RemoteHealth = MAX_HEALTH;
-            m_RemotePlayerState.stateFlags &= ~NetStateFlags::IS_DEAD;
-            m_RemotePlayerState.stateFlags |= NetStateFlags::IS_GROUNDED;
-            m_RemotePlayerState.position = { 7.0f, 0.0f, 7.0f };
-            m_RemotePlayerState.velocity = { 0.0f, 0.0f, 0.0f };
-            m_RemoteRespawnTimer = 0.0;
-        }
-    }
-    else
-    {
+    if ((m_PlayerState.stateFlags & NetStateFlags::IS_DEAD) == 0)
         ProcessFiring();
-    }
 
-    m_RemotePlayerState.health = m_RemoteHealth;
-
-    // 5. Update tick ID in states (and ack of last processed input — see GameServer)
+    // 5. Update tick ID in local state (and ack of last processed input — see GameServer)
     m_PlayerState.tickId = m_CurrentTick;
     m_PlayerState.lastProcessedInputTick = m_LastInputCmd.tickId;
     m_PlayerState.fireCounter = m_FireCounter;
     m_PlayerState.ammo = m_Ammo;
     m_PlayerState.ammoReserve = m_AmmoReserve;
 
-    // 5b. Advance display-only dummy bots (mock many-player render test)
-    UpdateDummyBots();
-
-    // 5c. Record lag-compensation history for the combat bot — exactly the
-    // state BroadcastSnapshot() is about to send (incl. respawn teleports)
+    // 5b. Record lag-compensation history for every bot — exactly the state
+    // BroadcastSnapshot() is about to send (incl. respawn teleports).
+    for (int i = 0; i < NUM_BOTS; i++)
     {
-        BotHistoryEntry& h = m_BotHistory[m_CurrentTick % BOT_HISTORY_SIZE];
+        Bot& b = m_Bots[i];
+        BotHistoryEntry& h = b.history[m_CurrentTick % BOT_HISTORY_SIZE];
         h.tick = m_CurrentTick;
-        h.position = m_RemotePlayerState.position;
-        h.alive = (m_RemotePlayerState.stateFlags & NetStateFlags::IS_DEAD) == 0;
+        h.position = b.state.position;
+        h.alive = (b.state.stateFlags & NetStateFlags::IS_DEAD) == 0;
     }
 
     // 6. Broadcast snapshot to client
@@ -223,6 +229,10 @@ void MockServer::ProcessInputCmd(const InputCmd& cmd)
     // Store camera angles
     m_PlayerState.yaw = cmd.yaw;
     m_PlayerState.pitch = cmd.pitch;
+
+    // Dead players: camera only, skip all actions (mirrors GameServer)
+    if (m_PlayerState.stateFlags & NetStateFlags::IS_DEAD)
+        return;
 
     // Update state flags based on buttons
     uint32_t flags = m_PlayerState.stateFlags;
@@ -712,93 +722,359 @@ void MockServer::ProcessFiring()
         if (!(viewFrac >= 0.0f && viewFrac < 1.0f)) viewFrac = 0.0f;  // NaN-safe
     }
 
-    DirectX::XMFLOAT3 botPos;
-    if (!GetRewoundBotPosition(viewTick, viewFrac, botPos))
-        return;  // bot was dead at the time the client saw — counts as a miss
+    // Nearest wall first: a bot hit only counts if it is in front of the wall
+    // the shot would otherwise strike (static geometry is NOT rewound).
+    float wallDist = 99999.0f;
+    if (m_pCollisionWorld)
+    {
+        for (const auto& col : m_pCollisionWorld->GetColliders())
+        {
+            float t = 0.0f;
+            if (RayAABB(eyePos, rayDir, col.aabb.min, col.aabb.max, t) && t < wallDist)
+                wallDist = t;
+        }
+    }
 
-    // Test against remote bot capsule (rewound position; damage applies to
-    // the live bot below)
-    float hitDist = 0.0f;
-    bool didHit = RayCapsule(eyePos, rayDir, botPos,
-                             PLAYER_HEIGHT, CAPSULE_RADIUS, hitDist);
+    // Test every live bot at its rewound position; keep the closest hit that is
+    // also nearer than the wall.
+    int   hitBot   = -1;
+    float bestDist = wallDist;
+    for (int i = 0; i < NUM_BOTS; i++)
+    {
+        const Bot& b = m_Bots[i];
+        if (b.state.stateFlags & NetStateFlags::IS_DEAD)
+            continue;
+        if (b.team == LOCAL_PLAYER_TEAM)
+            continue;  // friendly fire off — the RED player only damages BLUE bots
+
+        DirectX::XMFLOAT3 botPos;
+        if (!GetRewoundBotPosition(b, viewTick, viewFrac, botPos))
+            continue;  // bot was dead at the time the client saw — no ghost hit
+
+        float d = 0.0f;
+        if (RayCapsule(eyePos, rayDir, botPos, PLAYER_HEIGHT, CAPSULE_RADIUS, d)
+            && d < bestDist)
+        {
+            bestDist = d;
+            hitBot   = i;
+        }
+    }
 
     if (viewTick != 0)
     {
         const double rewindTicks =
             static_cast<double>(m_CurrentTick - viewTick) - viewFrac;
         DebugLog_Printf("LAGCOMP",
-            "view=%u+%.2f rewind=%.1ft (%.0fms) hit=%s dist=%.2f",
+            "view=%u+%.2f rewind=%.1ft (%.0fms) hit=%s id=%d dist=%.2f",
             viewTick, viewFrac,
             rewindTicks, rewindTicks * TICK_DURATION * 1000.0,
-            didHit ? "yes" : "no", didHit ? hitDist : 0.0f);
+            hitBot >= 0 ? "yes" : "no",
+            hitBot >= 0 ? hitBot + 1 : 0,
+            hitBot >= 0 ? bestDist : 0.0f);
     }
 
-    if (didHit)
+    if (hitBot >= 0)
     {
-        // Check if a wall is closer than the player hit
-        float wallDist = 99999.0f;
-        if (m_pCollisionWorld)
+        DamageBot(m_Bots[hitBot], RED_DAMAGE);
+        // Hit marker for local player (carries the bot id it struck)
+        m_PlayerState.hitByPlayerId = static_cast<uint8_t>(hitBot + 1);
+    }
+}
+
+//-----------------------------------------------------------------------------
+// PaceBot - the shared bot motion: slide left/right along X with a sinusoid
+// around a fixed base point. Every remote bot uses this, so they all move
+// identically (the combat behaviour layered on top differs only in state).
+//-----------------------------------------------------------------------------
+static void PaceBot(NetPlayerState& s, const DirectX::XMFLOAT3& base,
+                    float serverTime, float phase)
+{
+    constexpr float w   = 0.6f;   // angular speed (rad/s)
+    constexpr float amp = 1.5f;   // pace amplitude (m), kept small to avoid overlap
+    const float a = serverTime * w + phase;
+    s.position = { base.x + sinf(a) * amp, base.y, base.z };
+    s.velocity = { cosf(a) * amp * w, 0.0f, 0.0f };
+}
+
+//-----------------------------------------------------------------------------
+// UpdateBots - Advance every remote bot one tick.
+//
+// Each live bot moves with the shared display-bot pace (PaceBot), runs its
+// intermittent-fire / auto-reload AI (UpdateBotWeapon), then publishes ammo +
+// tick into its wire state. Dead bots hold still and count down to respawn.
+// Movement is identical to before — only the combat/fire behaviour is new.
+//
+// NOTE: the pace peaks at amp*w = 0.9 m/s, so the 100ms interpolation delay
+// displaces a rendered bot only ~0.09m — inside the 0.3m capsule radius. The
+// server-side rewind below still runs (so fast-moving bots stay hittable), but
+// at this speed it is no longer required to land tracking shots.
+//-----------------------------------------------------------------------------
+void MockServer::UpdateBots()
+{
+    const float t = static_cast<float>(m_ServerTime);
+
+    for (int i = 0; i < NUM_BOTS; i++)
+    {
+        Bot& b = m_Bots[i];
+
+        if (b.state.stateFlags & NetStateFlags::IS_DEAD)
         {
-            for (const auto& col : m_pCollisionWorld->GetColliders())
+            b.respawnTimer -= TICK_DURATION;
+            if (b.respawnTimer <= 0.0)
+                RespawnBot(b, i);
+            b.state.tickId = m_CurrentTick;
+            continue;  // no move / no fire on the tick it is dead or just respawned
+        }
+
+        PaceBot(b.state, b.base, t, b.phase);
+        UpdateBotWeapon(b, i);
+
+        b.state.ammo        = b.ammo;
+        b.state.ammoReserve = WeaponConfig::MAX_RESERVE;  // bots never run dry
+        b.state.tickId      = m_CurrentTick;
+    }
+}
+
+//-----------------------------------------------------------------------------
+// UpdateBotWeapon - Intermittent-fire AI for one bot.
+//
+// Fires short bursts (BOT_BURST_TIME) separated by gaps (BOT_GAP_TIME), burning
+// one round per shot at BOT_FIRE_RPM. When the magazine empties it auto-reloads
+// (out-of-ammo timing) and refills. Only the IS_FIRING / IS_RELOADING flags
+// matter to the client — its remote state machine paces muzzle flashes itself.
+//-----------------------------------------------------------------------------
+void MockServer::UpdateBotWeapon(Bot& b, int index)
+{
+    uint32_t& flags = b.state.stateFlags;
+
+    // Reloading takes priority and blocks firing.
+    if (b.reloadTimer > 0.0)
+    {
+        flags |= NetStateFlags::IS_RELOADING;   // IS_RELOAD_EMPTY set when it began
+        flags &= ~NetStateFlags::IS_FIRING;
+        b.reloadTimer -= TICK_DURATION;
+        if (b.reloadTimer <= 0.0)
+        {
+            b.reloadTimer = 0.0;
+            b.ammo = WeaponConfig::MAG_SIZE;
+            flags &= ~(NetStateFlags::IS_RELOADING | NetStateFlags::IS_RELOAD_EMPTY);
+            b.firing = false;
+            b.burstTimer = BOT_GAP_TIME;        // short pause before resuming
+        }
+        return;
+    }
+
+    b.burstTimer -= TICK_DURATION;
+
+    if (b.firing)
+    {
+        flags |= NetStateFlags::IS_FIRING;
+
+        b.fireTimer -= TICK_DURATION;
+        if (b.fireTimer <= 0.0)
+        {
+            b.fireTimer += 60.0 / BOT_FIRE_RPM;
+            if (b.ammo > 0)
             {
-                float t = 0.0f;
-                if (RayAABB(eyePos, rayDir, col.aabb.min, col.aabb.max, t))
-                {
-                    if (t < wallDist) wallDist = t;
-                }
+                b.ammo--;
+                b.state.fireCounter++;
+                BotFireShot(b, index);   // live hitscan: can damage bots / player
+            }
+            if (b.ammo == 0)
+            {
+                // Magazine emptied -> auto-reload (out-of-ammo timing).
+                b.reloadTimer = WeaponConfig::RELOAD_OUT_OF_AMMO_DURATION;
+                flags |= NetStateFlags::IS_RELOADING | NetStateFlags::IS_RELOAD_EMPTY;
+                flags &= ~NetStateFlags::IS_FIRING;
+                b.firing = false;
+                return;
             }
         }
 
-        // Only damage if player is closer than the nearest wall
-        if (hitDist < wallDist)
+        if (b.burstTimer <= 0.0)
         {
-            if (m_RemoteHealth > RED_DAMAGE)
-            {
-                m_RemoteHealth -= RED_DAMAGE;
-            }
-            else
-            {
-                m_RemoteHealth = 0;
-                m_RemotePlayerState.stateFlags |= NetStateFlags::IS_DEAD;
-                m_RemoteRespawnTimer = RESPAWN_TIME;
-                m_RemotePlayerState.velocity = { 0.0f, 0.0f, 0.0f };
-            }
-
-            // Hit marker for local player
-            m_PlayerState.hitByPlayerId = 1;
+            // Burst over -> gap.
+            b.firing = false;
+            flags &= ~NetStateFlags::IS_FIRING;
+            b.burstTimer = BOT_GAP_TIME;
+        }
+    }
+    else
+    {
+        flags &= ~NetStateFlags::IS_FIRING;
+        if (b.burstTimer <= 0.0)
+        {
+            // Gap over -> start a new burst (first shot fires next tick).
+            b.firing = true;
+            b.fireTimer = 0.0;
+            b.burstTimer = BOT_BURST_TIME;
         }
     }
 }
 
 //-----------------------------------------------------------------------------
-// UpdateCombatBot - Deterministic patrol for the shootable bot (id 1)
-//
-// Gives lag compensation a MOVING target in mock mode: even with zero network
-// latency, the 100ms interpolation delay makes the rendered bot trail its true
-// position by ~0.4m at 4 m/s — wider than the 0.3m capsule radius, so tracking
-// shots only land because the server rewinds. Velocity is set so the remote
-// animation state machine derives a proper WALK (< 6 m/s run threshold).
-// Position is set directly (no collision); the strip x∈[4.5,9], z=7 is clear
-// of map colliders (interior blocks end at z=5).
+// RespawnBot - Reset a bot to its spawn after the respawn delay.
 //-----------------------------------------------------------------------------
-void MockServer::UpdateCombatBot()
+void MockServer::RespawnBot(Bot& b, int index)
 {
-    if (m_RemotePlayerState.stateFlags & NetStateFlags::IS_DEAD)
-        return;  // velocity already zeroed on death; respawn resumes patrol
+    NetPlayerState& s = b.state;
+    s.health = MAX_HEALTH;
+    s.position = b.base;
+    s.velocity = { 0.0f, 0.0f, 0.0f };
+    s.stateFlags &= ~(NetStateFlags::IS_DEAD | NetStateFlags::IS_FIRING |
+                      NetStateFlags::IS_RELOADING | NetStateFlags::IS_RELOAD_EMPTY);
+    s.stateFlags |= NetStateFlags::IS_GROUNDED;
 
-    constexpr float BOT_SPEED = 4.0f;
-    constexpr float BOT_MIN_X = 4.5f;
-    constexpr float BOT_MAX_X = 9.0f;
-    const float dt = static_cast<float>(TICK_DURATION);
+    b.respawnTimer = 0.0;
+    b.ammo = WeaponConfig::MAG_SIZE;
+    b.reloadTimer = 0.0;
+    b.fireTimer = 0.0;
+    b.firing = false;
+    b.burstTimer = BOT_GAP_TIME + 0.2 * index;  // re-stagger
+    s.ammo = b.ammo;
+    s.ammoReserve = WeaponConfig::MAX_RESERVE;
+}
 
-    float x = m_RemotePlayerState.position.x + m_BotDirX * BOT_SPEED * dt;
-    if (x >= BOT_MAX_X)      { x = BOT_MAX_X; m_BotDirX = -1.0f; }
-    else if (x <= BOT_MIN_X) { x = BOT_MIN_X; m_BotDirX =  1.0f; }
+//-----------------------------------------------------------------------------
+// DamageBot - Apply damage to a bot; kill + start its respawn on lethal.
+//-----------------------------------------------------------------------------
+void MockServer::DamageBot(Bot& b, uint8_t dmg)
+{
+    if (b.state.health > dmg)
+    {
+        b.state.health -= dmg;
+        return;
+    }
 
-    m_RemotePlayerState.position.x = x;
-    m_RemotePlayerState.velocity = { m_BotDirX * BOT_SPEED, 0.0f, 0.0f };
-    // Face the travel direction (model front = (sin(yaw), 0, cos(yaw)))
-    m_RemotePlayerState.yaw = (m_BotDirX > 0.0f) ? 1.5707963f : -1.5707963f;
+    b.state.health = 0;
+    b.state.stateFlags |= NetStateFlags::IS_DEAD;
+    b.state.stateFlags &= ~(NetStateFlags::IS_FIRING |
+                            NetStateFlags::IS_RELOADING |
+                            NetStateFlags::IS_RELOAD_EMPTY);
+    b.state.velocity = { 0.0f, 0.0f, 0.0f };
+    b.respawnTimer = RESPAWN_TIME;
+    b.firing = false;
+    b.reloadTimer = 0.0;
+}
+
+//-----------------------------------------------------------------------------
+// DamagePlayer - Apply bot damage to the local player; kill + start respawn on
+// lethal. Health / IS_DEAD propagate via the snapshot; the client handles the
+// death fade and the respawn snap-to-spawn.
+//-----------------------------------------------------------------------------
+void MockServer::DamagePlayer(uint8_t dmg)
+{
+    uint32_t& flags = m_PlayerState.stateFlags;
+    if (flags & NetStateFlags::IS_DEAD)
+        return;
+
+    if (m_PlayerState.health > dmg)
+    {
+        m_PlayerState.health -= dmg;
+        return;
+    }
+
+    m_PlayerState.health = 0;
+    flags |= NetStateFlags::IS_DEAD;
+    flags &= ~(NetStateFlags::IS_FIRING | NetStateFlags::IS_RELOADING |
+               NetStateFlags::IS_RELOAD_EMPTY | NetStateFlags::IS_INSPECTING);
+    m_PlayerState.velocity = { 0.0f, 0.0f, 0.0f };
+    m_PlayerRespawnTimer = RESPAWN_TIME;
+    m_ReloadTimer = 0.0;
+}
+
+//-----------------------------------------------------------------------------
+// BotFireShot - One hitscan shot from a bot along its facing (pitch 0). Damages
+// the closest live entity — another bot or the local player — that is also in
+// front of the nearest wall. Bots fire straight ahead and never seek a target;
+// because RED bots face the BLUE row and vice-versa, this alone produces
+// RED<->BLUE crossfire and lets BLUE bots hit the player, with no team logic.
+//-----------------------------------------------------------------------------
+void MockServer::BotFireShot(const Bot& shooter, int shooterIndex)
+{
+    const DirectX::XMFLOAT3 eye = {
+        shooter.state.position.x,
+        shooter.state.position.y + BOT_EYE_HEIGHT,
+        shooter.state.position.z
+    };
+    const float yaw = shooter.state.yaw;
+    const DirectX::XMFLOAT3 dir = { sinf(yaw), 0.0f, cosf(yaw) };
+
+    // Static geometry occludes shots (not rewound — bots see live positions).
+    float bestDist = 99999.0f;
+    if (m_pCollisionWorld)
+    {
+        for (const auto& col : m_pCollisionWorld->GetColliders())
+        {
+            float t = 0.0f;
+            if (RayAABB(eye, dir, col.aabb.min, col.aabb.max, t) && t < bestDist)
+                bestDist = t;
+        }
+    }
+
+    int  hitBot    = -1;
+    bool hitPlayer = false;
+
+    // Other live ENEMY bots (live positions — no lag comp between server
+    // entities). Same-team bots are skipped entirely: friendly fire passes
+    // through them (no damage, no blocking), matching GameServer::RaycastPlayers.
+    for (int j = 0; j < NUM_BOTS; j++)
+    {
+        if (j == shooterIndex) continue;
+        const Bot& tb = m_Bots[j];
+        if (tb.state.stateFlags & NetStateFlags::IS_DEAD) continue;
+        if (tb.team == shooter.team) continue;  // friendly fire off
+
+        float d = 0.0f;
+        if (RayCapsule(eye, dir, tb.state.position, PLAYER_HEIGHT, CAPSULE_RADIUS, d)
+            && d < bestDist)
+        {
+            bestDist = d; hitBot = j; hitPlayer = false;
+        }
+    }
+
+    // Local player (RED) — only enemy (non-RED) bots can hit it.
+    if (shooter.team != LOCAL_PLAYER_TEAM &&
+        (m_PlayerState.stateFlags & NetStateFlags::IS_DEAD) == 0)
+    {
+        float d = 0.0f;
+        if (RayCapsule(eye, dir, m_PlayerState.position, PLAYER_HEIGHT, CAPSULE_RADIUS, d)
+            && d < bestDist)
+        {
+            bestDist = d; hitBot = -1; hitPlayer = true;
+        }
+    }
+
+    if (hitPlayer)
+        DamagePlayer(BOT_DAMAGE);
+    else if (hitBot >= 0)
+        DamageBot(m_Bots[hitBot], BOT_DAMAGE);
+}
+
+//-----------------------------------------------------------------------------
+// UpdatePlayerRespawn - Count down the local player's respawn timer and revive
+// them at the corner spawn (mirrors GameServer). The client snaps to this
+// position and faces world center on the IS_DEAD -> alive transition.
+//-----------------------------------------------------------------------------
+void MockServer::UpdatePlayerRespawn()
+{
+    m_PlayerRespawnTimer -= TICK_DURATION;
+    if (m_PlayerRespawnTimer > 0.0)
+        return;
+
+    m_PlayerRespawnTimer = 0.0;
+    m_PlayerState.health = MAX_HEALTH;
+    m_PlayerState.position = { -7.0f, 0.0f, -7.0f };  // corner spawn (matches Initialize)
+    m_PlayerState.velocity = { 0.0f, 0.0f, 0.0f };
+    m_PlayerState.stateFlags &= ~(NetStateFlags::IS_DEAD | NetStateFlags::IS_FIRING |
+                                  NetStateFlags::IS_RELOADING | NetStateFlags::IS_RELOAD_EMPTY |
+                                  NetStateFlags::IS_INSPECTING);
+    m_PlayerState.stateFlags |= NetStateFlags::IS_GROUNDED;
+    m_Ammo = WeaponConfig::MAG_SIZE;
+    m_AmmoReserve = WeaponConfig::MAX_RESERVE;
+    m_ReloadTimer = 0.0;
+    m_FireTimer = 0.0;
+    m_PrevButtons = 0;  // reset edge detection across respawn
 }
 
 //-----------------------------------------------------------------------------
@@ -809,21 +1085,22 @@ void MockServer::UpdateCombatBot()
 //
 // Returns false when the bot was dead at the viewed tick (not hittable).
 //-----------------------------------------------------------------------------
-bool MockServer::GetRewoundBotPosition(uint32_t viewTick, float viewFrac,
+bool MockServer::GetRewoundBotPosition(const Bot& bot, uint32_t viewTick,
+                                       float viewFrac,
                                        DirectX::XMFLOAT3& outPos) const
 {
     // 0 = "no data" sentinel; >= current tick = "no lag" → live position
-    // (ProcessFiring only runs while the bot is alive now)
+    // (callers skip bots that are dead now)
     if (viewTick == 0 || viewTick >= m_CurrentTick)
     {
-        outPos = m_RemotePlayerState.position;
+        outPos = bot.state.position;
         return true;
     }
 
-    const BotHistoryEntry& a = m_BotHistory[viewTick % BOT_HISTORY_SIZE];
+    const BotHistoryEntry& a = bot.history[viewTick % BOT_HISTORY_SIZE];
     if (a.tick != viewTick)  // older than the buffer / never written
     {
-        outPos = m_RemotePlayerState.position;
+        outPos = bot.state.position;
         return true;
     }
     if (!a.alive)
@@ -834,16 +1111,16 @@ bool MockServer::GetRewoundBotPosition(uint32_t viewTick, float viewFrac,
 
     // Endpoint B = entry for viewTick+1, or the live position when viewTick+1
     // is the in-flight current tick (moved this tick, history not yet written)
-    DirectX::XMFLOAT3 posB;
+    DirectX::XMFLOAT3 posB{};
     bool haveB = false;
     if (viewTick + 1 == m_CurrentTick)
     {
-        posB = m_RemotePlayerState.position;
+        posB = bot.state.position;
         haveB = true;
     }
     else
     {
-        const BotHistoryEntry& b = m_BotHistory[(viewTick + 1) % BOT_HISTORY_SIZE];
+        const BotHistoryEntry& b = bot.history[(viewTick + 1) % BOT_HISTORY_SIZE];
         if (b.tick == viewTick + 1 && b.alive)
         {
             posB = b.position;
@@ -867,27 +1144,6 @@ bool MockServer::GetRewoundBotPosition(uint32_t viewTick, float viewFrac,
 }
 
 //-----------------------------------------------------------------------------
-// UpdateDummyBots - Pace the display-only bots left/right along their strip so
-// remote interpolation + velocity-derived animation can be eyeballed in mock.
-//-----------------------------------------------------------------------------
-void MockServer::UpdateDummyBots()
-{
-    const float t   = static_cast<float>(m_ServerTime);
-    const float w   = 0.6f;   // angular speed (rad/s)
-    const float amp = 1.5f;   // pace amplitude (m), kept small to avoid overlap
-
-    for (int i = 0; i < MOCK_DUMMY_BOTS; i++)
-    {
-        const float ph = static_cast<float>(i);
-        const DirectX::XMFLOAT3& base = m_DummyBase[i];
-
-        m_DummyBots[i].position = { base.x + sinf(t * w + ph) * amp, base.y, base.z };
-        m_DummyBots[i].velocity = { cosf(t * w + ph) * amp * w, 0.0f, 0.0f };
-        m_DummyBots[i].tickId = m_CurrentTick;
-    }
-}
-
-//-----------------------------------------------------------------------------
 // BroadcastSnapshot - Send authoritative state to client
 //-----------------------------------------------------------------------------
 void MockServer::BroadcastSnapshot()
@@ -899,24 +1155,17 @@ void MockServer::BroadcastSnapshot()
     snapshot.serverTime = m_ServerTime;
     snapshot.localPlayer = m_PlayerState;
     snapshot.localPlayerId = 0;
-    snapshot.localPlayerTeam = PlayerTeam::RED;
+    snapshot.localPlayerTeam = LOCAL_PLAYER_TEAM;
 
-    // Include remote bot player (the shootable combat bot is id 1)
-    m_RemotePlayerState.tickId = m_CurrentTick;
-    snapshot.remotePlayers[0].playerId = 1;
-    snapshot.remotePlayers[0].teamId = PlayerTeam::BLUE;
-    snapshot.remotePlayers[0].state = m_RemotePlayerState;
-
-    // Append display-only dummy bots after the combat bot (ids 2..).
-    uint8_t remoteCount = 1;
-    for (int i = 0; i < MOCK_DUMMY_BOTS && remoteCount < MAX_PLAYERS - 1; i++)
+    // All remote bots (ids 1..NUM_BOTS). NUM_BOTS == MAX_PLAYERS - 1, so the
+    // remotePlayers[] array holds them exactly.
+    for (int i = 0; i < NUM_BOTS; i++)
     {
-        snapshot.remotePlayers[remoteCount].playerId = static_cast<uint8_t>(2 + i);
-        snapshot.remotePlayers[remoteCount].teamId = m_DummyTeams[i];
-        snapshot.remotePlayers[remoteCount].state = m_DummyBots[i];
-        remoteCount++;
+        snapshot.remotePlayers[i].playerId = static_cast<uint8_t>(i + 1);
+        snapshot.remotePlayers[i].teamId   = m_Bots[i].team;
+        snapshot.remotePlayers[i].state    = m_Bots[i].state;
     }
-    snapshot.remotePlayerCount = remoteCount;
+    snapshot.remotePlayerCount = static_cast<uint8_t>(NUM_BOTS);
 
     m_pNetwork->SendSnapshot(snapshot);
 }

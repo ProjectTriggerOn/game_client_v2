@@ -74,6 +74,10 @@ public:
 
 	uint8_t GetHealth() const { return m_Health; }
 	bool IsDead() const { return m_IsDead; }
+	// Input is locked (no movement/fire) while dead or during the respawn fade.
+	// The respawn-fade part is a CLIENT-SIDE presentation lock (not server-
+	// enforced); see ApplyServerCorrection's respawn branch.
+	bool IsInputLocked() const { return m_IsDead || m_RespawnLockTimer > 0.0; }
 
 	int GetAmmo()        const { return m_Ammo; }
 	int GetAmmoReserve() const { return m_AmmoReserve; }
@@ -136,6 +140,7 @@ private:
 	uint8_t m_Health;
 	bool m_IsDead;
 	bool m_WasDead;
+	double m_RespawnLockTimer;  // >0 = locked out of gameplay input during the respawn fade
 	MODEL_ANI* m_Model;
 	Animator* m_Animator;
 	PlayerStateMachine* m_StateMachine;

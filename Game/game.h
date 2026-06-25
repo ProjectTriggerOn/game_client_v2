@@ -50,6 +50,10 @@ CollisionWorld* Game_GetCollisionWorld();
 // lastProcessedInputTick ack can be looked up)
 uint32_t Game_GetClientTick();
 
+// True while the local player's gameplay input is locked (dead, or during the
+// short respawn fade). InputProducer sends neutral movement/buttons when set.
+bool Game_IsPlayerInputLocked();
+
 // Fractional server tick the local player is currently VIEWING (the interp-
 // delayed remote-player render time mapped into tick space). outTick == 0
 // means "no data yet" — the server must not rewind. Stamped into

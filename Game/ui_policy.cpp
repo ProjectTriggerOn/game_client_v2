@@ -30,8 +30,9 @@ void NavScenePolicy(scene s, UI::InteractiveLevel& level, const char*& entryPage
     level = UI::InteractiveLevel::Interactive;
     switch (s)
     {
+    case SCENE_TITLE: entryPage = "title"; break;   // real Ultralight title menu
     // case SCENE_LOBBY: entryPage = "lobby-home"; break;
-    default:          entryPage = "title"; break;   // ui_test sandbox / title
+    default:          entryPage = "title"; break;   // ui_test sandbox / result
     }
 }
 
