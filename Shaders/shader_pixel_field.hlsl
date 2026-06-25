@@ -81,7 +81,7 @@ float4 main(PS_IN pi):SV_TARGET
     float3 toEye = normalize(eye_pos - pi.posW.xyz); //視点方向ベクトル(視点座標 - 頂点座標)
     float3 r = reflect(normalize(directional_world_vector), normalW).xyz; //反射ベクトル
     float t = pow(max(dot(r, toEye), 0.0f), specular_power); //スペキュラ強度
-    float3 specular = specular_color * t;
+    float3 specular = specular_color.rgb * t;
 
     //float alpha = tex.Sample(samp, pi.uv).a * diffuse_color.a;
     float3 color = ambient + diffuse + specular; //最終的な目に届く色

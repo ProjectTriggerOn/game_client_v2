@@ -74,7 +74,7 @@ float4 main(PS_IN pi) : SV_TARGET
 
     //リムライト
     float rim = 1.0f -  max(dot(normalW.xyz, toEye),0.0f);
-    rim = pow(rim, 3.2f);
+    rim = pow(saturate(rim), 3.2f);
     //float3 color = float3(rim, rim, rim);
 
     for (int i = 0; i < point_light_count; i++)

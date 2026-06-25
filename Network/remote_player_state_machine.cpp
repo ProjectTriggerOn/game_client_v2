@@ -51,7 +51,6 @@ void RemotePlayerStateMachine::DeriveStateFromVelocity(float velX, float velZ, f
     
     // Thresholds
     constexpr float IDLE_THRESHOLD = 0.5f;
-    constexpr float WALK_THRESHOLD = 3.0f;
     constexpr float RUN_THRESHOLD = 6.0f;
     
     // Determine movement direction relative to facing
@@ -128,36 +127,6 @@ RemoteMoveDirection RemotePlayerStateMachine::CalculateDirection(float velX, flo
     // Forward-Right (PI/4): [PI/8, 3PI/8]
     // Right (PI/2): [3PI/8, 5PI/8]
     // ...
-    
-    float deg = XMConvertToDegrees(relativeAngle);
-    
-    // Shift so 0 is 0..45, 1 is 45..90? 
-    // Easier to offset by 22.5 (half slice) and floor.
-    // Range [-180, 180]. Add 180+22.5 = 202.5. Range [22.5, 382.5]. / 45.
-    
-    float shifted = deg + 180.0f + 22.5f;
-    if (shifted >= 360.0f) shifted -= 360.0f;
-    
-    int sector = static_cast<int>(shifted / 45.0f);
-    // 0: Back (-180)
-    // 1: Back-Left (-135) 
-    // 2: Left (-90)
-    // 3: Forward-Left (-45)
-    // 4: Forward (0)
-    // 5: Forward-Right (45)
-    // 6: Right (90)
-    // 7: Back-Right (135)
-    // Note: atan2(x, z) -> Z=0, X=90.
-    // relative = move - yaw.
-    // If relative is 0 => Forward.
-    
-    // Let's re-verify the sector mapping logic relative to 0.
-    // 0 deg +/- 22.5 -> Forward.
-    // 45 deg +/- 22.5 -> Forward-Right
-    // 90 deg +/- 22.5 -> Right (if +X is Right)
-    // etc.
-    // My previous calc assumed -180 start.
-    // simpler: add 360 to handle negatives easily, then offset.
     
     float angleDeg = XMConvertToDegrees(relativeAngle); // -180 to 180
     if (angleDeg < 0) angleDeg += 360.0f; // 0 to 360. 0 is Forward.

@@ -132,11 +132,11 @@ void Shader_3D_Ani_SetWorldMatrix(const DirectX::XMMATRIX& matrix)
 	g_pContext->UpdateSubresource(g_pVSConstantBuffer0, 0, nullptr, &transpose, 0, 0);
 }
 
-void Shader_3D_Ani_SetViewMatrix(const DirectX::XMMATRIX& matrix)
+void Shader_3D_Ani_SetViewMatrix([[maybe_unused]] const DirectX::XMMATRIX& matrix)
 {
 }
 
-void Shader_3D_Ani_SetProjectMatrix(const DirectX::XMMATRIX& matrix)
+void Shader_3D_Ani_SetProjectMatrix([[maybe_unused]] const DirectX::XMMATRIX& matrix)
 {
 }
 

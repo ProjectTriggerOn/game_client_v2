@@ -281,6 +281,7 @@ void Collision_DebugDraw(const Capsule& capsule, const DirectX::XMFLOAT4& color)
 	const int arcSegments = CIRCLE_SEGMENTS / 2;
 	const int arcVertices = 4 * arcSegments * 2;
 	const int totalVertices = ringVertices + lineVertices + arcVertices;
+	static_assert(totalVertices <= NUM_VERTEX, "Capsule debug-draw vertex budget exceeded");
 
 	Vertex v[NUM_VERTEX];
 	int vi = 0;
