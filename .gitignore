@@ -375,3 +375,9 @@ user_settings.toml.tmp
 
 # Ultralight engine log (written to CWD by GetDefaultLogger)
 ultralight.log
+
+# Ultralight runtime DLLs are vendored under ThirdParty/ultralight/bin/. The
+# generic "[Bb]in/" rule above would otherwise ignore them; re-include so a
+# fresh clone builds and runs without manually copying the SDK's bin/ DLLs.
+!ThirdParty/ultralight/bin/
+!ThirdParty/ultralight/bin/*.dll
