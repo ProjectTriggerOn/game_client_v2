@@ -33,6 +33,8 @@
 #include "mouse.h"
 #include <cwchar>
 #include <vector>
+#include <cstdio>
+#include <cstring>
 using namespace DirectX;
 
 namespace{
@@ -79,6 +81,60 @@ namespace{
 	};
 	std::vector<TickTimeEntry> g_TickTimeBuffer;
 	constexpr size_t TICK_TIME_BUFFER_MAX = 32;
+
+	// ========================================================================
+	// Scoring: latest snapshot cache + kill-feed dedup + scoreboard toggle
+	// ========================================================================
+	Snapshot g_LastSnapshot{};
+	bool     g_HasSnapshot = false;
+	uint32_t g_LastShownKillSeq = 0;   // highest kill seq already pushed to the feed
+	bool     g_ScoreboardShown = false;
+
+	// Append {"id":I,"k":K,"d":D,"me":bool} rows for one team into a bounded
+	// buffer; returns chars written. Iterates localPlayer (under localPlayerTeam)
+	// then the clamped remotePlayers[], splitting by teamId.
+	int AppendRosterTeam(const Snapshot& s, uint8_t team, char* out, int cap)
+	{
+		int n = 0;
+		bool first = true;
+		auto emit = [&](uint8_t id, uint16_t k, uint16_t d) {
+			int avail = (cap > n) ? cap - n : 0;
+			n += snprintf(out + n, avail,
+				"%s{\"id\":%u,\"k\":%u,\"d\":%u,\"me\":%s}",
+				first ? "" : ",", id, k, d,
+				(id == s.localPlayerId) ? "true" : "false");
+			first = false;
+		};
+		if (s.localPlayerTeam == team)
+			emit(s.localPlayerId, s.localPlayer.kills, s.localPlayer.deaths);
+		const uint8_t rc = (s.remotePlayerCount < (MAX_PLAYERS - 1))
+			? s.remotePlayerCount : static_cast<uint8_t>(MAX_PLAYERS - 1);
+		for (uint8_t i = 0; i < rc; ++i)
+			if (s.remotePlayers[i].teamId == team)
+				emit(s.remotePlayers[i].playerId,
+					s.remotePlayers[i].state.kills,
+					s.remotePlayers[i].state.deaths);
+		return n;
+	}
+
+	void BuildScoreboardJson(const Snapshot& s, char* out, int cap)
+	{
+		int n = snprintf(out, cap, "{\"red\":[");
+		n += AppendRosterTeam(s, PlayerTeam::RED, out + n, cap - n);
+		n += snprintf(out + n, cap - n, "],\"blue\":[");
+		n += AppendRosterTeam(s, PlayerTeam::BLUE, out + n, cap - n);
+		snprintf(out + n, cap - n, "]}");
+	}
+
+	void BuildResultJson(const Snapshot& s, char* out, int cap)
+	{
+		int n = snprintf(out, cap,
+			"{\"winner\":%u,\"red\":%u,\"blue\":%u,\"scoreboard\":",
+			s.winningTeam, s.redScore, s.blueScore);
+		BuildScoreboardJson(s, out + n, cap - n);
+		int len = static_cast<int>(strlen(out));
+		snprintf(out + len, cap - len, "}");
+	}
 }
 
 // Global network debug info (populated from received snapshots)
@@ -115,6 +171,13 @@ void Game_Initialize()
 	// nullptr); main() initializes it fresh right after, so the guard skips it.
 	extern MockServer* g_pMockServer;
 	if (g_pMockServer) g_pMockServer->ResetSession();
+
+	// Reset client-side scoring trackers so a fresh match starts clean (the
+	// scoreboard overlay hidden, kill-feed dedup re-zeroed).
+	g_HasSnapshot = false;
+	g_LastShownKillSeq = 0;
+	g_ScoreboardShown = false;
+	UI::PushScoreboardVisible(false);
 }
 
 bool Game_WantsUICursor()
@@ -265,6 +328,53 @@ void Game_Update(double elapsed_time)
 		{
 			g_TickTimeBuffer.erase(g_TickTimeBuffer.begin());
 		}
+
+		// --- Scoring ---------------------------------------------------------
+		g_LastSnapshot = snap;
+		g_HasSnapshot = true;
+
+		// Live HUD: team scores + match timer (dirty-flag dedups to 1 call/frame)
+		UI::PushScores(snap.redScore, snap.blueScore);
+		UI::PushMatchTimer(snap.matchTimeRemaining);
+
+		// Kill feed: replay new ring entries in (lastShown, latest], clamped to
+		// the ring window so a reset or dropped events can't loop/underflow.
+		uint32_t latest = snap.latestKillSeq;
+		if (latest < g_LastShownKillSeq) g_LastShownKillSeq = latest;  // match/server reset
+		uint32_t startSeq = g_LastShownKillSeq;
+		if (latest > KILL_FEED_SIZE && startSeq < latest - KILL_FEED_SIZE)
+			startSeq = latest - KILL_FEED_SIZE;
+		for (uint32_t k = startSeq; k < latest; ++k)
+		{
+			const KillFeedEntry& e = snap.recentKills[k % KILL_FEED_SIZE];
+			UI::PushKillFeed(e.killerId, e.victimId, e.killerTeam, e.victimTeam);
+		}
+		g_LastShownKillSeq = latest;
+
+		// Match end -> RESULT. Push the result payload first so the page is
+		// populated when UIPolicy_Apply shows it next frame.
+		if (snap.matchState == MatchState::ENDED && g_GameState != RESULT)
+		{
+			char rjson[1536];
+			BuildResultJson(snap, rjson, sizeof(rjson));
+			UI::PushMatchResult(rjson);
+			g_GameState = RESULT;
+		}
+	}
+
+	// Tab scoreboard: an overlay WITHIN the hud page (Display level — no cursor
+	// unlock). Driven by held key state; refresh live K/D while held.
+	const bool wantScoreboard = gameplayActive && KeyLogger_IsPressed(KK_TAB);
+	if (wantScoreboard != g_ScoreboardShown)
+	{
+		g_ScoreboardShown = wantScoreboard;
+		UI::PushScoreboardVisible(wantScoreboard);
+	}
+	if (wantScoreboard && g_HasSnapshot)
+	{
+		char sjson[1536];
+		BuildScoreboardJson(g_LastSnapshot, sjson, sizeof(sjson));
+		UI::PushScoreboard(sjson);
 	}
 
 	// Update snapshot receive rate (once per second)

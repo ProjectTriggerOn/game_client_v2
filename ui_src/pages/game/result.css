@@ -1,0 +1,73 @@
+/* result.css — match-end screen (modal overlay; .page.overlay supplies the dim) */
+
+#page-result { background: rgba(0, 0, 0, 0.85); }
+
+#page-result .result-root {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+}
+
+#page-result .result-winner {
+    font-size: 56px;
+    font-weight: 900;
+    letter-spacing: 6px;
+}
+#page-result .result-winner.w-red  { color: #ef5350; text-shadow: 0 0 24px rgba(239, 83, 80, 0.5); }
+#page-result .result-winner.w-blue { color: #42a5f5; text-shadow: 0 0 24px rgba(66, 165, 245, 0.5); }
+#page-result .result-winner.w-draw { color: #cccccc; }
+
+#page-result .result-score {
+    font-size: 40px;
+    font-weight: bold;
+    font-family: 'Consolas', monospace;
+}
+#page-result .result-red  { color: #ef5350; }
+#page-result .result-blue { color: #42a5f5; }
+#page-result .result-sep  { opacity: 0.5; margin: 0 14px; }
+
+#page-result .result-scoreboard {
+    display: flex;
+    gap: 40px;
+    width: 60%;
+    margin-top: 8px;
+}
+#page-result .sb-col  { flex: 1; }
+#page-result .sb-head {
+    font-size: 22px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+#page-result .sb-red  .sb-head { color: #ef5350; }
+#page-result .sb-blue .sb-head { color: #42a5f5; }
+
+#page-result .sb-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    font-size: 18px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+#page-result .sb-row.sb-me { color: #ffe082; font-weight: bold; }
+
+#page-result #result-return {
+    margin-top: 20px;
+    padding: 12px 32px;
+    font-size: 18px;
+    letter-spacing: 2px;
+    border: 2px solid rgba(255, 255, 255, 0.25);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    color: white;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+#page-result #result-return:hover {
+    background: #ff6b35;
+    border-color: #ff6b35;
+    color: #0f1419;
+}

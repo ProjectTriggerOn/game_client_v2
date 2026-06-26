@@ -137,9 +137,15 @@ private:
 
     //-------------------------------------------------------------------------
     // Apply damage (kill + start respawn on lethal) to a bot / to the player.
+    // killerId attributes the kill for scoring (player = id 0, bot i = id i+1).
     //-------------------------------------------------------------------------
-    void DamageBot(Bot& bot, uint8_t dmg);
-    void DamagePlayer(uint8_t dmg);
+    void DamageBot(int victimIndex, uint8_t dmg, uint8_t killerId);
+    void DamagePlayer(uint8_t dmg, uint8_t killerId);
+
+    //-------------------------------------------------------------------------
+    // Record a kill: bump killer/victim K/D + killer-team score + kill-feed ring.
+    //-------------------------------------------------------------------------
+    void RegisterKill(uint8_t killerId, uint8_t victimId);
 
     //-------------------------------------------------------------------------
     // Reset a bot to its spawn after the respawn delay.
@@ -187,6 +193,16 @@ private:
     double   m_FireTimer = 0.0;
     uint16_t m_FireCounter = 0;
     double   m_PlayerRespawnTimer = 0.0;  // counts down while the player IS_DEAD
+
+    // Match / scoring state (broadcast in every Snapshot header) — mirrors
+    // GameServer so single-player has full scoring parity.
+    uint8_t  m_MatchState = MatchState::PLAYING;
+    uint16_t m_RedScore = 0;
+    uint16_t m_BlueScore = 0;
+    uint8_t  m_WinningTeam = MatchTeam::NONE;
+    double   m_MatchTimeRemaining = MatchConfig::MATCH_DURATION;
+    uint32_t m_KillSeq = 0;
+    KillFeedEntry m_RecentKills[KILL_FEED_SIZE] = {};
 
     // Ammo
     uint8_t m_Ammo = WeaponConfig::MAG_SIZE;
