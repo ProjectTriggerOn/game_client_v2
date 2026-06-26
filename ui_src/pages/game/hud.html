@@ -18,7 +18,26 @@
 </div>
 
 <div class="hud-top-center">
-    <span class="hud-score hud-score-red">0</span>
-    <span class="hud-score-sep">:</span>
-    <span class="hud-score hud-score-blue">0</span>
+    <div class="hud-score-line">
+        <span class="hud-score hud-score-red">0</span>
+        <span class="hud-score-sep">:</span>
+        <span class="hud-score hud-score-blue">0</span>
+    </div>
+    <div class="hud-match-timer">--:--</div>
+</div>
+
+<!-- Kill feed: transient rows prepended by onKillFeed, auto-removed after a few s -->
+<div class="hud-killfeed"></div>
+
+<!-- Scoreboard overlay (Tab-hold). Uses its OWN .hidden toggle, separate from
+     the router's .page.hidden, so it never fights UIPolicy's page ownership. -->
+<div class="hud-scoreboard hidden">
+    <div class="sb-col sb-red">
+        <div class="sb-head">RED</div>
+        <div class="sb-rows"></div>
+    </div>
+    <div class="sb-col sb-blue">
+        <div class="sb-head">BLUE</div>
+        <div class="sb-rows"></div>
+    </div>
 </div>

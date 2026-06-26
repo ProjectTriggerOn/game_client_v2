@@ -15,7 +15,7 @@ namespace
 	ID3D11PixelShader* g_pPixelShader = nullptr;
 
 }
-bool Shader_3DUnlit_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
+bool Shader_3DUnlit_Initialize([[maybe_unused]] ID3D11Device* pDevice, [[maybe_unused]] ID3D11DeviceContext* pContext)
 {
 	HRESULT hr; // HRESULTはDirectXの関数の戻り値で、成功か失敗かを示す	
 
@@ -141,11 +141,11 @@ void Shader_3DUnlit_SetWorldMatrix(const DirectX::XMMATRIX& matrix)
 	Direct3D_GetDeviceContext()->UpdateSubresource(g_pVSConstantBuffer0, 0, nullptr, &transpose, 0, 0);
 }
 
-void Shader_3DUnlit_SetViewMatrix(const DirectX::XMMATRIX& matrix)
+void Shader_3DUnlit_SetViewMatrix([[maybe_unused]] const DirectX::XMMATRIX& matrix)
 {
 }
 
-void Shader_3DUnlit_SetProjectMatrix(const DirectX::XMMATRIX& matrix)
+void Shader_3DUnlit_SetProjectMatrix([[maybe_unused]] const DirectX::XMMATRIX& matrix)
 {
 }
 

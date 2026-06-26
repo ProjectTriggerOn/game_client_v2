@@ -67,7 +67,7 @@ INetwork* g_pNetwork = nullptr;
 // Network mode: "mock", "local", or "remote" (read from config.toml)
 static std::string g_NetworkMode;
 
-int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,_In_ LPSTR lpCmdLine, _In_ int nCmdShow)
+int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,[[maybe_unused]] _In_ LPSTR lpCmdLine, _In_ int nCmdShow)
 {
 	(void)CoInitializeEx(nullptr, COINIT_MULTITHREADED);
 

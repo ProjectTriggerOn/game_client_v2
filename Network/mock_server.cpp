@@ -43,6 +43,8 @@ void MockServer::Initialize(INetwork* pNetwork, CollisionWorld* pCollisionWorld)
     m_PlayerState.health = 200;
     m_PlayerState.hitByPlayerId = 0xFF;
     m_PlayerState.fireCounter = 0;
+    m_PlayerState.kills = 0;
+    m_PlayerState.deaths = 0;
     m_Ammo = WeaponConfig::MAG_SIZE;
     m_AmmoReserve = WeaponConfig::MAX_RESERVE;
 
@@ -51,6 +53,16 @@ void MockServer::Initialize(INetwork* pNetwork, CollisionWorld* pCollisionWorld)
 
     m_FireTimer = 0.0;
     m_FireCounter = 0;
+
+    // Fresh match (ResetSession routes through Initialize, so this also re-arms
+    // a new round on every game-scene re-entry).
+    m_MatchState = MatchState::PLAYING;
+    m_RedScore = 0;
+    m_BlueScore = 0;
+    m_WinningTeam = MatchTeam::NONE;
+    m_MatchTimeRemaining = MatchConfig::MATCH_DURATION;
+    m_KillSeq = 0;
+    for (auto& e : m_RecentKills) e = {};
 
     // Initialize all remote bots as combat bots. Bot 0 (id 1) keeps the former
     // combat bot's slot (BLUE, base {7,0,7}, phase 7); bots 1..8 (ids 2..9) keep
@@ -95,6 +107,8 @@ void MockServer::Initialize(INetwork* pNetwork, CollisionWorld* pCollisionWorld)
         s.hitByPlayerId = 0xFF;
         s.ammo = WeaponConfig::MAG_SIZE;
         s.ammoReserve = WeaponConfig::MAX_RESERVE;
+        s.kills = 0;
+        s.deaths = 0;
 
         // Stagger the fire cadence so the bots don't all shoot in unison.
         b.burstTimer = BOT_GAP_TIME + 0.2 * i;
@@ -158,18 +172,23 @@ void MockServer::Tick()
     m_CurrentTick++;
     m_ServerTime += TICK_DURATION;
 
+    // While the match has ENDED, combat freezes (no respawns, no movement, no
+    // firing) — the world broadcasts the frozen end state. Input is still drained
+    // so the upstream queue never backs up.
+    const bool playing = (m_MatchState == MatchState::PLAYING);
+
     // 0. Local player respawn — bots can now kill the player (see BotFireShot).
-    if (m_PlayerState.stateFlags & NetStateFlags::IS_DEAD)
+    if (playing && (m_PlayerState.stateFlags & NetStateFlags::IS_DEAD))
         UpdatePlayerRespawn();
     const bool playerAlive = (m_PlayerState.stateFlags & NetStateFlags::IS_DEAD) == 0;
 
     // 1. Update reload timer once per tick (BEFORE input so newly-started reloads
     //    this tick last exactly RELOAD_DURATION rather than RELOAD_DURATION - TICK_DURATION)
-    if (playerAlive)
+    if (playing && playerAlive)
         UpdateReloadTimer();
 
     // 2. Consume all pending input commands (ProcessInputCmd freezes a dead
-    //    player's actions to camera-only)
+    //    player's actions to camera-only) — always drained, even when ENDED.
     InputCmd cmd;
     while (m_pNetwork->ReceiveInputCmd(cmd))
     {
@@ -177,18 +196,19 @@ void MockServer::Tick()
     }
 
     // 3. Simulate physics for this tick (frozen while dead)
-    if (playerAlive)
+    if (playing && playerAlive)
         SimulatePhysics();
 
     // 3b. Advance all bots BEFORE firing (mirrors GameServer's physics-before-
     // combat order, so a shot at viewTick == m_CurrentTick tests each bot's
     // post-move live position). Movement + intermittent fire + reload + respawn.
-    UpdateBots();
+    if (playing)
+        UpdateBots();
 
     // 4. Clear the local hit marker, then resolve the local player's shots
     // against every bot. Skip if a bot just killed the player this tick.
     m_PlayerState.hitByPlayerId = 0xFF;
-    if ((m_PlayerState.stateFlags & NetStateFlags::IS_DEAD) == 0)
+    if (playing && (m_PlayerState.stateFlags & NetStateFlags::IS_DEAD) == 0)
         ProcessFiring();
 
     // 5. Update tick ID in local state (and ack of last processed input — see GameServer)
@@ -207,6 +227,22 @@ void MockServer::Tick()
         h.tick = m_CurrentTick;
         h.position = b.state.position;
         h.alive = (b.state.stateFlags & NetStateFlags::IS_DEAD) == 0;
+    }
+
+    // 5c. Match clock + win condition (score limit OR time limit, first to fire).
+    if (m_MatchState == MatchState::PLAYING)
+    {
+        m_MatchTimeRemaining -= TICK_DURATION;
+        if (m_RedScore >= MatchConfig::SCORE_LIMIT ||
+            m_BlueScore >= MatchConfig::SCORE_LIMIT ||
+            m_MatchTimeRemaining <= 0.0)
+        {
+            if (m_MatchTimeRemaining < 0.0) m_MatchTimeRemaining = 0.0;
+            m_MatchState = MatchState::ENDED;
+            m_WinningTeam = (m_RedScore > m_BlueScore) ? PlayerTeam::RED
+                          : (m_BlueScore > m_RedScore) ? PlayerTeam::BLUE
+                          : MatchTeam::DRAW;
+        }
     }
 
     // 6. Broadcast snapshot to client
@@ -775,7 +811,7 @@ void MockServer::ProcessFiring()
 
     if (hitBot >= 0)
     {
-        DamageBot(m_Bots[hitBot], RED_DAMAGE);
+        DamageBot(hitBot, RED_DAMAGE, /*killerId=*/0);  // local player = id 0
         // Hit marker for local player (carries the bot id it struck)
         m_PlayerState.hitByPlayerId = static_cast<uint8_t>(hitBot + 1);
     }
@@ -936,10 +972,42 @@ void MockServer::RespawnBot(Bot& b, int index)
 }
 
 //-----------------------------------------------------------------------------
+// RegisterKill - Bump killer/victim K/D + killer-team score + kill-feed ring.
+// Id convention: local player = 0, bot index i = id i+1. Counters live in each
+// entity's NetPlayerState (state.kills/deaths), which BroadcastSnapshot sends.
+//-----------------------------------------------------------------------------
+void MockServer::RegisterKill(uint8_t killerId, uint8_t victimId)
+{
+    auto teamOf = [&](uint8_t id) -> uint8_t {
+        return (id == 0) ? LOCAL_PLAYER_TEAM : m_Bots[id - 1].team;
+    };
+    auto killsRef = [&](uint8_t id) -> uint16_t& {
+        return (id == 0) ? m_PlayerState.kills : m_Bots[id - 1].state.kills;
+    };
+    auto deathsRef = [&](uint8_t id) -> uint16_t& {
+        return (id == 0) ? m_PlayerState.deaths : m_Bots[id - 1].state.deaths;
+    };
+
+    const uint8_t kTeam = teamOf(killerId);
+    const uint8_t vTeam = teamOf(victimId);
+    killsRef(killerId)++;
+    deathsRef(victimId)++;
+    if (kTeam == PlayerTeam::RED) m_RedScore++; else m_BlueScore++;
+
+    KillFeedEntry& kf = m_RecentKills[m_KillSeq % KILL_FEED_SIZE];
+    kf.killerId   = killerId;
+    kf.victimId   = victimId;
+    kf.killerTeam = kTeam;
+    kf.victimTeam = vTeam;
+    m_KillSeq++;
+}
+
+//-----------------------------------------------------------------------------
 // DamageBot - Apply damage to a bot; kill + start its respawn on lethal.
 //-----------------------------------------------------------------------------
-void MockServer::DamageBot(Bot& b, uint8_t dmg)
+void MockServer::DamageBot(int victimIndex, uint8_t dmg, uint8_t killerId)
 {
+    Bot& b = m_Bots[victimIndex];
     if (b.state.health > dmg)
     {
         b.state.health -= dmg;
@@ -955,6 +1023,7 @@ void MockServer::DamageBot(Bot& b, uint8_t dmg)
     b.respawnTimer = RESPAWN_TIME;
     b.firing = false;
     b.reloadTimer = 0.0;
+    RegisterKill(killerId, static_cast<uint8_t>(victimIndex + 1));
 }
 
 //-----------------------------------------------------------------------------
@@ -962,7 +1031,7 @@ void MockServer::DamageBot(Bot& b, uint8_t dmg)
 // lethal. Health / IS_DEAD propagate via the snapshot; the client handles the
 // death fade and the respawn snap-to-spawn.
 //-----------------------------------------------------------------------------
-void MockServer::DamagePlayer(uint8_t dmg)
+void MockServer::DamagePlayer(uint8_t dmg, uint8_t killerId)
 {
     uint32_t& flags = m_PlayerState.stateFlags;
     if (flags & NetStateFlags::IS_DEAD)
@@ -981,6 +1050,7 @@ void MockServer::DamagePlayer(uint8_t dmg)
     m_PlayerState.velocity = { 0.0f, 0.0f, 0.0f };
     m_PlayerRespawnTimer = RESPAWN_TIME;
     m_ReloadTimer = 0.0;
+    RegisterKill(killerId, /*victimId=*/0);  // local player = id 0
 }
 
 //-----------------------------------------------------------------------------
@@ -1045,10 +1115,11 @@ void MockServer::BotFireShot(const Bot& shooter, int shooterIndex)
         }
     }
 
+    const uint8_t shooterId = static_cast<uint8_t>(shooterIndex + 1);
     if (hitPlayer)
-        DamagePlayer(BOT_DAMAGE);
+        DamagePlayer(BOT_DAMAGE, shooterId);
     else if (hitBot >= 0)
-        DamageBot(m_Bots[hitBot], BOT_DAMAGE);
+        DamageBot(hitBot, BOT_DAMAGE, shooterId);
 }
 
 //-----------------------------------------------------------------------------
@@ -1156,6 +1227,16 @@ void MockServer::BroadcastSnapshot()
     snapshot.localPlayer = m_PlayerState;
     snapshot.localPlayerId = 0;
     snapshot.localPlayerTeam = LOCAL_PLAYER_TEAM;
+
+    // Global match / scoring state (mirrors GameServer::BroadcastSnapshots).
+    snapshot.matchState         = m_MatchState;
+    snapshot.winningTeam        = m_WinningTeam;
+    snapshot.redScore           = m_RedScore;
+    snapshot.blueScore          = m_BlueScore;
+    snapshot.matchTimeRemaining = static_cast<float>(m_MatchTimeRemaining);
+    snapshot.latestKillSeq      = m_KillSeq;
+    for (int k = 0; k < KILL_FEED_SIZE; ++k)
+        snapshot.recentKills[k] = m_RecentKills[k];
 
     // All remote bots (ids 1..NUM_BOTS). NUM_BOTS == MAX_PLAYERS - 1, so the
     // remotePlayers[] array holds them exactly.

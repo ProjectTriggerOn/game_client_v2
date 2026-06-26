@@ -19,5 +19,13 @@ void Unbind();
 void PushHealth(int current, int maxHp);
 void PushAmmo(int current, int reserve);
 
+// Scoring pushes (same fresh-lookup contract as above).
+void PushScores(int red, int blue);
+void PushMatchTimer(float secondsRemaining);
+void PushKillFeed(int killerId, int victimId, int killerTeam, int victimTeam);
+void PushScoreboard(const char* json);
+void PushScoreboardVisible(bool visible);
+void PushMatchResult(const char* json);
+
 }  // namespace Bridge
 }  // namespace UI

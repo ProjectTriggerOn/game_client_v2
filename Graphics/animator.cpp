@@ -472,7 +472,7 @@ void Animator::StopAdditive(double fadeOutTime)
 	}
 }
 
-void Animator::ApplyAdditive(int boneIndex, XMVECTOR& s, XMVECTOR& r, XMVECTOR& t)
+void Animator::ApplyAdditive(int boneIndex, [[maybe_unused]] XMVECTOR& s, XMVECTOR& r, XMVECTOR& t)
 {
 	const Animation& addAnim = m_Model->Animations[m_AdditiveAnimIndex];
 

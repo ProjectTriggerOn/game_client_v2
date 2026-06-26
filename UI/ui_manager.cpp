@@ -23,6 +23,8 @@
 #include <windows.h>
 #include <string>
 #include <memory>
+#include <vector>
+#include <array>
 
 namespace {
 
@@ -78,8 +80,16 @@ std::string g_deferredPage;
 struct PendingHud {
     bool healthDirty = false; int health = 0, healthMax = 0;
     bool ammoDirty   = false; int ammo = 0, ammoReserve = 0;
+    bool scoresDirty = false; int red = 0, blue = 0;
+    bool timerDirty  = false; float matchTime = 0.0f;
+    bool sbVisDirty  = false; bool sbVisible = false;
+    bool sbDataDirty = false; std::string sbJson;
+    bool resultDirty = false; std::string resultJson;
 };
 PendingHud g_pendingHud;
+// Kill-feed events are discrete, so they queue (not a dirty flag): every kill
+// pushed in a frame is replayed at flush. {killerId, victimId, killerTeam, victimTeam}.
+std::vector<std::array<int, 4>> g_pendingKills;
 
 std::string GetExeDirA() {
     char buf[MAX_PATH];
@@ -186,6 +196,30 @@ void Render() {
         UI::Bridge::PushAmmo(g_pendingHud.ammo, g_pendingHud.ammoReserve);
         g_pendingHud.ammoDirty = false;
     }
+    if (g_pendingHud.scoresDirty) {
+        UI::Bridge::PushScores(g_pendingHud.red, g_pendingHud.blue);
+        g_pendingHud.scoresDirty = false;
+    }
+    if (g_pendingHud.timerDirty) {
+        UI::Bridge::PushMatchTimer(g_pendingHud.matchTime);
+        g_pendingHud.timerDirty = false;
+    }
+    if (g_pendingHud.sbVisDirty) {
+        UI::Bridge::PushScoreboardVisible(g_pendingHud.sbVisible);
+        g_pendingHud.sbVisDirty = false;
+    }
+    if (g_pendingHud.sbDataDirty) {
+        UI::Bridge::PushScoreboard(g_pendingHud.sbJson.c_str());
+        g_pendingHud.sbDataDirty = false;
+    }
+    if (g_pendingHud.resultDirty) {
+        UI::Bridge::PushMatchResult(g_pendingHud.resultJson.c_str());
+        g_pendingHud.resultDirty = false;
+    }
+    for (const auto& k : g_pendingKills) {
+        UI::Bridge::PushKillFeed(k[0], k[1], k[2], k[3]);
+    }
+    g_pendingKills.clear();
 
     g_renderer->Update();
 
@@ -237,6 +271,26 @@ void PushHealth(int current, int maxHp) {
 void PushAmmo(int current, int reserve) {
     g_pendingHud.ammo = current; g_pendingHud.ammoReserve = reserve;
     g_pendingHud.ammoDirty = true;
+}
+void PushScores(int red, int blue) {
+    g_pendingHud.red = red; g_pendingHud.blue = blue;
+    g_pendingHud.scoresDirty = true;
+}
+void PushMatchTimer(float secondsRemaining) {
+    g_pendingHud.matchTime = secondsRemaining;
+    g_pendingHud.timerDirty = true;
+}
+void PushKillFeed(int killerId, int victimId, int killerTeam, int victimTeam) {
+    g_pendingKills.push_back({ killerId, victimId, killerTeam, victimTeam });
+}
+void PushScoreboard(const char* json) {
+    if (json) { g_pendingHud.sbJson = json; g_pendingHud.sbDataDirty = true; }
+}
+void PushScoreboardVisible(bool visible) {
+    g_pendingHud.sbVisible = visible; g_pendingHud.sbVisDirty = true;
+}
+void PushMatchResult(const char* json) {
+    if (json) { g_pendingHud.resultJson = json; g_pendingHud.resultDirty = true; }
 }
 
 void ProcessInput() {

@@ -32,6 +32,16 @@ bool IsModalActive();   // == Modal. Read by MousePolicy_Apply to free the curso
 void PushHealth(int current, int maxHp);
 void PushAmmo(int current, int reserve);
 
+// Scoring pushes. Stored when called (during Game_Update) and flushed at the top
+// of UI::Render — the one safe JS-call point per frame. Kill-feed events use a
+// queue (not a dirty flag) so multiple kills in one frame all surface.
+void PushScores(int red, int blue);
+void PushMatchTimer(float secondsRemaining);
+void PushKillFeed(int killerId, int victimId, int killerTeam, int victimTeam);
+void PushScoreboard(const char* json);
+void PushScoreboardVisible(bool visible);
+void PushMatchResult(const char* json);
+
 // Page switch helper: calls Router.show('<name>'). UIPolicy_Apply drives this
 // for state-derived pages; the ui_test sandbox uses it directly for preview.
 void ShowPage(const char* name);

@@ -73,7 +73,7 @@ void PlayerCamFps_Finalize()
 	g_DebugText = nullptr;
 }
 
-void PlayerCamFps_Update(double elapsed_time, const DirectX::XMFLOAT3& position)
+void PlayerCamFps_Update([[maybe_unused]] double elapsed_time, const DirectX::XMFLOAT3& position)
 {
 	int dx = MSLogger_GetX();
 	int dy = MSLogger_GetY();

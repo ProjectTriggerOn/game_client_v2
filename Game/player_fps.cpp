@@ -289,8 +289,8 @@ void PlayerFps::Update(double elapsed_time)
 
 	// ---- TRANSITION FIRE: fire during ADS_IN / ADS_OUT using additive ----
 	{
-		WeaponState ws = m_StateMachine->GetWeaponState();
-		bool inTransition = (ws == WeaponState::ADS_IN || ws == WeaponState::ADS_OUT);
+		WeaponState curWs = m_StateMachine->GetWeaponState();
+		bool inTransition = (curWs == WeaponState::ADS_IN || curWs == WeaponState::ADS_OUT);
 
 		if (inTransition && isPressingLeft)
 		{
@@ -396,10 +396,10 @@ void PlayerFps::Update(double elapsed_time)
 
 	// ---- INTERRUPT RELOAD (trigger only, not held) ----
 	{
-		WeaponState ws = m_StateMachine->GetWeaponState();
-		bool isReloading = (ws == WeaponState::RELOADING ||
-		                    ws == WeaponState::RELOADING_OUT_OF_AMMO);
-		if (isReloading) {
+		WeaponState curWs = m_StateMachine->GetWeaponState();
+		bool reloading = (curWs == WeaponState::RELOADING ||
+		                    curWs == WeaponState::RELOADING_OUT_OF_AMMO);
+		if (reloading) {
 			bool fireTrig   = MSLogger_IsTrigger(MBT_LEFT);
 			bool sprintTrig = KeyLogger_IsTrigger(KK_LEFTSHIFT);
 			bool jumpTrig   = KeyLogger_IsTrigger(KK_SPACE);
@@ -429,9 +429,7 @@ void PlayerFps::Update(double elapsed_time)
 	// Update Model Animation
 	if (m_Model && m_Animator)
 	{
-		WeaponState prevWs = m_StateMachine->GetWeaponState();
 		m_StateMachine->Update(elapsed_time, m_Animator);
-		WeaponState curWs = m_StateMachine->GetWeaponState();
 
 		// Reload complete: refill magazine from reserve (only on natural timeout)
 		if (m_StateMachine->ConsumeReloadCompleted())
@@ -797,9 +795,9 @@ void PlayerFps::ApplyServerCorrection(const NetPlayerState& serverState)
 		m_IsJump = !(serverState.stateFlags & NetStateFlags::IS_GROUNDED);
 
 		// Face toward world center (0, 0, 0)
-		float dx = 0.0f - serverState.position.x;
-		float dz = 0.0f - serverState.position.z;
-		float yaw = atan2f(dx, dz);
+		float toCenterX = 0.0f - serverState.position.x;
+		float toCenterZ = 0.0f - serverState.position.z;
+		float yaw = atan2f(toCenterX, toCenterZ);
 		PlayerCamFps_SetYaw(yaw);
 		PlayerCamFps_SetPitch(0.0f);
 

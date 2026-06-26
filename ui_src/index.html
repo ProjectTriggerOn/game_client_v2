@@ -8,12 +8,14 @@
     <link rel="stylesheet" href="pages/settings.css">
     <link rel="stylesheet" href="pages/game/hud.css">
     <link rel="stylesheet" href="pages/game/pause.css">
+    <link rel="stylesheet" href="pages/game/result.css">
 </head>
 <body>
     <div id="page-title"    class="page hidden"></div>
     <div id="page-settings" class="page hidden overlay"></div>
     <div id="page-hud"      class="page hidden"></div>
     <div id="page-pause"    class="page hidden overlay"></div>
+    <div id="page-result"   class="page hidden overlay"></div>
 
     <!-- Loading curtain: top-most transition overlay, toggled by C++ via
          UI::SetCurtain (window.Curtain in router.js). NOT a .page — it persists
@@ -29,6 +31,7 @@
     <script src="pages/settings.js"></script>
     <script src="pages/game/hud.js"></script>
     <script src="pages/game/pause.js"></script>
+    <script src="pages/game/result.js"></script>
 
     <!-- Router: fetches page markup → injects into divs → shows title by default -->
     <script src="router.js"></script>

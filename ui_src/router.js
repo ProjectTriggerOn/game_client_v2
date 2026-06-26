@@ -18,6 +18,7 @@
         'settings': 'settings',     // shared (game pause + future lobby)
         'hud':      'game/hud',     // game scene
         'pause':    'game/pause',   // game scene
+        'result':   'game/result',  // game scene end screen (RESULT GameState)
         // future: 'lobby-home': 'lobby/home', 'armory': 'lobby/armory', ...
     };
 

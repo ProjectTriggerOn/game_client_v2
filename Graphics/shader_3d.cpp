@@ -165,13 +165,13 @@ void Shader_3D_SetWorldMatrix(const DirectX::XMMATRIX& matrix)
 
 }
 
-void Shader_3D_SetViewMatrix(const DirectX::XMMATRIX& matrix)
+void Shader_3D_SetViewMatrix([[maybe_unused]] const DirectX::XMMATRIX& matrix)
 {
 
 
 }
 
-void Shader_3D_SetProjectMatrix(const DirectX::XMMATRIX& matrix)
+void Shader_3D_SetProjectMatrix([[maybe_unused]] const DirectX::XMMATRIX& matrix)
 {
 
 

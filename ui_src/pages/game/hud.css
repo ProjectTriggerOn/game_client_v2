@@ -73,11 +73,79 @@
     left: 50%;
     top: 24px;
     transform: translateX(-50%);
+    font-family: 'Consolas', monospace;
+    text-align: center;
+}
+
+#page-hud .hud-score-line {
     font-size: 32px;
     font-weight: bold;
-    font-family: 'Consolas', monospace;
 }
 
 #page-hud .hud-score-red  { color: #ef5350; }
 #page-hud .hud-score-blue { color: #42a5f5; }
 #page-hud .hud-score-sep  { opacity: 0.5; margin: 0 12px; }
+
+#page-hud .hud-match-timer {
+    margin-top: 4px;
+    font-size: 20px;
+    opacity: 0.85;
+}
+
+/* Kill feed — transient rows top-right */
+#page-hud .hud-killfeed {
+    position: absolute;
+    right: 24px;
+    top: 80px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-end;
+    font-family: 'Consolas', monospace;
+    font-size: 16px;
+}
+
+#page-hud .kf-row {
+    background: rgba(0, 0, 0, 0.45);
+    padding: 2px 8px;
+    border-radius: 2px;
+    white-space: nowrap;
+}
+
+#page-hud .kf-red    { color: #ef5350; }
+#page-hud .kf-blue   { color: #42a5f5; }
+#page-hud .kf-arrow  { opacity: 0.7; }
+
+/* Scoreboard overlay (Tab-hold). Centered panel over the scene. */
+#page-hud .hud-scoreboard {
+    position: absolute;
+    top: 12%;
+    left: 20%;
+    right: 20%;
+    bottom: 12%;
+    display: flex;
+    gap: 24px;
+    padding: 24px;
+    background: rgba(0, 0, 0, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+#page-hud .hud-scoreboard.hidden { display: none; }
+
+#page-hud .sb-col  { flex: 1; }
+#page-hud .sb-head {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 12px;
+}
+#page-hud .sb-red  .sb-head { color: #ef5350; }
+#page-hud .sb-blue .sb-head { color: #42a5f5; }
+
+#page-hud .sb-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    font-size: 18px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+#page-hud .sb-row.sb-me { font-weight: bold; color: #ffe082; }

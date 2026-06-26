@@ -19,6 +19,7 @@ void DeriveGamePage(GameState gs, UI::InteractiveLevel& level, const char*& page
     {
     case PAUSE:   level = UI::InteractiveLevel::Modal;   page = "pause";    break;
     case SETTING: level = UI::InteractiveLevel::Modal;   page = "settings"; break;
+    case RESULT:  level = UI::InteractiveLevel::Modal;   page = "result";   break; // match-end screen (frees cursor for the button)
     default:      level = UI::InteractiveLevel::Display; page = "hud";      break; // PLAY etc.
     }
 }

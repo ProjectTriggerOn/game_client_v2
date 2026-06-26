@@ -158,7 +158,7 @@ void D3D11BitmapRenderer::Finalize() {
     m_context = nullptr;
 }
 
-void D3D11BitmapRenderer::UpdateFromBitmap(const void* src, int srcW, int srcH, int srcRowBytes) {
+void D3D11BitmapRenderer::UpdateFromBitmap(const void* src, [[maybe_unused]] int srcW, int srcH, int srcRowBytes) {
     if (!m_texture || !m_context) return;
 
     D3D11_MAPPED_SUBRESOURCE mapped{};

@@ -103,8 +103,10 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>.;./Core;./Graphics;./Game;./Network;./UI;./ThirdParty/enet/include;./ThirdParty/assimp/include;./ThirdParty/ultralight/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.;./Core;./Graphics;./Game;./Network;./UI;./ThirdParty/enet/include;./ThirdParty/assimp/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <WarningLevel>Level4</WarningLevel>
+      <AdditionalOptions>/external:I./ThirdParty/ultralight/include %(AdditionalOptions)</AdditionalOptions>
+      <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
@@ -134,8 +136,10 @@ if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ui_src" "
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>.;./Core;./Graphics;./Game;./Network;./UI;./ThirdParty/enet/include;./ThirdParty/assimp/include;./ThirdParty/ultralight/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.;./Core;./Graphics;./Game;./Network;./UI;./ThirdParty/enet/include;./ThirdParty/assimp/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <WarningLevel>Level4</WarningLevel>
+      <AdditionalOptions>/external:I./ThirdParty/ultralight/include %(AdditionalOptions)</AdditionalOptions>
+      <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>

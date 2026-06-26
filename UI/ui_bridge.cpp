@@ -48,6 +48,57 @@ void CallJsFn2(const char* fnName, double a, double b) {
     fn(args);
 }
 
+// Variants of CallJsFn2 with different arities. Same fresh-lookup contract and
+// the same keep-the-JSPropertyValue-via-auto rule (see the note above).
+void CallJsFn1(const char* fnName, double a) {
+    if (!g_bridgeView) return;
+    auto ctx = g_bridgeView->LockJSContext();
+    SetJSContext(*ctx);
+    JSObject global = JSGlobalObject();
+    if (!global.HasProperty(fnName)) return;
+    auto prop = global[fnName];
+    if (!prop.IsFunction()) return;
+    JSFunction fn = prop.ToFunction();
+    if (!fn.IsValid()) return;
+    JSArgs args;
+    args.push_back(JSValue(a));
+    fn(args);
+}
+
+void CallJsFn4(const char* fnName, double a, double b, double c, double d) {
+    if (!g_bridgeView) return;
+    auto ctx = g_bridgeView->LockJSContext();
+    SetJSContext(*ctx);
+    JSObject global = JSGlobalObject();
+    if (!global.HasProperty(fnName)) return;
+    auto prop = global[fnName];
+    if (!prop.IsFunction()) return;
+    JSFunction fn = prop.ToFunction();
+    if (!fn.IsValid()) return;
+    JSArgs args;
+    args.push_back(JSValue(a));
+    args.push_back(JSValue(b));
+    args.push_back(JSValue(c));
+    args.push_back(JSValue(d));
+    fn(args);
+}
+
+// Pass a single string argument (e.g. a JSON payload the handler JSON.parses).
+void CallJsFnStr(const char* fnName, const char* s) {
+    if (!g_bridgeView || !s) return;
+    auto ctx = g_bridgeView->LockJSContext();
+    SetJSContext(*ctx);
+    JSObject global = JSGlobalObject();
+    if (!global.HasProperty(fnName)) return;
+    auto prop = global[fnName];
+    if (!prop.IsFunction()) return;
+    JSFunction fn = prop.ToFunction();
+    if (!fn.IsValid()) return;
+    JSArgs args;
+    args.push_back(JSValue(String(s)));
+    fn(args);
+}
+
 std::string JSValueToStdString(const JSValue& v) {
     String s = ((JSValue&)v).ToString();
     return std::string(s.utf8().data());
@@ -206,6 +257,31 @@ void PushHealth(int current, int maxHp) {
 
 void PushAmmo(int current, int reserve) {
     CallJsFn2("onAmmoChanged", (double)current, (double)reserve);
+}
+
+void PushScores(int red, int blue) {
+    CallJsFn2("onScoresChanged", (double)red, (double)blue);
+}
+
+void PushMatchTimer(float secondsRemaining) {
+    CallJsFn1("onMatchTimerChanged", (double)secondsRemaining);
+}
+
+void PushKillFeed(int killerId, int victimId, int killerTeam, int victimTeam) {
+    CallJsFn4("onKillFeed", (double)killerId, (double)victimId,
+              (double)killerTeam, (double)victimTeam);
+}
+
+void PushScoreboard(const char* json) {
+    CallJsFnStr("onScoreboardData", json);
+}
+
+void PushScoreboardVisible(bool visible) {
+    CallJsFn1("onScoreboardVisible", visible ? 1.0 : 0.0);
+}
+
+void PushMatchResult(const char* json) {
+    CallJsFnStr("onMatchResult", json);
 }
 
 }  // namespace Bridge
