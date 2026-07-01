@@ -1,151 +1,68 @@
-/* hud.css — persistent in-combat HUD */
+/* hud.css — in-combat HUD (stays transparent over the scene) */
 
-#page-hud {
-    /* HUD must stay transparent so the 3D scene shows through */
-    background: transparent;
-    pointer-events: none;  /* HUD takes no input; everything goes to the game */
+#page-hud{background:transparent;pointer-events:none;}
+/* crosshair is drawn natively (docs §12.1), not here */
+
+/* HP — bottom-left, thin low-profile bar */
+#page-hud .hud-bottom-left{position:absolute;left:40px;bottom:40px;width:300px;}
+#page-hud .hud-hp-label{
+  font-family:var(--ui-font);font-size:12px;letter-spacing:5px;text-transform:uppercase;
+  color:var(--ui-text-2);opacity:.85;margin-bottom:6px;
 }
+#page-hud .hud-hp-bar{width:100%;height:6px;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.18);}
+#page-hud .hud-hp-fill{width:100%;height:100%;background:var(--ui-text);transition:width .2s ease-out;}
+#page-hud .hud-hp-text{margin-top:6px;font-family:var(--ui-mono);font-size:15px;color:var(--ui-text);}
 
-/* crosshair is drawn natively (docs §12.1), not in the Ultralight HUD */
-
-#page-hud .hud-bottom-left {
-    position: absolute;
-    left: 40px;
-    bottom: 40px;
-    width: 320px;
+/* Ammo — bottom-right */
+#page-hud .hud-bottom-right{
+  position:absolute;right:40px;bottom:36px;display:flex;align-items:baseline;gap:6px;
+  font-family:var(--ui-mono);
 }
+#page-hud .hud-ammo-current{font-size:52px;color:var(--ui-text);line-height:1;}
+#page-hud .hud-ammo-sep{font-size:22px;color:var(--ui-text-dim);}
+#page-hud .hud-ammo-reserve{font-size:22px;color:var(--ui-text-2);}
 
-#page-hud .hud-hp-label {
-    font-size: 14px;
-    letter-spacing: 4px;
-    opacity: 0.7;
-    margin-bottom: 6px;
+/* Score / timer — top-center */
+#page-hud .hud-top-center{
+  position:absolute;left:50%;top:20px;transform:translateX(-50%);
+  font-family:var(--ui-mono);text-align:center;
 }
+#page-hud .hud-score-line{font-size:30px;}
+#page-hud .hud-score-red{color:var(--ui-red);}
+#page-hud .hud-score-blue{color:var(--ui-blue);}
+#page-hud .hud-score-sep{color:var(--ui-text-dim);margin:0 14px;}
+#page-hud .hud-match-timer{margin-top:4px;font-size:18px;color:var(--ui-text-2);letter-spacing:2px;}
 
-#page-hud .hud-hp-bar {
-    width: 100%;
-    height: 18px;
-    background: rgba(0, 0, 0, 0.5);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+/* Kill feed — top-right */
+#page-hud .hud-killfeed{
+  position:absolute;right:24px;top:72px;display:flex;flex-direction:column;gap:3px;
+  align-items:flex-end;font-family:var(--ui-font);font-size:15px;
 }
-
-#page-hud .hud-hp-fill {
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, #4caf50, #8bc34a);
-    transition: width 0.2s ease-out;
+#page-hud .kf-row{
+  background:rgba(5,8,11,0.55);padding:3px 10px;border-left:2px solid var(--ui-divider);
+  white-space:nowrap;letter-spacing:.5px;
 }
+#page-hud .kf-red{color:var(--ui-red);}
+#page-hud .kf-blue{color:var(--ui-blue);}
+#page-hud .kf-arrow{color:var(--ui-text-dim);}
 
-#page-hud .hud-hp-text {
-    margin-top: 6px;
-    font-size: 16px;
-    font-weight: bold;
+/* Scoreboard (Tab-hold) — its own .hidden toggle */
+#page-hud .hud-scoreboard{
+  position:absolute;top:12%;left:18%;right:18%;bottom:12%;display:flex;gap:20px;
+  padding:22px;background:var(--ui-panel);border:1px solid var(--ui-divider);
 }
-
-#page-hud .hud-bottom-right {
-    position: absolute;
-    right: 40px;
-    bottom: 40px;
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-    font-family: 'Consolas', monospace;
+#page-hud .hud-scoreboard.hidden{display:none;}
+#page-hud .sb-col{flex:1;}
+#page-hud .sb-head{
+  font-family:var(--ui-font);font-size:20px;font-weight:700;letter-spacing:4px;
+  text-transform:uppercase;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--ui-divider);
 }
-
-#page-hud .hud-ammo-current {
-    font-size: 48px;
-    font-weight: bold;
-    color: #ffe082;
+#page-hud .sb-red .sb-head{color:var(--ui-red);}
+#page-hud .sb-blue .sb-head{color:var(--ui-blue);}
+#page-hud .sb-row{
+  display:flex;justify-content:space-between;padding:6px 10px;margin-bottom:2px;
+  font-family:var(--ui-font);font-size:16px;
 }
-
-#page-hud .hud-ammo-sep {
-    font-size: 24px;
-    opacity: 0.5;
-}
-
-#page-hud .hud-ammo-reserve {
-    font-size: 24px;
-    opacity: 0.7;
-}
-
-#page-hud .hud-top-center {
-    position: absolute;
-    left: 50%;
-    top: 24px;
-    transform: translateX(-50%);
-    font-family: 'Consolas', monospace;
-    text-align: center;
-}
-
-#page-hud .hud-score-line {
-    font-size: 32px;
-    font-weight: bold;
-}
-
-#page-hud .hud-score-red  { color: #ef5350; }
-#page-hud .hud-score-blue { color: #42a5f5; }
-#page-hud .hud-score-sep  { opacity: 0.5; margin: 0 12px; }
-
-#page-hud .hud-match-timer {
-    margin-top: 4px;
-    font-size: 20px;
-    opacity: 0.85;
-}
-
-/* Kill feed — transient rows top-right */
-#page-hud .hud-killfeed {
-    position: absolute;
-    right: 24px;
-    top: 80px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    align-items: flex-end;
-    font-family: 'Consolas', monospace;
-    font-size: 16px;
-}
-
-#page-hud .kf-row {
-    background: rgba(0, 0, 0, 0.45);
-    padding: 2px 8px;
-    border-radius: 2px;
-    white-space: nowrap;
-}
-
-#page-hud .kf-red    { color: #ef5350; }
-#page-hud .kf-blue   { color: #42a5f5; }
-#page-hud .kf-arrow  { opacity: 0.7; }
-
-/* Scoreboard overlay (Tab-hold). Centered panel over the scene. */
-#page-hud .hud-scoreboard {
-    position: absolute;
-    top: 12%;
-    left: 20%;
-    right: 20%;
-    bottom: 12%;
-    display: flex;
-    gap: 24px;
-    padding: 24px;
-    background: rgba(0, 0, 0, 0.75);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-#page-hud .hud-scoreboard.hidden { display: none; }
-
-#page-hud .sb-col  { flex: 1; }
-#page-hud .sb-head {
-    font-size: 24px;
-    font-weight: bold;
-    margin-bottom: 12px;
-}
-#page-hud .sb-red  .sb-head { color: #ef5350; }
-#page-hud .sb-blue .sb-head { color: #42a5f5; }
-
-#page-hud .sb-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 4px 0;
-    font-size: 18px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-#page-hud .sb-row.sb-me { font-weight: bold; color: #ffe082; }
+#page-hud .sb-red .sb-row{border-left:2px solid var(--ui-red);background:var(--ui-red-tint);}
+#page-hud .sb-blue .sb-row{border-left:2px solid var(--ui-blue);background:var(--ui-blue-tint);}
+#page-hud .sb-row.sb-me{border-left-color:var(--ui-gold);color:var(--ui-gold);font-weight:600;}
