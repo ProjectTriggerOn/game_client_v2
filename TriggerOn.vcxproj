@@ -121,7 +121,7 @@
       <AdditionalLibraryDirectories>./ThirdParty/assimp/lib;./ThirdParty/ultralight/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /D /Y "$(TargetDir)*.cso" "$(ProjectDir)resource/shader"
+      <Command>xcopy /D /Y /I "$(TargetDir)*.cso" "$(ProjectDir)resource\shader\"
 xcopy /D /Y /I "$(TargetDir)ui\*.cso" "$(ProjectDir)resource\shader\ui\"
 xcopy /Y /D "$(ProjectDir)ThirdParty\ultralight\bin\*.dll" "$(TargetDir)"
 xcopy /Y /D /E /I "$(ProjectDir)ThirdParty\ultralight\resources" "$(TargetDir)resources\"
@@ -158,7 +158,7 @@ if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ui_src" "
       <AdditionalLibraryDirectories>./ThirdParty/assimp/lib;./ThirdParty/ultralight/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /D /Y "$(TargetDir)*.cso" "$(ProjectDir)resource/shader"
+      <Command>xcopy /D /Y /I "$(TargetDir)*.cso" "$(ProjectDir)resource\shader\"
 xcopy /D /Y /I "$(TargetDir)ui\*.cso" "$(ProjectDir)resource\shader\ui\"
 xcopy /Y /D "$(ProjectDir)ThirdParty\ultralight\bin\*.dll" "$(TargetDir)"
 xcopy /Y /D /E /I "$(ProjectDir)ThirdParty\ultralight\resources" "$(TargetDir)resources\"
