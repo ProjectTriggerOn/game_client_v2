@@ -1,72 +1,51 @@
-/* title.css */
+/* title.css — main menu (logo top-center, menu lower-left) */
 
-#page-title {
-    background: linear-gradient(180deg, #0f1419 0%, #1a2332 100%);
+#page-title{
+  background:
+    radial-gradient(120% 90% at 70% 18%, rgba(30,40,50,0.35) 0%, rgba(0,0,0,0) 60%),
+    linear-gradient(180deg,#0b0e12 0%,#05070a 100%);
+}
+#page-title .title-root{width:100%;height:100%;position:relative;}
+
+#page-title .title-logo{
+  position:absolute;top:13%;left:50%;transform:translateX(-50%);
+  font-family:var(--ui-font);font-weight:700;font-size:84px;line-height:1;
+  letter-spacing:14px;text-transform:uppercase;color:var(--ui-text);
+  text-shadow:0 2px 18px rgba(0,0,0,0.6);white-space:nowrap;
 }
 
-#page-title .title-root {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+#page-title .title-menu{
+  position:absolute;left:8%;bottom:16%;
+  display:flex;flex-direction:column;align-items:stretch;gap:2px;width:300px;
 }
-
-#page-title .title-logo {
-    font-size: 96px;
-    font-weight: 900;
-    letter-spacing: 12px;
-    color: #ff6b35;
-    text-shadow: 0 0 24px rgba(255, 107, 53, 0.6);
-    margin-bottom: 48px;
+#page-title .title-menu::before{
+  content:"MAIN MENU";
+  font-family:var(--ui-font);font-weight:600;font-size:26px;letter-spacing:6px;
+  text-transform:uppercase;color:var(--ui-text-2);margin-bottom:14px;padding-left:16px;
 }
-
-/* ---- Main menu ---- */
-
-#page-title .title-menu {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 16px;
-    width: 260px;
+#page-title .title-menu button{
+  position:relative;text-align:left;font-family:var(--ui-font);
+  font-size:20px;font-weight:400;letter-spacing:1px;padding:11px 16px;
+  border:0;border-radius:0;background:transparent;color:var(--ui-text);cursor:pointer;
+  transition:background .12s,color .12s;
 }
-
-#page-title .title-menu button {
-    font-size: 22px;
-    font-weight: 700;
-    letter-spacing: 4px;
-    padding: 14px 0;
-    border: 2px solid #ff6b35;
-    border-radius: 6px;
-    background: transparent;
-    color: #ff6b35;
-    cursor: pointer;
-    transition: background 0.15s, color 0.15s;
+#page-title .title-menu button::before{
+  content:"";position:absolute;left:0;top:0;bottom:0;width:3px;
+  background:var(--ui-cyan);opacity:0;transition:opacity .12s;
 }
+#page-title .title-menu button:hover,
+#page-title .title-menu button:focus{background:var(--ui-cyan-dim);outline:none;color:#fff;}
+#page-title .title-menu button:hover::before,
+#page-title .title-menu button:focus::before{opacity:1;}
+#page-title .title-menu button:active{background:rgba(121,220,246,0.28);}
 
-#page-title .title-menu button:hover {
-    background: #ff6b35;
-    color: #0f1419;
+#page-title .title-root::after{
+  content:"ENTER \00B7 SELECT";
+  position:absolute;left:0;right:0;bottom:0;height:44px;display:flex;align-items:center;
+  padding:0 8%;border-top:1px solid var(--ui-divider);
+  font-family:var(--ui-font);font-size:13px;letter-spacing:2px;color:var(--ui-text-dim);
 }
-
-#page-title .title-menu button:active {
-    background: #cc4f22;
-    border-color: #cc4f22;
-}
-
-#page-title .title-menu button:focus {
-    outline: 2px dashed #ffaa80;
-    outline-offset: 4px;
-}
-
-/* ---- Build version stamp (bottom-right corner) ---- */
-
-#page-title .title-version {
-    position: absolute;
-    right: 16px;
-    bottom: 12px;
-    font-size: 12px;
-    opacity: 0.4;
-    letter-spacing: 1px;
+#page-title .title-version{
+  position:absolute;right:16px;bottom:56px;font-family:var(--ui-mono);
+  font-size:12px;opacity:.45;letter-spacing:1px;color:var(--ui-text-2);
 }
