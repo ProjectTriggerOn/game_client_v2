@@ -822,14 +822,18 @@ void MockServer::ProcessFiring()
 // around a fixed base point. Every remote bot uses this, so they all move
 // identically (the combat behaviour layered on top differs only in state).
 //-----------------------------------------------------------------------------
+// Shared pace-motion constants. RespawnBot also uses PACE_W to re-anchor a
+// respawned bot's phase so it paces continuously out of its spawn instead of
+// teleporting to wherever the sinusoid currently sits.
+static constexpr float PACE_W   = 0.6f;   // angular speed (rad/s)
+static constexpr float PACE_AMP = 1.5f;   // pace amplitude (m), kept small to avoid overlap
+
 static void PaceBot(NetPlayerState& s, const DirectX::XMFLOAT3& base,
                     float serverTime, float phase)
 {
-    constexpr float w   = 0.6f;   // angular speed (rad/s)
-    constexpr float amp = 1.5f;   // pace amplitude (m), kept small to avoid overlap
-    const float a = serverTime * w + phase;
-    s.position = { base.x + sinf(a) * amp, base.y, base.z };
-    s.velocity = { cosf(a) * amp * w, 0.0f, 0.0f };
+    const float a = serverTime * PACE_W + phase;
+    s.position = { base.x + sinf(a) * PACE_AMP, base.y, base.z };
+    s.velocity = { cosf(a) * PACE_AMP * PACE_W, 0.0f, 0.0f };
 }
 
 //-----------------------------------------------------------------------------
@@ -840,8 +844,8 @@ static void PaceBot(NetPlayerState& s, const DirectX::XMFLOAT3& base,
 // tick into its wire state. Dead bots hold still and count down to respawn.
 // Movement is identical to before — only the combat/fire behaviour is new.
 //
-// NOTE: the pace peaks at amp*w = 0.9 m/s, so the 100ms interpolation delay
-// displaces a rendered bot only ~0.09m — inside the 0.3m capsule radius. The
+// NOTE: the pace peaks at amp*w = 0.9 m/s, so the 62.5ms interpolation delay
+// displaces a rendered bot only ~0.056m — inside the 0.3m capsule radius. The
 // server-side rewind below still runs (so fast-moving bots stay hittable), but
 // at this speed it is no longer required to land tracking shots.
 //-----------------------------------------------------------------------------
@@ -957,6 +961,12 @@ void MockServer::RespawnBot(Bot& b, int index)
     s.health = MAX_HEALTH;
     s.position = b.base;
     s.velocity = { 0.0f, 0.0f, 0.0f };
+
+    // Re-anchor the pace sinusoid so sin()==0 (position == base) at THIS instant.
+    // Otherwise next tick's PaceBot evaluates the sine wherever it happens to be
+    // and snaps the just-respawned bot up to ±PACE_AMP (1.5m) away in a single
+    // tick — the visible "respawn teleport". This keeps respawn->pace continuous.
+    b.phase = -static_cast<float>(m_ServerTime) * PACE_W;
     s.stateFlags &= ~(NetStateFlags::IS_DEAD | NetStateFlags::IS_FIRING |
                       NetStateFlags::IS_RELOADING | NetStateFlags::IS_RELOAD_EMPTY);
     s.stateFlags |= NetStateFlags::IS_GROUNDED;

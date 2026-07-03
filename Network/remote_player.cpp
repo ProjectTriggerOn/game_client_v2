@@ -351,6 +351,50 @@ void RemotePlayer::Update(double elapsed_time, double currentTime)
 //-----------------------------------------------------------------------------
 void RemotePlayer::InterpolateBetween(const RemoteSnapshot& a, const RemoteSnapshot& b, double renderTime)
 {
+    // =========================================================================
+    // RESPAWN / TELEPORT GUARD
+    // On respawn the server teleports a player from their death spot to the
+    // spawn point and clears IS_DEAD on the *same* snapshot. Lerping across
+    // that jump would drag the model across the map (a rubber-band slide) at the
+    // very moment it becomes visible again. Snap to the newer snapshot 'b'
+    // instead of interpolating whenever the two bracketing snapshots either:
+    //   (1) differ in IS_DEAD — the load-bearing trigger: a death or respawn
+    //       always toggles this bit, and the dead->alive bracket is present for
+    //       the whole ~2s respawn window, so it is reliably observed (this is
+    //       what catches mock bots, whose spawn is only ~1.5m from the death
+    //       spot); or
+    //   (2) are farther apart than a player could plausibly have MOVED during
+    //       the snapshot pair's own time gap — a defensive catch for any real
+    //       teleport whose IS_DEAD edge we somehow missed. The bound SCALES with
+    //       the gap (maxSpeed * dt), so heavy packet loss on a genuinely fast
+    //       enemy is never mistaken for a teleport and force-snapped.
+    // =========================================================================
+    const bool aDead = (a.state.stateFlags & NetStateFlags::IS_DEAD) != 0;
+    const bool bDead = (b.state.stateFlags & NetStateFlags::IS_DEAD) != 0;
+
+    const float dx = b.state.position.x - a.state.position.x;
+    const float dy = b.state.position.y - a.state.position.y;
+    const float dz = b.state.position.z - a.state.position.z;
+    const float jumpSq = dx * dx + dy * dy + dz * dz;
+
+    // Max plausible displacement over the real snapshot gap: comfortably above
+    // run speed (8 m/s) plus vertical jump/fall headroom, with slack for jitter.
+    // A cross-map respawn teleport far exceeds this; a fast player bridging a
+    // few dropped snapshots stays under it, so it lerps smoothly as intended.
+    const double gap = b.receiveTime - a.receiveTime;
+    const float maxStep = 14.0f * static_cast<float>(gap > 0.0 ? gap : 0.0) + 0.5f;
+
+    if (aDead != bDead || jumpSq > maxStep * maxStep)
+    {
+        m_RenderPosition = b.state.position;
+        m_Velocity       = b.state.velocity;
+        m_Yaw            = b.state.yaw;
+        m_Pitch          = b.state.pitch;
+        m_StateFlags     = b.state.stateFlags;
+        m_LerpFactor     = 1.0f;
+        return;
+    }
+
     double duration = b.receiveTime - a.receiveTime;
     if (duration <= 0.0) duration = 0.001;
     

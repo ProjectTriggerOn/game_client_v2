@@ -6,7 +6,7 @@
 // 
 // Sync Strategy: INTERPOLATION + EXTRAPOLATION (with snapshot buffer)
 //   - Maintains buffer of recent server snapshots
-//   - Render time is delayed by ~100ms for interpolation
+//   - Render time is delayed by ~62.5ms for interpolation
 //   - Interpolates between snapshots for smooth movement
 //   - Extrapolates if no recent data (packet loss)
 //   - Snaps if too far behind
@@ -35,7 +35,7 @@ public:
     // Interpolation timing constants (single source of truth — also used by
     // Game_GetViewTick() to compute the view tick reported for lag comp)
     //-------------------------------------------------------------------------
-    static constexpr double INTERPOLATION_DELAY = 0.1;    // render 100ms behind newest data
+    static constexpr double INTERPOLATION_DELAY = 0.0625; // render 62.5ms (2 snapshot ticks @ 32Hz) behind newest data
     static constexpr double MAX_EXTRAPOLATION_TIME = 0.15; // beyond this, render SNAPs to newest
 
     RemotePlayer();
@@ -90,7 +90,18 @@ public:
     std::string GetWeaponStateString() const;
     std::string GetMoveDirectionString() const;
     
-    void SetActive(bool active) { m_IsActive = active; }
+    void SetActive(bool active)
+    {
+        // On an inactive->active edge (a remote id reappearing after being
+        // dropped from a snapshot, e.g. a disconnect/reconnect), discard any
+        // snapshots buffered before the gap. Otherwise the first Update after
+        // reactivation could interpolate across the multi-second receiveTime
+        // discontinuity between the stale entry and the fresh one and rubber-
+        // band the model from its old position — the same rubber-band artifact the
+        // respawn guard in InterpolateBetween prevents, on the reconnect path.
+        if (active && !m_IsActive) m_SnapshotBuffer.clear();
+        m_IsActive = active;
+    }
     void SetTeam(uint8_t teamId);
     uint8_t GetTeam() const { return m_TeamId; }
 
@@ -111,7 +122,7 @@ private:
     static const size_t MAX_BUFFER_SIZE = 32;
     
     // Interpolation parameters
-    double m_InterpolationDelay;    // How far behind real-time we render (100ms)
+    double m_InterpolationDelay;    // How far behind real-time we render (62.5ms)
     double m_MaxExtrapolationTime;  // Max time to extrapolate (150ms)
     
     // Render state (what we display)
