@@ -34,6 +34,23 @@ UI::D3D11BitmapRenderer                  g_d3d_renderer;
 std::unique_ptr<UI::UIFileSystem>        g_filesystem;  // must outlive the View; Ultralight keeps a raw pointer
 int g_width = 0, g_height = 0;
 
+// Monitor DPI zoom (dpi/96). The effective device scale is derived from this and
+// the current surface width so the CSS viewport stays >= ~1280 (see DeviceScaleFor).
+float g_dpiScale = 1.0f;
+// The device scale currently applied to the View. Input event coordinates must be
+// divided by this: Ultralight's MouseEvent x/y are PAGE units, but WndProc taps
+// client (screen) pixels, and device_scale maps page units → screen pixels
+// (View.h). At scale 1.0 they're equal; above it they diverge and hover/clicks
+// land off by the scale factor.
+float g_deviceScale = 1.0f;
+float DeviceScaleFor(int w) {
+    float s = g_dpiScale;
+    const float capByWidth = (w > 0) ? (float)w / 1280.0f : s;  // keep CSS width >= 1280
+    if (s > capByWidth) s = capByWidth;
+    if (s < 1.0f) s = 1.0f;
+    return s;
+}
+
 // Slice C: single global value; Slice E will drive this from OnGameStateChanged.
 // Defaults to Interactive — we boot into the title page, which is interactive.
 UI::InteractiveLevel g_interactiveLevel = UI::InteractiveLevel::Interactive;
@@ -85,6 +102,7 @@ struct PendingHud {
     bool sbVisDirty  = false; bool sbVisible = false;
     bool sbDataDirty = false; std::string sbJson;
     bool resultDirty = false; std::string resultJson;
+    bool revertDirty = false; int  revertSec  = 0;
 };
 PendingHud g_pendingHud;
 // Kill-feed events are discrete, so they queue (not a dirty flag): every kill
@@ -112,9 +130,10 @@ std::string GetUiRoot() {
 
 namespace UI {
 
-void Initialize(ID3D11Device* dev, ID3D11DeviceContext* ctx, int w, int h) {
+void Initialize(ID3D11Device* dev, ID3D11DeviceContext* ctx, int w, int h, float dpiScale) {
     g_width  = w;
     g_height = h;
+    g_dpiScale = (dpiScale > 0.0f) ? dpiScale : 1.0f;
 
     // 1. Config — resource_path_prefix must be exe-relative, otherwise we crash
     //    whenever the CWD is wrong (see docs/ultralight_integration.md §3.5)
@@ -147,7 +166,8 @@ void Initialize(ID3D11Device* dev, ID3D11DeviceContext* ctx, int w, int h) {
     ultralight::ViewConfig vc;
     vc.is_accelerated = false;        // CPU / BitmapSurface path
     vc.is_transparent = true;         // unpainted HTML regions reveal the 3D scene underneath
-    vc.initial_device_scale = 1.0;
+    g_deviceScale = DeviceScaleFor(w);
+    vc.initial_device_scale = (double)g_deviceScale;  // DPI zoom, clamped by width
     g_view = g_renderer->CreateView((uint32_t)w, (uint32_t)h, vc, nullptr);
     if (!g_view) {
         OutputDebugStringA("[UI] CreateView failed\n");
@@ -169,6 +189,21 @@ void Initialize(ID3D11Device* dev, ID3D11DeviceContext* ctx, int w, int h) {
 #if defined(_DEBUG) || defined(DEBUG)
     HotReload::Start(GetUiRoot().c_str());
 #endif
+}
+
+void Resize(int w, int h) {
+    if (w <= 0 || h <= 0) return;
+    if (w == g_width && h == g_height) return;
+    // View::Resize keeps the page, JS context and listeners; Ultralight marks the
+    // whole surface dirty, so the next Render re-uploads a full-size frame.
+    if (g_view) {
+        g_view->Resize((uint32_t)w, (uint32_t)h);
+        g_deviceScale = DeviceScaleFor(w);                    // larger surface → more scale
+        g_view->set_device_scale((double)g_deviceScale);
+    }
+    g_d3d_renderer.Resize(w, h);
+    g_width  = w;
+    g_height = h;
 }
 
 void Render() {
@@ -215,6 +250,10 @@ void Render() {
     if (g_pendingHud.resultDirty) {
         UI::Bridge::PushMatchResult(g_pendingHud.resultJson.c_str());
         g_pendingHud.resultDirty = false;
+    }
+    if (g_pendingHud.revertDirty) {
+        UI::Bridge::PushDisplayRevertTick(g_pendingHud.revertSec);
+        g_pendingHud.revertDirty = false;
     }
     for (const auto& k : g_pendingKills) {
         UI::Bridge::PushKillFeed(k[0], k[1], k[2], k[3]);
@@ -292,6 +331,9 @@ void PushScoreboardVisible(bool visible) {
 void PushMatchResult(const char* json) {
     if (json) { g_pendingHud.resultJson = json; g_pendingHud.resultDirty = true; }
 }
+void PushDisplayRevertTick(int secondsLeft) {
+    g_pendingHud.revertSec = secondsLeft; g_pendingHud.revertDirty = true;
+}
 
 void ProcessInput() {
     UIInputEvent ev;
@@ -346,8 +388,10 @@ void ProcessInput() {
             me.type = (ev.type == UIInputType::MouseMove) ? ultralight::MouseEvent::kType_MouseMoved
                     : (ev.type == UIInputType::MouseDown) ? ultralight::MouseEvent::kType_MouseDown
                                                           : ultralight::MouseEvent::kType_MouseUp;
-            me.x      = ev.mouse_x;
-            me.y      = ev.mouse_y;
+            // Client (screen) pixels → page units (Ultralight expects page units).
+            const float inv = (g_deviceScale > 0.0f) ? (1.0f / g_deviceScale) : 1.0f;
+            me.x      = (int)(ev.mouse_x * inv);
+            me.y      = (int)(ev.mouse_y * inv);
             me.button = (ultralight::MouseEvent::Button)ev.mouse_button;
             g_view->FireMouseEvent(me);
             break;

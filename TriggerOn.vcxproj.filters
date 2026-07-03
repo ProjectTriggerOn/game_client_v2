@@ -39,6 +39,9 @@
     <ClCompile Include="Core\direct3d.cpp">
       <Filter>Core</Filter>
     </ClCompile>
+    <ClCompile Include="Core\display_manager.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
     <ClCompile Include="Core\system_timer.cpp">
       <Filter>Core</Filter>
     </ClCompile>
@@ -195,6 +198,9 @@
       <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="Core\direct3d.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\display_manager.h">
       <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="Core\system_timer.h">

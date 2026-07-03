@@ -10,8 +10,9 @@
 }
 
 #page-settings .settings-form{
-  position:absolute;left:8%;top:24%;width:52%;max-width:640px;
+  position:absolute;left:8%;top:24%;bottom:22%;width:52%;max-width:640px;
   display:flex;flex-direction:column;gap:2px;
+  overflow-y:auto;padding-right:8px;
 }
 #page-settings .set-row{
   display:flex;align-items:center;gap:16px;padding:14px 16px;
@@ -45,6 +46,66 @@
 #page-settings input[type=checkbox]:checked{background:var(--ui-cyan-dim);border-color:var(--ui-cyan);}
 #page-settings input[type=checkbox]:checked::before{transform:translateX(24px);background:var(--ui-cyan);}
 
+/* ---- dropdowns ---------------------------------------------------------------
+   Ultralight renders the native <select> popup as an unstyled white OS list, so
+   settings.js replaces it with a custom list (see enhanceSelect). The <select>
+   stays in the DOM (hidden) as the value source; the .dd-trigger + .dd-list below
+   are the visible control. The native select keeps the same face for graceful
+   fallback if the JS enhancement doesn't run. ---- */
+
+/* shared control face: dark fill, hairline border, sharp corners, grey chevron */
+#page-settings .set-select{width:230px;flex:0 0 auto;}
+#page-settings .dd{width:230px;flex:0 0 auto;position:relative;}
+#page-settings .dd-trigger{width:100%;}
+#page-settings .set-select,
+#page-settings .dd-trigger{
+  box-sizing:border-box;height:36px;padding:6px 34px 6px 13px;text-align:left;
+  color:var(--ui-text);font-family:var(--ui-font);font-size:15px;letter-spacing:.3px;
+  background-color:rgba(0,0,0,0.32);border:1px solid var(--ui-divider);border-radius:0;
+  background-repeat:no-repeat;background-position:right 12px center;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7' viewBox='0 0 11 7'%3E%3Cpath d='M1 1L5.5 5.5 10 1' fill='none' stroke='%23bdc4c7' stroke-width='1.4'/%3E%3C/svg%3E");
+  -webkit-appearance:none;appearance:none;cursor:pointer;outline:none;
+  transition:border-color .12s,background-color .12s;
+}
+#page-settings .set-select:hover,#page-settings .set-select:focus,
+#page-settings .dd-trigger:hover,#page-settings .dd.open>.dd-trigger{
+  border-color:var(--ui-cyan);background-color:var(--ui-cyan-dim);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7' viewBox='0 0 11 7'%3E%3Cpath d='M1 1L5.5 5.5 10 1' fill='none' stroke='%2379dcf6' stroke-width='1.6'/%3E%3C/svg%3E");
+}
+#page-settings .set-select:disabled,#page-settings .dd-disabled>.dd-trigger{opacity:.38;cursor:not-allowed;}
+#page-settings .set-select.dd-native{display:none;}   /* enhanced: hide the native select */
+#page-settings .dd-trigger .dd-label{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+/* the styled option list — fixed-positioned by JS so the form's overflow can't clip it */
+#page-settings .dd-list{
+  position:fixed;z-index:200;display:none;min-width:230px;padding:2px 0;
+  background:var(--ui-panel-solid);border:1px solid var(--ui-cyan);
+  box-shadow:0 10px 26px rgba(0,0,0,0.55);overflow-y:auto;
+}
+#page-settings .dd.open>.dd-list{display:block;}
+#page-settings .dd-opt{
+  position:relative;padding:9px 14px;font-family:var(--ui-font);font-size:15px;
+  color:var(--ui-text-2);cursor:pointer;white-space:nowrap;transition:background .1s,color .1s;
+}
+#page-settings .dd-opt::before{
+  content:"";position:absolute;left:0;top:0;bottom:0;width:3px;
+  background:var(--ui-cyan);opacity:0;transition:opacity .1s;
+}
+#page-settings .dd-opt:hover{background:var(--ui-cyan-dim);color:#fff;}
+#page-settings .dd-opt:hover::before{opacity:1;}
+#page-settings .dd-opt.sel{color:var(--ui-cyan);background:rgba(121,220,246,0.10);}
+#page-settings .dd-opt.sel::before{opacity:1;}
+
+/* thin COD-style scrollbar for the form + the dropdown list */
+#page-settings .settings-form::-webkit-scrollbar,
+#page-settings .dd-list::-webkit-scrollbar{width:8px;}
+#page-settings .settings-form::-webkit-scrollbar-track,
+#page-settings .dd-list::-webkit-scrollbar-track{background:rgba(0,0,0,0.22);}
+#page-settings .settings-form::-webkit-scrollbar-thumb,
+#page-settings .dd-list::-webkit-scrollbar-thumb{background:var(--ui-divider);}
+#page-settings .settings-form::-webkit-scrollbar-thumb:hover,
+#page-settings .dd-list::-webkit-scrollbar-thumb:hover{background:rgba(121,220,246,0.45);}
+
 /* actions */
 #page-settings .settings-actions{position:absolute;left:8%;bottom:14%;display:flex;gap:14px;}
 #page-settings .settings-actions button{
@@ -58,6 +119,36 @@
   outline:none;border-color:var(--ui-cyan);color:var(--ui-cyan);background:var(--ui-cyan-dim);
 }
 #page-settings #set-save{border-color:rgba(121,220,246,0.5);color:var(--ui-cyan);}
+#page-settings #set-apply{border-color:rgba(121,220,246,0.5);color:var(--ui-cyan);}
+
+/* display-settings revert countdown modal */
+#page-settings .revert-modal{
+  position:absolute;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;
+  background:rgba(4,7,10,0.62);
+}
+#page-settings .revert-modal.hidden{display:none;}
+#page-settings .revert-box{
+  background:var(--ui-bg);border:1px solid var(--ui-cyan);
+  padding:28px 34px;min-width:360px;text-align:center;
+  box-shadow:0 0 24px rgba(0,0,0,0.6);
+}
+#page-settings .revert-title{
+  font-family:var(--ui-font);font-weight:600;font-size:20px;letter-spacing:2px;
+  color:var(--ui-text);margin-bottom:10px;
+}
+#page-settings .revert-count{font-family:var(--ui-mono);color:var(--ui-cyan);margin-bottom:20px;}
+#page-settings .revert-actions{display:flex;gap:14px;justify-content:center;}
+#page-settings .revert-actions button{
+  font-family:var(--ui-font);font-size:14px;font-weight:600;letter-spacing:3px;text-transform:uppercase;
+  padding:10px 24px;cursor:pointer;background:rgba(255,255,255,0.04);
+  border:1px solid var(--ui-divider);color:var(--ui-text);
+  transition:border-color .12s,color .12s,background .12s;
+}
+#page-settings .revert-actions button:hover,
+#page-settings .revert-actions button:focus{
+  outline:none;border-color:var(--ui-cyan);color:var(--ui-cyan);background:var(--ui-cyan-dim);
+}
+#page-settings #revert-keep{border-color:var(--ui-cyan);color:var(--ui-cyan);}
 
 #page-settings .settings-hint{
   position:absolute;left:0;right:0;bottom:0;height:44px;display:flex;align-items:center;

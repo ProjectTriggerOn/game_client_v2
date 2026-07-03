@@ -7,6 +7,7 @@
 #include "keyboard.h"
 #include "mouse.h"
 #include "ui_input_queue.h"
+#include "display_manager.h"
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 // ---------------------------------------------------------------------------
@@ -121,8 +122,15 @@ HWND GameWindow_Generate(HINSTANCE hInstance)
 	RegisterClassExW(&wcex);
 	/* メインウインドウの作成 */
 
-	const int SCREEN_WIDTH  = Config::GetInstance().GetInt("client", "window_width",  1920);
-	const int SCREEN_HEIGHT = Config::GetInstance().GetInt("client", "window_height", 1080);
+	// Prefer [display].width/height; fall back to legacy [client]; then hard
+	// default. 0 = "Native/Auto" sentinel → fall back to [client] here (the
+	// window is always created windowed; DisplayManager applies the persisted
+	// mode/resolution once D3D + UI are up). See Core/display_manager.cpp.
+	auto& cfg = Config::GetInstance();
+	const int dispW = (int)cfg.Get("display.width").AsInt();
+	const int dispH = (int)cfg.Get("display.height").AsInt();
+	const int SCREEN_WIDTH  = dispW > 0 ? dispW : cfg.GetInt("client", "window_width",  1920);
+	const int SCREEN_HEIGHT = dispH > 0 ? dispH : cfg.GetInt("client", "window_height", 1080);
 	DWORD WINDOW_STYLE = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
 	RECT window_rect{
 		0,0,SCREEN_WIDTH,SCREEN_HEIGHT
@@ -169,7 +177,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_ACTIVATEAPP:
 		Keyboard_ProcessMessage(message, wParam, lParam);
 		Mouse_ProcessMessage(message, wParam, lParam);
+		Display::OnActivateApp(wParam == TRUE);   // exclusive-fullscreen alt-tab
 		break;
+	case WM_SIZE:
+		// Resize funnel: DisplayManager rebuilds the swap chain + UI. Skip
+		// minimize (0×0). Both programmatic (SetWindowPos) and DXGI-generated
+		// (exclusive mode switch / alt-tab) WM_SIZE land here; OnWindowResize is
+		// idempotent, so duplicate/imperative calls collapse to one resize.
+		if (wParam != SIZE_MINIMIZED)
+			Display::OnWindowResize(LOWORD(lParam), HIWORD(lParam));
+		return 0;
 	case WM_INPUT:
 	case WM_MOUSEMOVE:
 	case WM_LBUTTONDOWN:

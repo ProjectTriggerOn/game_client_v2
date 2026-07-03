@@ -36,6 +36,9 @@ namespace
 
 	// Mouse sensitivity
 	float g_Sensitivity = 0.002f;
+
+	// Vertical FOV in radians (driven live by config key display.fov, in degrees)
+	float g_Fov = XM_PIDIV4;   // 45° default
 }
 
 void PlayerCamFps_Initialize()
@@ -56,6 +59,13 @@ void PlayerCamFps_Initialize()
 		              [](const ConfigValue& v) { g_Sensitivity = (float)v.AsFloat(); });
 		cfg.Subscribe("input.invert_y",
 		              [](const ConfigValue& v) { g_invertY = v.AsBool(); });
+		// FOV adjustment is DISABLED for now: changing FOV distorts the first-person
+		// viewmodel (weapon/arms), which needs a separate viewmodel FOV compensation
+		// that isn't implemented yet. g_Fov stays at its XM_PIDIV4 default so the
+		// projection keeps the original 45°. Re-enable by uncommenting this once the
+		// viewmodel compensation lands (and un-hide the FOV row in settings.html).
+		// cfg.Subscribe("display.fov",
+		//               [](const ConfigValue& v) { g_Fov = XMConvertToRadians((float)v.AsFloat()); });
 	}
 
 	g_DebugText = new hal::DebugText(Direct3D_GetDevice(), Direct3D_GetDeviceContext(),
@@ -116,7 +126,7 @@ void PlayerCamFps_Update([[maybe_unused]] double elapsed_time, const DirectX::XM
 
 	// 6. Projection Matrix
 	float aspectRatio = static_cast<float>(Direct3D_GetBackBufferWidth()) / static_cast<float>(Direct3D_GetBackBufferHeight());
-	float fov = XM_PIDIV4; // 45 degrees
+	float fov = g_Fov; // vertical FOV (radians), from config key display.fov
 	float nearZ = 0.1f;
 	float farZ = 1000.0f;
 	XMMATRIX projection = XMMatrixPerspectiveFovLH(fov, aspectRatio, nearZ, farZ);

@@ -4,6 +4,7 @@
 #include "config.h"
 #include "scene.h"
 #include "game.h"
+#include "display_manager.h"
 
 #include <Ultralight/View.h>
 #include <AppCore/JSHelpers.h>
@@ -102,6 +103,12 @@ void CallJsFnStr(const char* fnName, const char* s) {
 std::string JSValueToStdString(const JSValue& v) {
     String s = ((JSValue&)v).ToString();
     return std::string(s.utf8().data());
+}
+
+// JS number → int. Bind to a named lvalue first (the JSHelpers accessors are
+// non-const); casting args[i] directly would trip C4238 (rvalue used as lvalue).
+int JSValueToInt(const JSValue& v) {
+    return (int)((JSValue&)v).ToNumber();
 }
 
 // JS number/bool/string → ConfigValue (Config::Set preserves integer-ness of
@@ -217,6 +224,42 @@ void Register(ultralight::View* view) {
         DebugLog("[UI:bridge] game.saveConfig ", ok ? "ok" : "FAILED");
     };
 
+    // --- display settings -----------------------------------------------------
+    //
+    // getDisplayInfo returns cached DXGI data (monitors + modes + current
+    // settings) as a JSON string the page JSON.parses — read-only, so it's safe
+    // synchronously here. apply/confirm/revert only STAGE a request; the actual
+    // window + swap-chain change runs in Display::Update on the main loop (poking
+    // the window inside a JS callback would pump messages and re-enter WndProc).
+
+    game["getDisplayInfo"] = (JSCallbackWithRetval)[](const JSObject&, const JSArgs&) -> JSValue {
+        const std::string json = Display::GetInfoJson();
+        return JSValue(json.c_str());   // JS side JSON.parses it
+    };
+
+    game["applyDisplaySettings"] = (JSCallback)[](const JSObject&, const JSArgs& args) {
+        if (args.size() < 4) return;
+        const std::string m = JSValueToStdString(args[0]);
+        Display::Mode mode = (m == "borderless") ? Display::Mode::Borderless
+                           : (m == "exclusive")  ? Display::Mode::Exclusive
+                                                 : Display::Mode::Windowed;
+        const int w   = JSValueToInt(args[1]);
+        const int h   = JSValueToInt(args[2]);
+        const int mon = JSValueToInt(args[3]);
+        DebugLog("[UI:bridge] game.applyDisplaySettings ", m);
+        Display::RequestApply(mode, w, h, mon);   // staged; executed in Display::Update
+    };
+
+    game["confirmDisplaySettings"] = (JSCallback)[](const JSObject&, const JSArgs&) {
+        DebugLog("[UI:bridge] game.confirmDisplaySettings", "");
+        Display::RequestConfirm();
+    };
+
+    game["revertDisplaySettings"] = (JSCallback)[](const JSObject&, const JSArgs&) {
+        DebugLog("[UI:bridge] game.revertDisplaySettings", "");
+        Display::RequestRevert();
+    };
+
     // --- misc -----------------------------------------------------------------
 
     game["getPlayerList"] = (JSCallbackWithRetval)[](const JSObject&, const JSArgs&) -> JSValue {
@@ -282,6 +325,10 @@ void PushScoreboardVisible(bool visible) {
 
 void PushMatchResult(const char* json) {
     CallJsFnStr("onMatchResult", json);
+}
+
+void PushDisplayRevertTick(int secondsLeft) {
+    CallJsFn1("onDisplayRevertTick", (double)secondsLeft);
 }
 
 }  // namespace Bridge

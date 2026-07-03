@@ -16,8 +16,41 @@ local_host  = "127.0.0.1"
 remote_host = "127.0.0.1"
 
 [client]
+# Legacy window size (kept for back-compat). Display settings below take
+# precedence when [display].width/height are > 0. See Core/display_manager.
 window_width  = 1920
 window_height = 1080
+
+# =============================================================================
+# Display / window settings (Core/display_manager.cpp).
+#   mode / width / height / monitor_index change through the settings-page
+#   APPLY button and are confirmed with a 15s auto-revert (a bad/black-screen
+#   mode restores itself). vsync / fov / max_fps apply live like input.*.
+# =============================================================================
+[display]
+# Display mode: "windowed" | "borderless" | "exclusive"
+#   windowed   — bordered, non-resizable, centered on the chosen monitor
+#   borderless — WS_POPUP covering the whole monitor (always native resolution)
+#   exclusive  — true DXGI fullscreen + mode switch (honors width/height)
+mode          = "windowed"
+
+# Render resolution. 0 = "Native/Auto": borderless/exclusive use the monitor's
+# desktop resolution; windowed falls back to [client].window_width/height (a
+# desktop-sized *window* would overflow its title bar). Concrete values are
+# honored as-is in windowed and exclusive; borderless is always native.
+width         = 1920
+height        = 1080
+
+# UI filter only (does not affect rendering): "all" | "16:9" | "16:10" | "21:9" | "4:3"
+aspect_ratio  = "all"
+
+# DXGI output index (0 = primary) — which monitor the game targets.
+monitor_index = 0
+
+# --- live keys (apply instantly via Config subscribers, no confirm dialog) ---
+vsync         = true    # Present() sync interval 1 vs 0
+fov           = 90.0    # FPS camera VERTICAL field of view, in degrees
+max_fps       = 0       # frame cap; 0 = uncapped (only bites when vsync = false)
 
 # =============================================================================
 # Generic file logger (single-threaded). See Core/debug_log.h.
