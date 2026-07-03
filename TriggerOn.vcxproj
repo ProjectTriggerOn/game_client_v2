@@ -183,6 +183,7 @@ if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ui_src" "
     <ClCompile Include="Core\debug_ostream.cpp" />
     <ClCompile Include="Core\debug_text.cpp" />
     <ClCompile Include="Core\direct3d.cpp" />
+    <ClCompile Include="Core\display_manager.cpp" />
     <ClCompile Include="Graphics\effect.cpp" />
     <ClCompile Include="Graphics\fade.cpp" />
     <ClCompile Include="Game\game.cpp" />
@@ -249,6 +250,7 @@ if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ui_src" "
     <ClInclude Include="Core\debug_log.h" />
     <ClInclude Include="Core\debug_text.h" />
     <ClInclude Include="Core\direct3d.h" />
+    <ClInclude Include="Core\display_manager.h" />
     <ClInclude Include="Graphics\effect.h" />
     <ClInclude Include="Graphics\fade.h" />
     <ClInclude Include="Game\game.h" />

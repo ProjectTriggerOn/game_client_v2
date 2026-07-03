@@ -1,13 +1,22 @@
 #include <d3d11.h>
+#include <dxgi1_5.h>   // IDXGIFactory5 / DXGI_FEATURE_PRESENT_ALLOW_TEARING
 #include "direct3d.h"
 #include "debug_ostream.h"
 
 #pragma comment(lib, "d3d11.lib")
+#pragma comment(lib, "dxgi.lib")
 
 // Direct3D interfaces (singleton state)
 static ID3D11Device* g_pDevice = nullptr;
 static ID3D11DeviceContext* g_pDeviceContext = nullptr;
 static IDXGISwapChain* g_pSwapChain = nullptr;
+
+// Swap-chain flags decided at creation. ResizeBuffers MUST reuse the exact same
+// flags (mandatory for ALLOW_MODE_SWITCH / ALLOW_TEARING). VSync interval and
+// tearing capability drive Present.
+static UINT g_SwapChainFlags = 0;
+static UINT g_VSyncInterval  = 1;      // 1 = VSync on (Config subscriber overrides)
+static bool g_AllowTearing   = false;  // true only when the OS/driver supports it
 static ID3D11BlendState* g_pBlendStateMultiply = nullptr;
 static ID3D11DepthStencilState* g_pDepthStencilStateDepthDisable = nullptr;
 static ID3D11DepthStencilState* g_pDepthStencilStateDepthEnable = nullptr;
@@ -25,8 +34,28 @@ static bool configureBackBuffer();
 static void releaseBackBuffer();
 
 
+// Probe OS/driver support for tearing (uncapped VSync-off) via a temporary
+// factory, before the device exists. Safe no-op on pre-Win10 (QI just fails).
+static bool QueryTearingSupport()
+{
+    IDXGIFactory5* factory5 = nullptr;
+    if (FAILED(CreateDXGIFactory1(IID_PPV_ARGS(&factory5))) || !factory5)
+        return false;
+    BOOL allow = FALSE;
+    HRESULT hr = factory5->CheckFeatureSupport(
+        DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allow, sizeof(allow));
+    factory5->Release();
+    return SUCCEEDED(hr) && allow;
+}
+
 bool Direct3D_Initialize(HWND hWnd)
 {
+    // Mode switch is required for exclusive-fullscreen resolution changes;
+    // tearing is added only when supported (used by an uncapped, VSync-off cap).
+    g_AllowTearing   = QueryTearingSupport();
+    g_SwapChainFlags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH
+                     | (g_AllowTearing ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0u);
+
     DXGI_SWAP_CHAIN_DESC swap_chain_desc{};
     swap_chain_desc.Windowed = TRUE;
     swap_chain_desc.BufferCount = 2;
@@ -37,6 +66,7 @@ bool Direct3D_Initialize(HWND hWnd)
     swap_chain_desc.SampleDesc.Quality = 0;
     swap_chain_desc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
     swap_chain_desc.OutputWindow = hWnd;
+    swap_chain_desc.Flags = g_SwapChainFlags;
 
 	UINT device_flags = 0;
 
@@ -69,6 +99,16 @@ bool Direct3D_Initialize(HWND hWnd)
 		MessageBox(hWnd, "Direct3Dの初期化に失敗しました", "エラー", MB_OK);
         return false;
     }
+
+	// Own Alt+Enter ourselves: DisplayManager drives all mode switches, so DXGI
+	// must not toggle fullscreen behind its back (that would desync g_current).
+	{
+		IDXGIFactory* factory = nullptr;
+		if (SUCCEEDED(g_pSwapChain->GetParent(IID_PPV_ARGS(&factory))) && factory) {
+			factory->MakeWindowAssociation(hWnd, DXGI_MWA_NO_ALT_ENTER);
+			factory->Release();
+		}
+	}
 
 	if (!configureBackBuffer()) {
 		MessageBox(hWnd, "バックバッファの設定に失敗しました", "エラー", MB_OK);
@@ -133,9 +173,65 @@ void Direct3D_Finalize()
 
 	releaseBackBuffer();
 
+	// Releasing a swap chain while in exclusive fullscreen is illegal (DXGI
+	// asserts). Always drop back to windowed first.
+	if (g_pSwapChain) g_pSwapChain->SetFullscreenState(FALSE, nullptr);
+
 	SAFE_RELEASE(g_pSwapChain)
 	SAFE_RELEASE(g_pDeviceContext)
 	SAFE_RELEASE(g_pDevice)
+}
+
+bool Direct3D_Resize(unsigned int width, unsigned int height)
+{
+	if (!g_pSwapChain || width == 0 || height == 0) return false;
+
+	// FLIP model requires every outstanding back-buffer reference released before
+	// ResizeBuffers — releaseBackBuffer() drops the RTV + depth stencil (the only
+	// GetBuffer references we hold).
+	releaseBackBuffer();
+
+	HRESULT hr = g_pSwapChain->ResizeBuffers(
+		0, width, height, DXGI_FORMAT_UNKNOWN, g_SwapChainFlags);
+	if (FAILED(hr)) {
+		hal::dout << "ResizeBuffers failed" << std::endl;
+		return false;
+	}
+
+	// Rebuilds RTV/depth/viewport and re-reads the new size into g_BackBufferDesc,
+	// so Direct3D_GetBackBufferWidth/Height (and every camera's aspect) self-correct.
+	return configureBackBuffer();
+}
+
+void Direct3D_SetVSyncInterval(unsigned int interval)
+{
+	g_VSyncInterval = interval;
+}
+
+bool Direct3D_SetFullscreenState(bool fullscreen, IDXGIOutput* output)
+{
+	if (!g_pSwapChain) return false;
+	return SUCCEEDED(g_pSwapChain->SetFullscreenState(fullscreen ? TRUE : FALSE, output));
+}
+
+bool Direct3D_ResizeTarget(const DXGI_MODE_DESC* mode)
+{
+	if (!g_pSwapChain || !mode) return false;
+	return SUCCEEDED(g_pSwapChain->ResizeTarget(mode));
+}
+
+bool Direct3D_IsFullscreen()
+{
+	if (!g_pSwapChain) return false;
+	BOOL fs = FALSE;
+	g_pSwapChain->GetFullscreenState(&fs, nullptr);
+	return fs == TRUE;
+}
+
+bool Direct3D_FindClosestMode(IDXGIOutput* output, const DXGI_MODE_DESC* want, DXGI_MODE_DESC* got)
+{
+	if (!output || !want || !got || !g_pDevice) return false;
+	return SUCCEEDED(output->FindClosestMatchingMode(want, got, g_pDevice));
 }
 
 void Direct3D_Clear()
@@ -149,7 +245,11 @@ void Direct3D_Clear()
 
 void Direct3D_Present()
 {
-	g_pSwapChain->Present(1, 0);
+	// Tearing (true uncapped) is only legal with sync interval 0, when the OS
+	// supports it, and NOT in exclusive fullscreen.
+	UINT flags = (g_VSyncInterval == 0 && g_AllowTearing && !Direct3D_IsFullscreen())
+		? DXGI_PRESENT_ALLOW_TEARING : 0u;
+	g_pSwapChain->Present(g_VSyncInterval, flags);
 }
 
 unsigned int Direct3D_GetBackBufferWidth()

@@ -12,11 +12,72 @@
             <span class="set-label">Invert Y</span>
             <input id="set-invert" type="checkbox">
         </div>
+
+        <!-- Display mode / resolution / monitor go through APPLY + a 15s revert
+             confirm (a bad mode restores itself). VSync / FOV / Max FPS apply live. -->
+        <div class="set-row">
+            <span class="set-label">Display mode</span>
+            <select id="set-mode" class="set-select">
+                <option value="windowed">Windowed</option>
+                <option value="borderless">Borderless</option>
+                <option value="exclusive">Fullscreen</option>
+            </select>
+        </div>
+        <div class="set-row">
+            <span class="set-label">Monitor</span>
+            <select id="set-monitor" class="set-select"></select>
+        </div>
+        <div class="set-row">
+            <span class="set-label">Aspect ratio</span>
+            <select id="set-aspect" class="set-select">
+                <option value="all">All</option>
+                <option value="16:9">16:9</option>
+                <option value="16:10">16:10</option>
+                <option value="21:9">21:9</option>
+                <option value="4:3">4:3</option>
+            </select>
+        </div>
+        <div class="set-row">
+            <span class="set-label">Resolution</span>
+            <select id="set-res" class="set-select"></select>
+        </div>
+        <div class="set-row">
+            <span class="set-label">VSync</span>
+            <input id="set-vsync" type="checkbox">
+        </div>
+        <!-- Field of view is temporarily hidden: changing FOV distorts the
+             first-person viewmodel until a viewmodel-FOV compensation is added.
+             Re-enable this row + the display.fov subscription in player_cam_fps.cpp. -->
+        <div class="set-row">
+            <span class="set-label">Max FPS</span>
+            <select id="set-maxfps" class="set-select">
+                <option value="0">Uncapped</option>
+                <option value="30">30</option>
+                <option value="60">60</option>
+                <option value="120">120</option>
+                <option value="144">144</option>
+                <option value="240">240</option>
+            </select>
+        </div>
     </div>
 
     <div class="settings-actions">
+        <button id="set-apply" type="button">APPLY</button>
         <button id="set-save" type="button">SAVE</button>
         <button id="set-back" type="button">BACK</button>
     </div>
-    <div class="settings-hint">Changes apply live; SAVE persists them. Esc backs out.</div>
+    <div class="settings-hint">Sensitivity / VSync / Max FPS apply live; APPLY changes the display mode; SAVE persists. Esc backs out.</div>
+
+    <!-- Display-settings revert countdown (C++-owned timer). Hidden by default;
+         window.onDisplayRevertTick(sec) shows/updates it, sec=0 hides it. -->
+    <div id="display-revert" class="revert-modal hidden">
+        <div class="revert-box">
+            <div class="revert-title">Keep these display settings?</div>
+            <div class="revert-count">Reverting in <span id="revert-sec">15</span>s&hellip;</div>
+            <div class="revert-actions">
+                <button id="revert-keep" type="button">KEEP</button>
+                <button id="revert-undo" type="button">REVERT</button>
+            </div>
+        </div>
+    </div>
 </div>

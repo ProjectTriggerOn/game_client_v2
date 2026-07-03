@@ -53,10 +53,17 @@
 #include "mouse_policy.h"
 #include "ui_policy.h"
 #include "ui_manager.h"
+#include "display_manager.h"
+
+#include <timeapi.h>
+#pragma comment(lib, "winmm.lib")   // timeBeginPeriod for the frame limiter
 
 
 //Window procedure prototype claim
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+
+// Frame-cap target time (seconds/frame); 0 = uncapped. Driven by display.max_fps.
+static double g_TargetFrameTime = 0.0;
 
 // Global accessor for MockServer (for debug visualization in mock mode)
 MockServer* g_pMockServer = nullptr;
@@ -75,6 +82,17 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,[[maybe_unused
 
 	// Load global config early so window size settings are available
 	Config::GetInstance().Load("config.toml");
+
+	// Live display keys (Subscribe fires immediately with the persisted value).
+	// VSync only sets a static, so it's safe before Direct3D_Initialize; the
+	// frame cap only bites when VSync is off (see the limiter at end-of-frame).
+	Config::GetInstance().Subscribe("display.vsync", [](const ConfigValue& v) {
+		Direct3D_SetVSyncInterval(v.AsBool() ? 1u : 0u);
+	});
+	Config::GetInstance().Subscribe("display.max_fps", [](const ConfigValue& v) {
+		const int cap = (int)v.AsInt();
+		g_TargetFrameTime = cap > 0 ? 1.0 / (double)cap : 0.0;
+	});
 
 	// Initialize file-only diagnostic logger (no-op if [debug].enable_log = false)
 	DebugLog_Initialize();
@@ -120,9 +138,21 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,[[maybe_unused
 	{
 		RECT rc{};
 		GetClientRect(hWnd, &rc);
+		// Pass the monitor DPI zoom so the UI scales up on high-DPI displays
+		// (UI::Initialize derives the effective device scale per-resolution, capped
+		// so the CSS viewport doesn't crowd the pages). 100% monitors stay at 1.0.
+		const UINT dpi = GetDpiForWindow(hWnd);
+		float dpiScale = (dpi > 0) ? (float)dpi / 96.0f : 1.0f;
+		if (dpiScale < 1.0f) dpiScale = 1.0f;
+		if (dpiScale > 2.0f) dpiScale = 2.0f;   // cap very-high-DPI (250%+) at 2x
 		UI::Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext(),
-		               rc.right - rc.left, rc.bottom - rc.top);
+		               rc.right - rc.left, rc.bottom - rc.top, dpiScale);
 	}
+
+	// Display manager: enumerate monitors/modes and queue the persisted display
+	// mode (applied on the first Update, after ShowWindow, with no revert
+	// countdown). Needs Direct3D (DXGI device) and UI (UI::Resize) already up.
+	Display::Initialize(hWnd);
 
 	// Boot scene selection (config.toml [debug].start_scene = "game" | "title" | "ui_test")
 	{
@@ -228,7 +258,9 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,[[maybe_unused
 
 	Mouse_SetVisible(true);
 
-
+	// Raise the timer resolution so Sleep(1) in the frame limiter is ~1ms, not
+	// the default ~15ms (paired with timeEndPeriod after the loop).
+	timeBeginPeriod(1);
 
 	double exec_last_time = SystemTimer_GetTime();
 	double fps_last_time = exec_last_time;
@@ -311,6 +343,11 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,[[maybe_unused
 
 			SpriteAnime_Update(elapsed_time);
 
+			// Apply any staged display change + drive the revert countdown. Runs
+			// before Direct3D_Clear so a swap-chain resize precedes this frame's
+			// draw (SetWindowPos here fires WM_SIZE → Display::OnWindowResize).
+			Display::Update(elapsed_time);
+
 			Direct3D_Clear();
 
 			Sprite_Begin();
@@ -340,8 +377,23 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,[[maybe_unused
 			Scene_Refresh();
 
 			frame_count++;
+
+			// Frame cap (display.max_fps): only meaningful with VSync off. Coarse
+			// Sleep down to the last ~2ms, then spin. exec_last_time is this
+			// frame's start timestamp (set above).
+			if (g_TargetFrameTime > 0.0) {
+				const double frameEnd = exec_last_time + g_TargetFrameTime;
+				for (;;) {
+					const double now = SystemTimer_GetTime();
+					const double remain = frameEnd - now;
+					if (remain <= 0.0) break;
+					if (remain > 0.002) Sleep(1);
+				}
+			}
 		}
 	} while (msg.message != WM_QUIT);
+
+	timeEndPeriod(1);
 
 	// Network cleanup
 	if (g_NetworkMode == "local" || g_NetworkMode == "remote")
@@ -364,6 +416,9 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,[[maybe_unused
 	Cube_Finalize();
 
 	Scene_Finalize();
+
+	// Leave exclusive fullscreen + release DXGI enum before Direct3D_Finalize.
+	Display::Finalize();
 
 	UI::Finalize();
 

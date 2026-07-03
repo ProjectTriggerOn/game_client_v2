@@ -27,5 +27,8 @@ void PushScoreboard(const char* json);
 void PushScoreboardVisible(bool visible);
 void PushMatchResult(const char* json);
 
+// Display-settings revert countdown → window.onDisplayRevertTick(secondsLeft).
+void PushDisplayRevertTick(int secondsLeft);
+
 }  // namespace Bridge
 }  // namespace UI

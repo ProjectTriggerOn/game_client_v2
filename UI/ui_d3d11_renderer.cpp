@@ -145,6 +145,37 @@ bool D3D11BitmapRenderer::Initialize(ID3D11Device* dev, ID3D11DeviceContext* ctx
     return true;
 }
 
+bool D3D11BitmapRenderer::Resize(int w, int h) {
+    if (!m_device || w <= 0 || h <= 0) return false;
+    if (w == m_width && h == m_height) return true;
+
+    // Only the texture + SRV are size-dependent; shaders/sampler/states stay.
+    SafeRelease(m_srv);
+    SafeRelease(m_texture);
+
+    D3D11_TEXTURE2D_DESC td{};
+    td.Width      = w;
+    td.Height     = h;
+    td.MipLevels  = 1;
+    td.ArraySize  = 1;
+    td.Format     = DXGI_FORMAT_B8G8R8A8_UNORM;
+    td.SampleDesc.Count = 1;
+    td.Usage      = D3D11_USAGE_DYNAMIC;
+    td.BindFlags  = D3D11_BIND_SHADER_RESOURCE;
+    td.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+    if (FAILED(m_device->CreateTexture2D(&td, nullptr, &m_texture))) return false;
+
+    D3D11_SHADER_RESOURCE_VIEW_DESC sd{};
+    sd.Format = td.Format;
+    sd.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+    sd.Texture2D.MipLevels = 1;
+    if (FAILED(m_device->CreateShaderResourceView(m_texture, &sd, &m_srv))) return false;
+
+    m_width  = w;
+    m_height = h;
+    return true;
+}
+
 void D3D11BitmapRenderer::Finalize() {
     SafeRelease(m_raster);
     SafeRelease(m_depth);

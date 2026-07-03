@@ -137,10 +137,13 @@ public:
     {
         const toml::node* node = WalkToNode(dottedKey);
         if (!node) return {};
-        if (auto v = node->value<bool>())        return ConfigValue(*v);
-        if (auto v = node->value<int64_t>())     return ConfigValue(*v);
-        if (auto v = node->value<double>())      return ConfigValue(*v);
-        if (auto v = node->value<std::string>()) return ConfigValue(*v);
+        // Dispatch on the node's EXACT TOML type. value<bool>() coerces integers
+        // (1920 -> true), so probing it first misreads every integer key as 0/1 —
+        // guard each probe with is_*() (same predicates MergeInto uses below).
+        if (node->is_boolean())        { if (auto v = node->value<bool>())        return ConfigValue(*v); }
+        if (node->is_integer())        { if (auto v = node->value<int64_t>())     return ConfigValue(*v); }
+        if (node->is_floating_point()) { if (auto v = node->value<double>())      return ConfigValue(*v); }
+        if (node->is_string())         { if (auto v = node->value<std::string>()) return ConfigValue(*v); }
         return {};
     }
 

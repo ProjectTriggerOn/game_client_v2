@@ -11,6 +11,10 @@ public:
     bool Initialize(ID3D11Device* dev, ID3D11DeviceContext* ctx, int w, int h);
     void Finalize();
 
+    // Recreate only the size-dependent dynamic texture + SRV at the new size
+    // (shaders/sampler/blend/depth/raster are size-independent and preserved).
+    bool Resize(int w, int h);
+
     // Upload pixels from the Ultralight BitmapSurface into the dynamic texture (DISCARD map)
     void UpdateFromBitmap(const void* bgra, int w, int h, int row_bytes);
 

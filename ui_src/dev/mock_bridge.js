@@ -23,16 +23,52 @@
         'audio.master_volume':  1.0,
         'audio.bgm_volume':     0.8,
         'audio.sfx_volume':     1.0,
+        'display.mode':         'windowed',
         'display.fov':          90.0,
-        'display.width':        1920,
-        'display.height':       1080,
-        'display.fullscreen':   false,
+        'display.width':        0,        // 0 = Native/Auto
+        'display.height':       0,
+        'display.aspect_ratio': 'all',
+        'display.monitor_index':0,
         'display.vsync':        true,
+        'display.max_fps':      0,
         'network.mode':         'remote',
         'network.server_port':  7777,
         'network.local_host':   '127.0.0.1',
         'network.remote_host':  '127.0.0.1',
     };
+
+    // Canned monitor/mode enumeration, standing in for the C++ DXGI query.
+    const MOCK_MONITORS = [
+        { index: 0, name: '\\\\.\\DISPLAY1', primary: true,
+          desktop: { width: 2560, height: 1440, refresh: 144 },
+          modes: [
+            { width: 3440, height: 1440 }, { width: 2560, height: 1440 },
+            { width: 2560, height: 1080 }, { width: 1920, height: 1200 },
+            { width: 1920, height: 1080 }, { width: 1680, height: 1050 },
+            { width: 1600, height: 900 },  { width: 1280, height: 1024 },
+            { width: 1280, height: 720 },  { width: 1024, height: 768 },
+          ] },
+        { index: 1, name: '\\\\.\\DISPLAY2', primary: false,
+          desktop: { width: 1920, height: 1080, refresh: 60 },
+          modes: [
+            { width: 1920, height: 1080 }, { width: 1600, height: 900 },
+            { width: 1280, height: 720 },  { width: 1024, height: 768 },
+          ] },
+    ];
+
+    // Mock C++-owned revert countdown (setInterval stand-in for Display::Update).
+    let revertTimer = null;
+    function stopRevert() { if (revertTimer) { clearInterval(revertTimer); revertTimer = null; } }
+    function startRevert() {
+        stopRevert();
+        let left = 15;
+        window.onDisplayRevertTick?.(left);
+        revertTimer = setInterval(() => {
+            left -= 1;
+            if (left <= 0) { stopRevert(); window.onDisplayRevertTick?.(0); }
+            else window.onDisplayRevertTick?.(left);
+        }, 1000);
+    }
 
     function loadConfig() {
         try {
@@ -73,6 +109,40 @@
         saveConfig() {
             console.log('[mock] game.saveConfig → localStorage');
             localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+        },
+        getDisplayInfo() {
+            return JSON.stringify({
+                current: {
+                    mode:    config['display.mode'],
+                    width:   config['display.width'],
+                    height:  config['display.height'],
+                    monitor: config['display.monitor_index'],
+                    vsync:   config['display.vsync'],
+                    fov:     config['display.fov'],
+                    maxFps:  config['display.max_fps'],
+                    aspect:  config['display.aspect_ratio'],
+                },
+                monitors: MOCK_MONITORS,
+            });
+        },
+        applyDisplaySettings(mode, w, h, monitor) {
+            console.log('[mock] applyDisplaySettings', mode, w, h, monitor);
+            config['display.mode'] = mode;
+            config['display.width'] = w;
+            config['display.height'] = h;
+            config['display.monitor_index'] = monitor;
+            startRevert();   // show the confirm dialog + countdown
+        },
+        confirmDisplaySettings() {
+            console.log('[mock] confirmDisplaySettings');
+            stopRevert();
+            window.onDisplayRevertTick?.(0);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+        },
+        revertDisplaySettings() {
+            console.log('[mock] revertDisplaySettings');
+            stopRevert();
+            window.onDisplayRevertTick?.(0);
         },
         getPlayerList() {
             return [

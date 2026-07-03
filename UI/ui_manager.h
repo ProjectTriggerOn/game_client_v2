@@ -14,9 +14,19 @@ enum class InteractiveLevel {
     Modal,        // consumes input AND requires gameplay input freeze (PAUSE/SETTINGS)
 };
 
-void Initialize(ID3D11Device* dev, ID3D11DeviceContext* ctx, int backBufW, int backBufH);
+// dpiScale is the monitor's DPI zoom (dpi/96; 1.0 = 100%). The effective UI
+// device scale is derived per-resolution as clamp(dpiScale, 1.0, width/1280) —
+// so a high-DPI monitor gets larger, physically-correct UI text, but the CSS
+// viewport never drops below ~1280 (which would crowd the ~1920-authored pages).
+// It is recomputed on Resize so fullscreen (a larger surface) can use more scale.
+void Initialize(ID3D11Device* dev, ID3D11DeviceContext* ctx, int backBufW, int backBufH,
+                float dpiScale = 1.0f);
 void Finalize();
 void Render();
+
+// Resize the Ultralight View + the D3D11 bitmap compositor to a new back-buffer
+// size. Driven by Display::OnWindowResize (main thread, outside any JS callback).
+void Resize(int w, int h);
 
 // Call once per frame (after KeyLogger/MSLogger updates): drains UI_InputQueue,
 // then drops or translates events into Ultralight and fires them at the View
@@ -41,6 +51,11 @@ void PushKillFeed(int killerId, int victimId, int killerTeam, int victimTeam);
 void PushScoreboard(const char* json);
 void PushScoreboardVisible(bool visible);
 void PushMatchResult(const char* json);
+
+// Display-settings revert countdown (C++-owned 15s timer in Display::Update).
+// Stored when called and flushed inside UI::Render, like the HUD pushes above.
+// secondsLeft > 0 shows/updates the "keep these settings?" dialog; 0 hides it.
+void PushDisplayRevertTick(int secondsLeft);
 
 // Page switch helper: calls Router.show('<name>'). UIPolicy_Apply drives this
 // for state-derived pages; the ui_test sandbox uses it directly for preview.
