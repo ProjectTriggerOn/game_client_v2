@@ -177,6 +177,10 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,[[maybe_unused
 	static MockServer g_MockServer;
 	static ENetClientNetwork g_ENetNetwork;
 
+	// Load the active map once, before either network path uses its colliders.
+	if (!Map_LoadFromFile("resource/maps/default.map"))
+		OutputDebugStringA("[MAP] WARNING: failed to load resource/maps/default.map\n");
+
 	if (g_NetworkMode == "local" || g_NetworkMode == "remote")
 	{
 		// ENet mode: pick host from config based on mode
