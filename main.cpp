@@ -191,6 +191,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,[[maybe_unused
 
 		g_ENetNetwork.SetServerAddress(serverHost.c_str(), serverPort);
 		g_ENetNetwork.Initialize();
+		g_ENetNetwork.SetExpectedMapChecksum(Map_GetCollisionChecksum());
 		g_pNetwork = &g_ENetNetwork;
 		g_pMockServer = nullptr;
 	}

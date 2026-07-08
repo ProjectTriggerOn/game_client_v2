@@ -57,6 +57,9 @@ public:
     //-------------------------------------------------------------------------
     void PollEvents();
 
+    // Expected local map checksum for the MAP_INFO handshake (0 = skip check)
+    void SetExpectedMapChecksum(uint32_t c) { m_ExpectedMapChecksum = c; }
+
 private:
     ENetHost* m_pClient;
     ENetPeer* m_pServerPeer;
@@ -72,4 +75,7 @@ private:
     // Statistics
     uint32_t m_TotalInputsSent;
     uint32_t m_TotalSnapshotsReceived;
+
+    // MAP_INFO handshake: checksum of the locally loaded map (0 = don't verify)
+    uint32_t m_ExpectedMapChecksum = 0;
 };

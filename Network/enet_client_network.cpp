@@ -10,6 +10,7 @@
 #include "enet_client_network.h"
 #include "net_packet.h"
 #include <cstring>
+#include <cstdio>
 
 ENetClientNetwork::ENetClientNetwork()
     : m_pClient(nullptr)
@@ -157,6 +158,22 @@ void ENetClientNetwork::PollEvents()
                     std::lock_guard<std::mutex> lock(m_SnapshotMutex);
                     m_SnapshotQueue.push(snap);
                     m_TotalSnapshotsReceived++;
+                }
+                else if (type == PacketType::MAP_INFO &&
+                         event.packet->dataLength == 1 + sizeof(MapInfo))
+                {
+                    MapInfo info;
+                    std::memcpy(&info, event.packet->data + 1, sizeof(MapInfo));
+                    if (m_ExpectedMapChecksum != 0 && info.checksum != m_ExpectedMapChecksum)
+                    {
+                        printf("[MAP] ERROR: checksum mismatch! server '%s' cksum=%08x local=%08x - disconnecting.\n",
+                               info.name, info.checksum, m_ExpectedMapChecksum);
+                        enet_peer_disconnect(event.peer, 0);
+                    }
+                    else
+                    {
+                        printf("[MAP] verified map '%s' cksum=%08x\n", info.name, info.checksum);
+                    }
                 }
             }
             enet_packet_destroy(event.packet);
