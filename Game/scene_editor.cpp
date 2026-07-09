@@ -118,6 +118,13 @@ void SceneEditor_Initialize()
 
     if (!editor::EditorMap_Load("resource/maps/default.map", g_Map))
         OutputDebugStringA("[EDITOR] WARNING: failed to load resource/maps/default.map\n");
+
+    // g_Map/g_Cmds/g_Sel are namespace-scope statics that outlive a scene
+    // teardown, so re-entering the editor reloads a fresh g_Map while any
+    // command/selection from the previous session would still hold indices into
+    // the old map. Start every editor session with an empty stack + no selection.
+    g_Cmds.Clear();
+    g_Sel = Selection{};
 }
 
 void SceneEditor_Finalize()
@@ -187,10 +194,17 @@ void SceneEditor_Update([[maybe_unused]] double elapsed_time)
                               : "[EDITOR] save FAILED (is resource/maps/ writable?)\n");
     }
     if (KeyLogger_IsTrigger(KK_F10)) {
-        if (editor::EditorMap_Load(kEditorSavePath, g_Map))
+        if (editor::EditorMap_Load(kEditorSavePath, g_Map)) {
+            // g_Map was replaced wholesale: any buffered command holds indices
+            // into the old (differently-sized) vectors, and g_Sel may point past
+            // the new end. Both are stale now — undo/redo or Delete against them
+            // would insert/erase/read out of bounds. Drop both.
+            g_Cmds.Clear();
+            g_Sel = Selection{};
             OutputDebugStringA("[EDITOR] reloaded resource/maps/_editor_save.map\n");
-        else
+        } else {
             OutputDebugStringA("[EDITOR] reload FAILED (save with F9 first)\n");
+        }
     }
 }
 
