@@ -61,6 +61,12 @@ namespace {
 
 void SceneEditor_Initialize()
 {
+    // Create the shared view/projection constant buffers (slots b1/b2) that
+    // Camera_SetMatrixToShader binds in SceneEditor_Draw. Game_Initialize does
+    // this for the game scene; the editor boot path never runs it, so without
+    // this call the buffers stay null and Draw feeds null CBs to the 3D VS.
+    Camera_Initialize();
+
     EditorCamera_Init({ 0.0f, 1.0f, 0.0f },  // pivot at map center
                       22.0f,                  // distance
                       0.0f,                   // yaw
@@ -74,6 +80,9 @@ void SceneEditor_Initialize()
 
 void SceneEditor_Finalize()
 {
+    // Pair the Camera_Initialize() from SceneEditor_Initialize (mirrors
+    // Game_Finalize) so the constant buffers / debug text don't leak on exit.
+    Camera_Finalize();
 }
 
 void SceneEditor_Update([[maybe_unused]] double elapsed_time)
