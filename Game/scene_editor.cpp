@@ -127,7 +127,11 @@ void SceneEditor_Finalize()
 void SceneEditor_Update([[maybe_unused]] double elapsed_time)
 {
     // Frame-to-frame mouse delta (cursor stays absolute+visible; see spec §8.1).
-    int mx = MSLogger_GetX(), my = MSLogger_GetY();
+    // The editor runs in MOUSE_POSITION_MODE_ABSOLUTE (MousePolicy_Apply forces
+    // every non-SCENE_GAME scene into absolute/UI mode), so the cursor lives in
+    // MSLogger's MODE_UI slot — the MODE_GAME x/y are zeroed each frame. Read the
+    // *UI accessors (as ui_widget.cpp does) so the pick ray gets the real cursor.
+    int mx = MSLogger_GetXUI(), my = MSLogger_GetYUI();
     if (!g_MouseInit) { g_LastMouseX = mx; g_LastMouseY = my; g_LastWheel = MSLogger_GetScrollWheelValue(); g_MouseInit = true; }
     float dx = static_cast<float>(mx - g_LastMouseX);
     float dy = static_cast<float>(my - g_LastMouseY);
@@ -148,7 +152,7 @@ void SceneEditor_Update([[maybe_unused]] double elapsed_time)
 
     // §8.2 select: plain LMB (no Alt) ray-picks the nearest selectable; an empty
     // click clears the selection. (Gizmo interception is added in Task 4.)
-    if (!alt && MSLogger_IsTrigger(MBT_LEFT)) {
+    if (!alt && MSLogger_IsTriggerUI(MBT_LEFT)) {
         Ray r = EditorPick_ScreenRay(mx, my, EditorCamera_GetView(), EditorCamera_GetProj());
         g_Sel = PickNearest(r);   // {None,-1} on empty click => deselect
     }
