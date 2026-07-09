@@ -65,9 +65,10 @@ root    = "logs"
 # Gameplay diagnostic filters consumed by callers of DebugLog_Printf.
 # =============================================================================
 [debug]
-# Boot scene: "game" | "title" | "ui_test"
+# Boot scene: "game" | "title" | "ui_test" | "editor"
 #   title   — Ultralight title menu (PLAY / SETTINGS / QUIT)
 #   ui_test — UI development sandbox: no gameplay, no 3D, all input to Ultralight
+#   editor  — in-engine level editor: free-fly camera, renders/edits a .map
 start_scene             = "title"
 error_threshold         = 0.5    # CORR rows with err <= this are skipped (unless log_every_correction)
 log_every_correction    = false  # log every server correction (noisy)

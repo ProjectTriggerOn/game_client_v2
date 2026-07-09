@@ -17,6 +17,7 @@ enum scene : std::uint8_t
 	SCENE_GAME,
 	SCENE_RESULT,
 	SCENE_UI_TEST,   // isolated UI dev scene: no gameplay, no 3D, Ultralight UI only
+	SCENE_EDITOR,    // in-engine level editor: free-fly camera, renders an EditorMap
 	SCENE_MAX
 };
 

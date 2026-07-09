@@ -32,6 +32,7 @@ void NavScenePolicy(scene s, UI::InteractiveLevel& level, const char*& entryPage
     switch (s)
     {
     case SCENE_TITLE: entryPage = "title"; break;   // real Ultralight title menu
+    case SCENE_EDITOR: entryPage = "editor"; break; // editor viewport overlay (M4 fills it)
     // case SCENE_LOBBY: entryPage = "lobby-home"; break;
     default:          entryPage = "title"; break;   // ui_test sandbox / result
     }

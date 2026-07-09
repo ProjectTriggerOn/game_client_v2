@@ -215,6 +215,7 @@ if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ui_src" "
     <ClCompile Include="Graphics\sampler.cpp" />
     <ClCompile Include="Game\scene.cpp" />
     <ClCompile Include="Game\scene_ui_test.cpp" />
+    <ClCompile Include="Game\scene_editor.cpp" />
     <ClCompile Include="Game\mouse_policy.cpp" />
     <ClCompile Include="Game\ui_policy.cpp" />
     <ClCompile Include="Game\score.cpp" />
@@ -285,6 +286,7 @@ if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ui_src" "
     <ClInclude Include="Graphics\sampler.h" />
     <ClInclude Include="Game\scene.h" />
     <ClInclude Include="Game\scene_ui_test.h" />
+    <ClInclude Include="Game\scene_editor.h" />
     <ClInclude Include="Game\mouse_policy.h" />
     <ClInclude Include="Game\ui_policy.h" />
     <ClInclude Include="Game\score.h" />

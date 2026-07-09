@@ -3,6 +3,7 @@
 #include "game.h"
 #include "title.h"
 #include "scene_ui_test.h"
+#include "scene_editor.h"
 #include "ui_manager.h"
 #include "fade.h"
 
@@ -37,6 +38,9 @@ void Scene_Initialize()
 	case SCENE_UI_TEST:
 		UITest_Initialize();
 		break;
+	case SCENE_EDITOR:
+		SceneEditor_Initialize();
+		break;
 	default:
 		break;
 	}
@@ -57,6 +61,9 @@ void Scene_Finalize()
 		break;
 	case SCENE_UI_TEST:
 		UITest_Finalize();
+		break;
+	case SCENE_EDITOR:
+		SceneEditor_Finalize();
 		break;
 	default:
 		break;
@@ -79,6 +86,9 @@ void Scene_Update(double elapsed_time)
 	case SCENE_UI_TEST:
 		UITest_Update(elapsed_time);
 		break;
+	case SCENE_EDITOR:
+		SceneEditor_Update(elapsed_time);
+		break;
 	default:
 		break;
 	}
@@ -100,6 +110,9 @@ void Scene_Draw()
 		break;
 	case SCENE_UI_TEST:
 		UITest_Draw();
+		break;
+	case SCENE_EDITOR:
+		SceneEditor_Draw();
 		break;
 	default:
 		break;
