@@ -14,6 +14,7 @@
 #include "editor_camera.h"
 #include "editor_pick.h"
 #include "editor_command.h"
+#include "editor_gizmo.h"
 #include "cube.h"
 #include "mesh_field.h"
 #include "texture.h"
@@ -99,6 +100,25 @@ namespace {
         test(SelKind::Collider, (int)g_Map.colliders.size());
         return best;
     }
+
+    // §8.2 tool state (Q/W/E/R). Move gizmo lands in Task 4; rotate/scale in T5.
+    enum class Tool { Select, Move, Rotate, Scale };
+    Tool      g_Tool = Tool::Select;
+    bool      g_Dragging = false;
+    GizmoAxis g_HotAxis = GizmoAxis::None;
+    // Drag snapshot for building the command on release:
+    DirectX::XMFLOAT3 g_DragBeforeA {}, g_DragBeforeB {};   // Box/Model: A=pos or scale; Collider: A=min,B=max
+
+    float SnapTo(float v, float step) { return step > 0.0f ? std::round(v / step) * step : v; }
+    DirectX::XMFLOAT3 SelectionCenter() {
+        AABB a; if (g_Sel.has && SelectableAABB(g_Sel.kind, g_Sel.index, a)) return AABBCenter(a);
+        return { 0, 0, 0 };
+    }
+    DirectX::XMFLOAT3 SelectionMovePos() {   // the value MoveCommand tracks
+        if (g_Sel.kind == SelKind::Box)      return g_Map.boxes[g_Sel.index].pos;
+        if (g_Sel.kind == SelKind::Model)    return g_Map.models[g_Sel.index].pos;
+        return g_Map.colliders[g_Sel.index].min;   // Collider tracked by min
+    }
 }
 
 void SceneEditor_Initialize()
@@ -160,11 +180,57 @@ void SceneEditor_Update([[maybe_unused]] double elapsed_time)
         if (MSLogger_IsPressed(MBT_RIGHT))  EditorCamera_Dolly(dx * 0.05f);
     }
 
-    // §8.2 select: plain LMB (no Alt) ray-picks the nearest selectable; an empty
-    // click clears the selection. (Gizmo interception is added in Task 4.)
-    if (!alt && MSLogger_IsTriggerUI(MBT_LEFT)) {
-        Ray r = EditorPick_ScreenRay(mx, my, EditorCamera_GetView(), EditorCamera_GetProj());
-        g_Sel = PickNearest(r);   // {has=false} on empty click => deselect
+    // §8.2 tools: Q select / W move / E rotate / R scale.
+    if (KeyLogger_IsTrigger(KK_Q)) g_Tool = Tool::Select;
+    if (KeyLogger_IsTrigger(KK_W)) g_Tool = Tool::Move;
+    if (KeyLogger_IsTrigger(KK_E)) g_Tool = Tool::Rotate;
+    if (KeyLogger_IsTrigger(KK_R)) g_Tool = Tool::Scale;
+
+    // §8.3 arbitration rule 2: no Alt => gizmo/pick. Begin a drag on a handle,
+    // continue it (live-apply so the user sees the move), release => push ONE
+    // command with before/after, else ray-pick to select/deselect. The editor
+    // runs in absolute/UI mouse mode (MousePolicy_Apply), so the live LMB state
+    // lives in MSLogger's UI slot — read *UI accessors (matching the T2 pick).
+    if (!alt) {
+        Ray ray = EditorPick_ScreenRay(mx, my, EditorCamera_GetView(), EditorCamera_GetProj());
+        const bool ctrlSnap = !KeyLogger_IsPressed(KK_LEFTCONTROL);   // Ctrl held = free (no snap)
+
+        if (g_Dragging) {
+            if (MSLogger_IsPressedUI(MBT_LEFT)) {
+                if (g_Tool == Tool::Move) {
+                    XMFLOAT3 off = EditorGizmo_DragTranslate(ray);
+                    XMFLOAT3 np = { g_DragBeforeA.x + off.x, g_DragBeforeA.y + off.y, g_DragBeforeA.z + off.z };
+                    if (ctrlSnap) { np.x = SnapTo(np.x, 0.5f); np.y = SnapTo(np.y, 0.5f); np.z = SnapTo(np.z, 0.5f); }
+                    // live-apply so the user sees it; command captures before/after on release
+                    if (g_Sel.kind == SelKind::Box)        g_Map.boxes[g_Sel.index].pos = np;
+                    else if (g_Sel.kind == SelKind::Model)  g_Map.models[g_Sel.index].pos = np;
+                    else { auto& c = g_Map.colliders[g_Sel.index];
+                           XMFLOAT3 d = { np.x-c.min.x, np.y-c.min.y, np.z-c.min.z };
+                           c.min = np; c.max = { c.max.x+d.x, c.max.y+d.y, c.max.z+d.z }; }
+                }
+                // Rotate/Scale drag handled in Task 5.
+            } else {
+                // Release: record an undoable command from before/after.
+                if (g_Tool == Tool::Move) {
+                    XMFLOAT3 after = SelectionMovePos();
+                    g_Cmds.Execute(std::make_unique<editor::MoveCommand>(g_Map, g_Sel.kind, g_Sel.index, g_DragBeforeA, after));
+                }
+                g_Dragging = false;
+                g_HotAxis = GizmoAxis::None;
+            }
+        } else if (MSLogger_IsTriggerUI(MBT_LEFT)) {
+            GizmoAxis axis = GizmoAxis::None;
+            if (g_Sel.has && g_Tool == Tool::Move)
+                axis = EditorGizmo_PickAxis(SelectionCenter(), EditorCamera_GetEye(), mx, my,
+                                            EditorCamera_GetView(), EditorCamera_GetProj());
+            if (axis != GizmoAxis::None) {
+                g_Dragging = true; g_HotAxis = axis;
+                g_DragBeforeA = SelectionMovePos();
+                EditorGizmo_BeginDrag(axis, SelectionCenter(), ray, EditorCamera_GetEye());
+            } else {
+                g_Sel = PickNearest(ray);   // click selects / deselects
+            }
+        }
     }
 
     // §8.2 delete + undo/redo. Clearing selection avoids a stale index pointing
@@ -267,6 +333,15 @@ void SceneEditor_Draw()
         AABB a;
         if (SelectableAABB(g_Sel.kind, g_Sel.index, a))
             Collision_DebugDraw(a, { 1.0f, 1.0f, 0.0f, 1.0f });   // selection = yellow
+    }
+
+    // Manipulator for the active tool (drawn with the same depth-off debug lines).
+    if (g_Sel.has && g_Tool != Tool::Select) {
+        XMFLOAT3 gc = SelectionCenter();
+        XMFLOAT3 eye = EditorCamera_GetEye();
+        GizmoAxis hot = g_Dragging ? g_HotAxis : GizmoAxis::None;
+        if (g_Tool == Tool::Move)   EditorGizmo_DrawTranslate(gc, eye, hot, view * proj);
+        // Rotate/Scale draw calls added in Task 5.
     }
 
     Direct3D_SetDepthEnable(true);
