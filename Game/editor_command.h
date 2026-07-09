@@ -48,12 +48,13 @@ class MoveCommand : public EditorCommand {
 public:
     MoveCommand(EditorMap& map, ElemKind kind, int index,
                 const DirectX::XMFLOAT3& before, const DirectX::XMFLOAT3& after);
-    void Do() override;   // for Collider, before/after are the delta applied to min&max
+    void Do() override;   // Collider: before/after are the min corner; max follows via m_Size (absolute + idempotent)
     void Undo() override;
 private:
     void Apply(const DirectX::XMFLOAT3& posOrDelta, const DirectX::XMFLOAT3& other, bool useAfter);
     EditorMap& m_Map; ElemKind m_Kind; int m_Index;
     DirectX::XMFLOAT3 m_Before, m_After;
+    DirectX::XMFLOAT3 m_Size {};   // Collider only: max-min captured at construction, held invariant across move
 };
 
 class ScaleCommand : public EditorCommand {

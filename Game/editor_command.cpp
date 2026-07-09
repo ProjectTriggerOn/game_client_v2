@@ -51,22 +51,30 @@ void DeleteCommand::Undo() {
 // ---- MoveCommand ----
 MoveCommand::MoveCommand(EditorMap& map, ElemKind kind, int index,
                          const XMFLOAT3& before, const XMFLOAT3& after)
-    : m_Map(map), m_Kind(kind), m_Index(index), m_Before(before), m_After(after) {}
+    : m_Map(map), m_Kind(kind), m_Index(index), m_Before(before), m_After(after) {
+    // Colliders track their min corner in Before/After; capture the current
+    // size once so Do()/Undo() can set min+max ABSOLUTELY. A relative "max += d"
+    // is not idempotent: Execute() runs Do() when the live-apply drag has
+    // already moved the collider, so a delta re-add would double-count and
+    // corrupt max (and undo couldn't restore it).
+    if (kind == ElemKind::Collider) {
+        const auto& c = map.colliders[index];
+        m_Size = { c.max.x - c.min.x, c.max.y - c.min.y, c.max.z - c.min.z };
+    }
+}
 void MoveCommand::Do() {
     if (m_Kind == ElemKind::Box)        m_Map.boxes[m_Index].pos = m_After;
     else if (m_Kind == ElemKind::Model) m_Map.models[m_Index].pos = m_After;
-    else { auto& c = m_Map.colliders[m_Index];   // Collider: store min in Before/After, keep size
-        XMFLOAT3 d = { m_After.x - m_Before.x, m_After.y - m_Before.y, m_After.z - m_Before.z };
+    else { auto& c = m_Map.colliders[m_Index];   // Collider: absolute min + preserved size
         c.min = m_After;
-        c.max = { c.max.x + d.x, c.max.y + d.y, c.max.z + d.z }; }
+        c.max = { m_After.x + m_Size.x, m_After.y + m_Size.y, m_After.z + m_Size.z }; }
 }
 void MoveCommand::Undo() {
     if (m_Kind == ElemKind::Box)        m_Map.boxes[m_Index].pos = m_Before;
     else if (m_Kind == ElemKind::Model) m_Map.models[m_Index].pos = m_Before;
     else { auto& c = m_Map.colliders[m_Index];
-        XMFLOAT3 d = { m_Before.x - m_After.x, m_Before.y - m_After.y, m_Before.z - m_After.z };
         c.min = m_Before;
-        c.max = { c.max.x + d.x, c.max.y + d.y, c.max.z + d.z }; }
+        c.max = { m_Before.x + m_Size.x, m_Before.y + m_Size.y, m_Before.z + m_Size.z }; }
 }
 void MoveCommand::Apply(const XMFLOAT3&, const XMFLOAT3&, bool) {}   // unused helper stub
 

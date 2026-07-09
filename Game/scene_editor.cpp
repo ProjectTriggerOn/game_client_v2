@@ -119,6 +119,15 @@ namespace {
         if (g_Sel.kind == SelKind::Model)    return g_Map.models[g_Sel.index].pos;
         return g_Map.colliders[g_Sel.index].min;   // Collider tracked by min
     }
+    // g_Sel.index still in range for its list? A mid-drag Delete/Undo/Redo can
+    // erase the dragged element and clear g_Sel.has while g_Dragging is still
+    // true — guard before indexing g_Map[...] to avoid an OOB write.
+    bool SelectionIndexValid() {
+        if (!g_Sel.has || g_Sel.index < 0) return false;
+        if (g_Sel.kind == SelKind::Box)   return g_Sel.index < (int)g_Map.boxes.size();
+        if (g_Sel.kind == SelKind::Model) return g_Sel.index < (int)g_Map.models.size();
+        return g_Sel.index < (int)g_Map.colliders.size();
+    }
 }
 
 void SceneEditor_Initialize()
@@ -180,11 +189,16 @@ void SceneEditor_Update([[maybe_unused]] double elapsed_time)
         if (MSLogger_IsPressed(MBT_RIGHT))  EditorCamera_Dolly(dx * 0.05f);
     }
 
-    // §8.2 tools: Q select / W move / E rotate / R scale.
-    if (KeyLogger_IsTrigger(KK_Q)) g_Tool = Tool::Select;
-    if (KeyLogger_IsTrigger(KK_W)) g_Tool = Tool::Move;
-    if (KeyLogger_IsTrigger(KK_E)) g_Tool = Tool::Rotate;
-    if (KeyLogger_IsTrigger(KK_R)) g_Tool = Tool::Scale;
+    // §8.2 tools: Q select / W move / E rotate / R scale. Ignored mid-drag: the
+    // live-apply has already mutated g_Map, and the release path only records a
+    // command for the tool that started the drag (g_Tool==Move). Letting the tool
+    // change here would orphan that mutation (no command => cannot be undone).
+    if (!g_Dragging) {
+        if (KeyLogger_IsTrigger(KK_Q)) g_Tool = Tool::Select;
+        if (KeyLogger_IsTrigger(KK_W)) g_Tool = Tool::Move;
+        if (KeyLogger_IsTrigger(KK_E)) g_Tool = Tool::Rotate;
+        if (KeyLogger_IsTrigger(KK_R)) g_Tool = Tool::Scale;
+    }
 
     // §8.3 arbitration rule 2: no Alt => gizmo/pick. Begin a drag on a handle,
     // continue it (live-apply so the user sees the move), release => push ONE
@@ -196,7 +210,12 @@ void SceneEditor_Update([[maybe_unused]] double elapsed_time)
         const bool ctrlSnap = !KeyLogger_IsPressed(KK_LEFTCONTROL);   // Ctrl held = free (no snap)
 
         if (g_Dragging) {
-            if (MSLogger_IsPressedUI(MBT_LEFT)) {
+            if (!SelectionIndexValid()) {
+                // Selection was invalidated mid-drag (Delete/Undo/Redo). Abandon
+                // the drag without applying or recording a command — the live
+                // mutation up to this point stays under the command that caused it.
+                g_Dragging = false; g_HotAxis = GizmoAxis::None;
+            } else if (MSLogger_IsPressedUI(MBT_LEFT)) {
                 if (g_Tool == Tool::Move) {
                     XMFLOAT3 off = EditorGizmo_DragTranslate(ray);
                     XMFLOAT3 np = { g_DragBeforeA.x + off.x, g_DragBeforeA.y + off.y, g_DragBeforeA.z + off.z };
