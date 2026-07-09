@@ -376,6 +376,9 @@ user_settings.toml.tmp
 # Ultralight engine log (written to CWD by GetDefaultLogger)
 ultralight.log
 
+# Editor scratch save output (M2 save/reload probe)
+resource/maps/_editor_*.map
+
 # Ultralight runtime DLLs are vendored under ThirdParty/ultralight/bin/. The
 # generic "[Bb]in/" rule above would otherwise ignore them; re-include so a
 # fresh clone builds and runs without manually copying the SDK's bin/ DLLs.

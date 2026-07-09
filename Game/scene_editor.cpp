@@ -30,6 +30,7 @@ using namespace DirectX;
 namespace {
     editor::EditorMap g_Map;
     int               g_CubeTexId = -1;
+    const char* const kEditorSavePath = "resource/maps/_editor_save.map";
 }
 
 void SceneEditor_Initialize()
@@ -56,6 +57,22 @@ void SceneEditor_Update(double elapsed_time)
 {
     // Free-fly navigation: WASD move, arrows look, Space/Ctrl up/down, Z/X fov.
     Camera_Update(elapsed_time);
+
+    // M2 persistence probe (no editor UI yet): F9 saves the in-memory map to a
+    // scratch file, F10 reloads it. Editing (M3) and UI buttons (M4) come later.
+    if (KeyLogger_IsTrigger(KK_F9))
+    {
+        bool ok = editor::EditorMap_Save(kEditorSavePath, g_Map);
+        OutputDebugStringA(ok ? "[EDITOR] saved resource/maps/_editor_save.map\n"
+                              : "[EDITOR] save FAILED (is resource/maps/ writable?)\n");
+    }
+    if (KeyLogger_IsTrigger(KK_F10))
+    {
+        if (editor::EditorMap_Load(kEditorSavePath, g_Map))
+            OutputDebugStringA("[EDITOR] reloaded resource/maps/_editor_save.map\n");
+        else
+            OutputDebugStringA("[EDITOR] reload FAILED (save with F9 first)\n");
+    }
 }
 
 void SceneEditor_Draw()
