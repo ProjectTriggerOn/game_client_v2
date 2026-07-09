@@ -12,6 +12,7 @@
 
 #include "camera.h"
 #include "editor_camera.h"
+#include "editor_pick.h"
 #include "cube.h"
 #include "mesh_field.h"
 #include "texture.h"
@@ -56,6 +57,44 @@ namespace {
         }
         for (const auto& c : g_Map.colliders) { acc(c.min.x, c.min.y, c.min.z); acc(c.max.x, c.max.y, c.max.z); }
         if (!any) { mn = { -5, 0, -5 }; mx = { 5, 4, 5 }; }
+    }
+
+    enum class SelKind { None, Box, Collider, Model };
+    struct Selection { SelKind kind = SelKind::None; int index = -1; };
+    Selection g_Sel;
+
+    // AABB of a selectable, for pick + highlight + gizmo pivot.
+    bool SelectableAABB(SelKind kind, int i, AABB& out) {
+        if (kind == SelKind::Box && i >= 0 && i < (int)g_Map.boxes.size()) {
+            const auto& b = g_Map.boxes[i];
+            out = { { b.pos.x - b.scale.x*0.5f, b.pos.y - b.scale.y*0.5f, b.pos.z - b.scale.z*0.5f },
+                    { b.pos.x + b.scale.x*0.5f, b.pos.y + b.scale.y*0.5f, b.pos.z + b.scale.z*0.5f } };
+            return true;
+        }
+        if (kind == SelKind::Collider && i >= 0 && i < (int)g_Map.colliders.size()) {
+            const auto& c = g_Map.colliders[i];
+            out = { { c.min.x, c.min.y, c.min.z }, { c.max.x, c.max.y, c.max.z } };
+            return true;
+        }
+        return false;   // Model added in Task 6
+    }
+
+    DirectX::XMFLOAT3 AABBCenter(const AABB& a) {
+        return { (a.min.x+a.max.x)*0.5f, (a.min.y+a.max.y)*0.5f, (a.min.z+a.max.z)*0.5f };
+    }
+
+    // Ray-pick the nearest selectable. Returns {None,-1} on miss.
+    Selection PickNearest(const Ray& r) {
+        Selection best; float bestT = 1e30f;
+        auto test = [&](SelKind kind, int count) {
+            for (int i = 0; i < count; i++) {
+                AABB a; if (!SelectableAABB(kind, i, a)) continue;
+                float t; if (EditorPick_RayAABB(r, a, t) && t < bestT) { bestT = t; best = { kind, i }; }
+            }
+        };
+        test(SelKind::Box, (int)g_Map.boxes.size());
+        test(SelKind::Collider, (int)g_Map.colliders.size());
+        return best;
     }
 }
 
@@ -106,13 +145,24 @@ void SceneEditor_Update([[maybe_unused]] double elapsed_time)
         if (MSLogger_IsPressed(MBT_MIDDLE)) EditorCamera_Track(dx, dy);
         if (MSLogger_IsPressed(MBT_RIGHT))  EditorCamera_Dolly(dx * 0.05f);
     }
+
+    // §8.2 select: plain LMB (no Alt) ray-picks the nearest selectable; an empty
+    // click clears the selection. (Gizmo interception is added in Task 4.)
+    if (!alt && MSLogger_IsTrigger(MBT_LEFT)) {
+        Ray r = EditorPick_ScreenRay(mx, my, EditorCamera_GetView(), EditorCamera_GetProj());
+        g_Sel = PickNearest(r);   // {None,-1} on empty click => deselect
+    }
+
     if (wheelSteps != 0.0f) EditorCamera_Dolly(wheelSteps);   // wheel dollies (Maya), no Alt needed
 
-    // Framing: F = frame selection (no selection yet -> whole map), A = frame all.
-    if (KeyLogger_IsTrigger(KK_F) || KeyLogger_IsTrigger(KK_A)) {
-        DirectX::XMFLOAT3 bmn, bmx; MapWorldBounds(bmn, bmx);
-        EditorCamera_FrameBounds(bmn, bmx);
+    // Framing: F frames the selection (whole map if nothing is selected), A frames all.
+    if (KeyLogger_IsTrigger(KK_F)) {
+        AABB a;
+        if (g_Sel.kind != SelKind::None && SelectableAABB(g_Sel.kind, g_Sel.index, a))
+            EditorCamera_FrameBounds(a.min, a.max);
+        else { DirectX::XMFLOAT3 mn, mx2; MapWorldBounds(mn, mx2); EditorCamera_FrameBounds(mn, mx2); }
     }
+    if (KeyLogger_IsTrigger(KK_A)) { DirectX::XMFLOAT3 mn, mx2; MapWorldBounds(mn, mx2); EditorCamera_FrameBounds(mn, mx2); }
 
     if (KeyLogger_IsTrigger(KK_F9)) {
         bool ok = editor::EditorMap_Save(kEditorSavePath, g_Map);
@@ -179,6 +229,13 @@ void SceneEditor_Draw()
         XMFLOAT3 head = { base.x + std::sin(s.yaw) * 1.5f, base.y + 0.1f,
                           base.z + std::cos(s.yaw) * 1.5f };
         Collision_DebugDrawLine(base, head, col);                         // facing arrow (+Z at yaw 0)
+    }
+
+    // Selection highlight (depth still off so it reads through the box brushes).
+    if (g_Sel.kind != SelKind::None) {
+        AABB a;
+        if (SelectableAABB(g_Sel.kind, g_Sel.index, a))
+            Collision_DebugDraw(a, { 1.0f, 1.0f, 0.0f, 1.0f });   // selection = yellow
     }
 
     Direct3D_SetDepthEnable(true);
