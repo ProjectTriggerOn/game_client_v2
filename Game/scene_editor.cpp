@@ -42,6 +42,9 @@ void SceneEditor_Initialize()
                       { 0.0f, 1.0f, 0.0f });     // up
 
     g_CubeTexId = Texture_LoadFromFile(L"resource/texture/stone_001.jpg");
+
+    if (!editor::EditorMap_Load("resource/maps/default.map", g_Map))
+        OutputDebugStringA("[EDITOR] WARNING: failed to load resource/maps/default.map\n");
 }
 
 void SceneEditor_Finalize()
@@ -73,4 +76,42 @@ void SceneEditor_Draw()
 
     // Ground plane (same Y offset as the game scene).
     MeshField_Draw(XMMatrixTranslation(0.0f, -1.0f, 0.0f));
+
+    // Box brushes: scaled cubes (mirrors Map_Draw's transform).
+    Cube_SetUVMode(CUBE_UV_PER_FACE);
+    for (const auto& b : g_Map.boxes)
+    {
+        XMMATRIX w = XMMatrixScaling(b.scale.x, b.scale.y, b.scale.z)
+                   * XMMatrixTranslation(b.pos.x, b.pos.y, b.pos.z);
+        Cube_Draw(g_CubeTexId, w);
+    }
+
+    // Colliders + spawns as debug geometry. Depth off so they read through the
+    // box brushes. Collision_DebugDraw overwrites CB0, so restore the 2D ortho
+    // projection with Sprite_Begin afterward (mirrors game.cpp).
+    Direct3D_SetDepthEnable(false);
+    Collision_DebugSetViewProj(view * proj);
+
+    for (const auto& c : g_Map.colliders)
+    {
+        AABB a{ { c.min.x, c.min.y, c.min.z }, { c.max.x, c.max.y, c.max.z } };
+        XMFLOAT4 col = c.isGround ? XMFLOAT4{ 0.0f, 0.5f, 1.0f, 1.0f }    // blue ground
+                                  : XMFLOAT4{ 1.0f, 0.5f, 0.0f, 1.0f };   // orange walls
+        Collision_DebugDraw(a, col);
+    }
+
+    for (const auto& s : g_Map.spawns)
+    {
+        XMFLOAT4 col = (s.team == mapio::TEAM_RED) ? XMFLOAT4{ 1.0f, 0.2f, 0.2f, 1.0f }
+                                                   : XMFLOAT4{ 0.2f, 0.4f, 1.0f, 1.0f };
+        XMFLOAT3 base = s.pos;
+        XMFLOAT3 top  = { base.x, base.y + 2.0f, base.z };
+        Collision_DebugDrawLine(base, top, col);                          // vertical post
+        XMFLOAT3 head = { base.x + std::sin(s.yaw) * 1.5f, base.y + 0.1f,
+                          base.z + std::cos(s.yaw) * 1.5f };
+        Collision_DebugDrawLine(base, head, col);                         // facing arrow (+Z at yaw 0)
+    }
+
+    Direct3D_SetDepthEnable(true);
+    Sprite_Begin();
 }
