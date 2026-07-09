@@ -196,6 +196,7 @@ if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ui_src" "
     <ClCompile Include="Graphics\light.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Game\map.cpp" />
+    <ClCompile Include="Game\editor_map.cpp" />
     <ClCompile Include="Graphics\mesh_field.cpp" />
     <ClCompile Include="Graphics\model.cpp" />
     <ClCompile Include="Graphics\model_ani.cpp" />
@@ -262,6 +263,7 @@ if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ui_src" "
     <ClInclude Include="Core\key_logger.h" />
     <ClInclude Include="Graphics\light.h" />
     <ClInclude Include="Game\map.h" />
+    <ClInclude Include="Game\editor_map.h" />
     <ClInclude Include="Graphics\mesh_field.h" />
     <ClInclude Include="Graphics\model.h" />
     <ClInclude Include="Graphics\model_ani.h" />
