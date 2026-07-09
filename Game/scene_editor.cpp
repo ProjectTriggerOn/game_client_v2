@@ -13,6 +13,7 @@
 #include "camera.h"
 #include "editor_camera.h"
 #include "editor_pick.h"
+#include "editor_command.h"
 #include "cube.h"
 #include "mesh_field.h"
 #include "texture.h"
@@ -26,6 +27,7 @@
 
 #include <DirectXMath.h>
 #include <cmath>
+#include <memory>
 #include <Windows.h>
 
 using namespace DirectX;
@@ -59,9 +61,10 @@ namespace {
         if (!any) { mn = { -5, 0, -5 }; mx = { 5, 4, 5 }; }
     }
 
-    enum class SelKind { None, Box, Collider, Model };
-    struct Selection { SelKind kind = SelKind::None; int index = -1; };
+    using SelKind = editor::ElemKind;
+    struct Selection { bool has = false; SelKind kind = SelKind::Box; int index = -1; };
     Selection g_Sel;
+    editor::CommandStack g_Cmds;
 
     // AABB of a selectable, for pick + highlight + gizmo pivot.
     bool SelectableAABB(SelKind kind, int i, AABB& out) {
@@ -83,13 +86,13 @@ namespace {
         return { (a.min.x+a.max.x)*0.5f, (a.min.y+a.max.y)*0.5f, (a.min.z+a.max.z)*0.5f };
     }
 
-    // Ray-pick the nearest selectable. Returns {None,-1} on miss.
+    // Ray-pick the nearest selectable. Returns {has=false} on miss.
     Selection PickNearest(const Ray& r) {
         Selection best; float bestT = 1e30f;
         auto test = [&](SelKind kind, int count) {
             for (int i = 0; i < count; i++) {
                 AABB a; if (!SelectableAABB(kind, i, a)) continue;
-                float t; if (EditorPick_RayAABB(r, a, t) && t < bestT) { bestT = t; best = { kind, i }; }
+                float t; if (EditorPick_RayAABB(r, a, t) && t < bestT) { bestT = t; best = { true, kind, i }; }
             }
         };
         test(SelKind::Box, (int)g_Map.boxes.size());
@@ -154,15 +157,25 @@ void SceneEditor_Update([[maybe_unused]] double elapsed_time)
     // click clears the selection. (Gizmo interception is added in Task 4.)
     if (!alt && MSLogger_IsTriggerUI(MBT_LEFT)) {
         Ray r = EditorPick_ScreenRay(mx, my, EditorCamera_GetView(), EditorCamera_GetProj());
-        g_Sel = PickNearest(r);   // {None,-1} on empty click => deselect
+        g_Sel = PickNearest(r);   // {has=false} on empty click => deselect
     }
+
+    // §8.2 delete + undo/redo. Clearing selection avoids a stale index pointing
+    // at a shifted/removed element after the structural change (safe v1 choice).
+    const bool ctrl = KeyLogger_IsPressed(KK_LEFTCONTROL);
+    if (KeyLogger_IsTrigger(KK_DELETE) && g_Sel.has) {
+        g_Cmds.Execute(std::make_unique<editor::DeleteCommand>(g_Map, g_Sel.kind, g_Sel.index));
+        g_Sel.has = false;
+    }
+    if (ctrl && KeyLogger_IsTrigger(KK_Z)) { g_Cmds.Undo(); g_Sel.has = false; }
+    if (ctrl && KeyLogger_IsTrigger(KK_Y)) { g_Cmds.Redo(); g_Sel.has = false; }
 
     if (wheelSteps != 0.0f) EditorCamera_Dolly(wheelSteps);   // wheel dollies (Maya), no Alt needed
 
     // Framing: F frames the selection (whole map if nothing is selected), A frames all.
     if (KeyLogger_IsTrigger(KK_F)) {
         AABB a;
-        if (g_Sel.kind != SelKind::None && SelectableAABB(g_Sel.kind, g_Sel.index, a))
+        if (g_Sel.has && SelectableAABB(g_Sel.kind, g_Sel.index, a))
             EditorCamera_FrameBounds(a.min, a.max);
         else { DirectX::XMFLOAT3 mn, mx2; MapWorldBounds(mn, mx2); EditorCamera_FrameBounds(mn, mx2); }
     }
@@ -236,7 +249,7 @@ void SceneEditor_Draw()
     }
 
     // Selection highlight (depth still off so it reads through the box brushes).
-    if (g_Sel.kind != SelKind::None) {
+    if (g_Sel.has) {
         AABB a;
         if (SelectableAABB(g_Sel.kind, g_Sel.index, a))
             Collision_DebugDraw(a, { 1.0f, 1.0f, 0.0f, 1.0f });   // selection = yellow
