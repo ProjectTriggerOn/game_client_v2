@@ -37,6 +37,9 @@ GizmoAxis EditorGizmo_PickRing(const DirectX::XMFLOAT3& center, const DirectX::X
 void EditorGizmo_BeginDrag(GizmoAxis axis, const DirectX::XMFLOAT3& center,
                            const Ray& ray, const DirectX::XMFLOAT3& eye);
 
+// Begin a rotate drag: the drag plane is the ring plane (normal = axis through center).
+void EditorGizmo_BeginRingDrag(GizmoAxis axis, const DirectX::XMFLOAT3& center, const Ray& ray);
+
 // Accumulated results since BeginDrag:
 DirectX::XMFLOAT3 EditorGizmo_DragTranslate(const Ray& ray);                 // world offset along axis
 DirectX::XMFLOAT3 EditorGizmo_DragScale(const Ray& ray);                     // per-axis multiplier (>=0.05)

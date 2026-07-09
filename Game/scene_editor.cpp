@@ -227,12 +227,45 @@ void SceneEditor_Update([[maybe_unused]] double elapsed_time)
                            XMFLOAT3 d = { np.x-c.min.x, np.y-c.min.y, np.z-c.min.z };
                            c.min = np; c.max = { c.max.x+d.x, c.max.y+d.y, c.max.z+d.z }; }
                 }
-                // Rotate/Scale drag handled in Task 5.
+                else if (g_Tool == Tool::Scale) {
+                    XMFLOAT3 f = EditorGizmo_DragScale(ray);
+                    if (g_Sel.kind == SelKind::Box)
+                        g_Map.boxes[g_Sel.index].scale = { g_DragBeforeA.x*f.x, g_DragBeforeA.y*f.y, g_DragBeforeA.z*f.z };
+                    else if (g_Sel.kind == SelKind::Model)
+                        g_Map.models[g_Sel.index].scale = { g_DragBeforeA.x*f.x, g_DragBeforeA.y*f.y, g_DragBeforeA.z*f.z };
+                    else { // Collider: scale extents about center
+                        XMFLOAT3 ctr = { (g_DragBeforeA.x+g_DragBeforeB.x)*0.5f, (g_DragBeforeA.y+g_DragBeforeB.y)*0.5f, (g_DragBeforeA.z+g_DragBeforeB.z)*0.5f };
+                        XMFLOAT3 half = { (g_DragBeforeB.x-g_DragBeforeA.x)*0.5f*f.x, (g_DragBeforeB.y-g_DragBeforeA.y)*0.5f*f.y, (g_DragBeforeB.z-g_DragBeforeA.z)*0.5f*f.z };
+                        g_Map.colliders[g_Sel.index].min = { ctr.x-half.x, ctr.y-half.y, ctr.z-half.z };
+                        g_Map.colliders[g_Sel.index].max = { ctr.x+half.x, ctr.y+half.y, ctr.z+half.z };
+                    }
+                }
+                else if (g_Tool == Tool::Rotate) {
+                    float ang = EditorGizmo_DragRotate(ray, SelectionCenter());
+                    const bool snap = !KeyLogger_IsPressed(KK_LEFTCONTROL);
+                    if (snap) ang = SnapTo(ang, XM_PI/12.0f);   // 15 degrees
+                    XMFLOAT3 e = g_DragBeforeA;
+                    if (g_HotAxis==GizmoAxis::X) e.x += ang; else if (g_HotAxis==GizmoAxis::Y) e.y += ang; else e.z += ang;
+                    if (g_Sel.kind == SelKind::Box)   g_Map.boxes[g_Sel.index].rotEuler = e;
+                    else if (g_Sel.kind == SelKind::Model) g_Map.models[g_Sel.index].rotEuler = e;
+                }
             } else {
                 // Release: record an undoable command from before/after.
                 if (g_Tool == Tool::Move) {
                     XMFLOAT3 after = SelectionMovePos();
                     g_Cmds.Execute(std::make_unique<editor::MoveCommand>(g_Map, g_Sel.kind, g_Sel.index, g_DragBeforeA, after));
+                }
+                else if (g_Tool == Tool::Scale) {
+                    if (g_Sel.kind == SelKind::Collider)
+                        g_Cmds.Execute(std::make_unique<editor::ScaleCommand>(g_Map, g_Sel.kind, g_Sel.index, g_DragBeforeA, g_DragBeforeB, g_Map.colliders[g_Sel.index].min, g_Map.colliders[g_Sel.index].max));
+                    else {
+                        XMFLOAT3 after = (g_Sel.kind==SelKind::Box) ? g_Map.boxes[g_Sel.index].scale : g_Map.models[g_Sel.index].scale;
+                        g_Cmds.Execute(std::make_unique<editor::ScaleCommand>(g_Map, g_Sel.kind, g_Sel.index, g_DragBeforeA, XMFLOAT3{0,0,0}, after, XMFLOAT3{0,0,0}));
+                    }
+                }
+                else if (g_Tool == Tool::Rotate) {
+                    XMFLOAT3 after = (g_Sel.kind==SelKind::Box) ? g_Map.boxes[g_Sel.index].rotEuler : g_Map.models[g_Sel.index].rotEuler;
+                    g_Cmds.Execute(std::make_unique<editor::RotateCommand>(g_Map, g_Sel.index, g_Sel.kind, g_DragBeforeA, after));
                 }
                 g_Dragging = false;
                 g_HotAxis = GizmoAxis::None;
@@ -240,12 +273,28 @@ void SceneEditor_Update([[maybe_unused]] double elapsed_time)
         } else if (MSLogger_IsTriggerUI(MBT_LEFT)) {
             GizmoAxis axis = GizmoAxis::None;
             if (g_Sel.has && g_Tool == Tool::Move)
-                axis = EditorGizmo_PickAxis(SelectionCenter(), EditorCamera_GetEye(), mx, my,
-                                            EditorCamera_GetView(), EditorCamera_GetProj());
+                axis = EditorGizmo_PickAxis(SelectionCenter(), EditorCamera_GetEye(), mx, my, EditorCamera_GetView(), EditorCamera_GetProj());
+            else if (g_Sel.has && g_Tool == Tool::Scale)
+                axis = EditorGizmo_PickAxis(SelectionCenter(), EditorCamera_GetEye(), mx, my, EditorCamera_GetView(), EditorCamera_GetProj());
+            else if (g_Sel.has && g_Tool == Tool::Rotate)
+                axis = EditorGizmo_PickRing(SelectionCenter(), EditorCamera_GetEye(), mx, my, EditorCamera_GetView(), EditorCamera_GetProj());
+
             if (axis != GizmoAxis::None) {
                 g_Dragging = true; g_HotAxis = axis;
-                g_DragBeforeA = SelectionMovePos();
-                EditorGizmo_BeginDrag(axis, SelectionCenter(), ray, EditorCamera_GetEye());
+                if (g_Tool == Tool::Move) {
+                    g_DragBeforeA = SelectionMovePos();
+                    EditorGizmo_BeginDrag(axis, SelectionCenter(), ray, EditorCamera_GetEye());
+                } else if (g_Tool == Tool::Scale) {
+                    if (g_Sel.kind == SelKind::Collider) { g_DragBeforeA = g_Map.colliders[g_Sel.index].min; g_DragBeforeB = g_Map.colliders[g_Sel.index].max; }
+                    else if (g_Sel.kind == SelKind::Box)  g_DragBeforeA = g_Map.boxes[g_Sel.index].scale;
+                    else                                  g_DragBeforeA = g_Map.models[g_Sel.index].scale;
+                    EditorGizmo_BeginDrag(axis, SelectionCenter(), ray, EditorCamera_GetEye());
+                } else { // Rotate
+                    if (g_Sel.kind == SelKind::Box)   g_DragBeforeA = g_Map.boxes[g_Sel.index].rotEuler;
+                    else if (g_Sel.kind == SelKind::Model) g_DragBeforeA = g_Map.models[g_Sel.index].rotEuler;
+                    else { g_HotAxis = GizmoAxis::None; g_Dragging = false; /* colliders don't rotate */ }
+                    if (g_Dragging) EditorGizmo_BeginRingDrag(axis, SelectionCenter(), ray);
+                }
             } else {
                 g_Sel = PickNearest(ray);   // click selects / deselects
             }
@@ -317,6 +366,7 @@ void SceneEditor_Draw()
     for (const auto& b : g_Map.boxes)
     {
         XMMATRIX w = XMMatrixScaling(b.scale.x, b.scale.y, b.scale.z)
+                   * XMMatrixRotationRollPitchYaw(b.rotEuler.x, b.rotEuler.y, b.rotEuler.z)
                    * XMMatrixTranslation(b.pos.x, b.pos.y, b.pos.z);
         Cube_Draw(g_CubeTexId, w);
     }
@@ -360,7 +410,8 @@ void SceneEditor_Draw()
         XMFLOAT3 eye = EditorCamera_GetEye();
         GizmoAxis hot = g_Dragging ? g_HotAxis : GizmoAxis::None;
         if (g_Tool == Tool::Move)   EditorGizmo_DrawTranslate(gc, eye, hot, view * proj);
-        // Rotate/Scale draw calls added in Task 5.
+        if (g_Tool == Tool::Scale)  EditorGizmo_DrawScale(gc, eye, hot, view * proj);
+        if (g_Tool == Tool::Rotate) EditorGizmo_DrawRotate(gc, eye, hot, view * proj);
     }
 
     Direct3D_SetDepthEnable(true);
