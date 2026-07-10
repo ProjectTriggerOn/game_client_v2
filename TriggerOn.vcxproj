@@ -258,6 +258,7 @@ if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ui_src" "
     <ClInclude Include="Core\debug_text.h" />
     <ClInclude Include="Core\direct3d.h" />
     <ClInclude Include="Core\display_manager.h" />
+    <ClInclude Include="Core\exe_path.h" />
     <ClInclude Include="Graphics\effect.h" />
     <ClInclude Include="Graphics\fade.h" />
     <ClInclude Include="Game\game.h" />

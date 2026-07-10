@@ -47,6 +47,7 @@
 #include "remote_player.h"
 #include "i_network.h"
 #include "config.h"
+#include "exe_path.h"
 #include "debug_log.h"
 #include "game.h"
 #include "map.h"
@@ -80,8 +81,22 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,[[maybe_unused
 
 	SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 
-	// Load global config early so window size settings are available
-	Config::GetInstance().Load("config.toml");
+	// Load global config early so window size settings are available.
+	// Resolve exe-relative first so the shipped build finds config.toml no
+	// matter the CWD (a shortcut with a blank "Start in", or a script launch);
+	// fall back to the CWD-relative name so the Debug/dev workflow — run from
+	// game_client/ where config.toml lives — still finds it. A truly missing
+	// file no longer crashes: Config::Load falls back to built-in defaults.
+	{
+		const std::string exeDir = ExeDirA();
+		std::string cfgPath  = exeDir + "config.toml";
+		std::string userPath = exeDir + "user_settings.toml";
+		if (!std::filesystem::exists(cfgPath)) {
+			cfgPath  = "config.toml";          // CWD (Debug: project dir)
+			userPath = "user_settings.toml";
+		}
+		Config::GetInstance().Load(cfgPath, userPath);
+	}
 
 	// Live display keys (Subscribe fires immediately with the persisted value).
 	// VSync only sets a static, so it's safe before Direct3D_Initialize; the

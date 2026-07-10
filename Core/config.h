@@ -101,7 +101,16 @@ public:
     //-------------------------------------------------------------------------
     void Load(const std::string& filePath, const std::string& userFilePath = "user_settings.toml")
     {
-        m_Table = toml::parse_file(filePath);
+        // Defaults layer. toml++ is built with exceptions on (TOML_EXCEPTIONS=1),
+        // so parse_file THROWS if config.toml is missing or malformed. Swallow it
+        // and run on an empty table: every accessor then returns its built-in
+        // default argument (GetString(...,"mock") etc.), so the game still boots
+        // instead of terminating with no window (mirrors the user-layer catch below).
+        try {
+            m_Table = toml::parse_file(filePath);
+        } catch (...) {
+            m_Table = toml::table{};
+        }
         m_FilePath = filePath;
         m_UserFilePath = userFilePath;
 

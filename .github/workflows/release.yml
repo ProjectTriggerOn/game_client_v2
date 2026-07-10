@@ -8,6 +8,13 @@ on:
 permissions:
   contents: write
 
+# Serialize by tag: a force-repushed identical tag won't race two runs against
+# the same GitHub Release (duplicate-asset / partial-update). Distinct tags
+# already yield distinct artifacts, so this only ever gates same-tag reruns.
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: windows-latest
@@ -23,18 +30,71 @@ jobs:
         run: msbuild TriggerOn.sln /p:Configuration=Release /p:Platform=x64
 
       - name: Stage release files
-        shell: cmd
+        shell: pwsh
         run: |
-          mkdir release
-          copy x64\Release\TriggerOn.exe release\
-          copy assimp-vc143-mt.dll release\
-          copy x64\Release\Ultralight.dll release\
-          copy x64\Release\UltralightCore.dll release\
-          copy x64\Release\WebCore.dll release\
-          copy x64\Release\AppCore.dll release\
-          xcopy /E /I x64\Release\resources release\resources
-          copy config.toml release\
-          xcopy /E /I resource release\resource
+          # Fail-fast: any missing source or copy error aborts the run BEFORE a
+          # broken ZIP is published (the old shell:cmd block ignored intermediate
+          # copy failures and could ship an incomplete release with a green run).
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force -Path release | Out-Null
+
+          # --- App binary, vendored third-party DLLs, config ---
+          Copy-Item x64\Release\TriggerOn.exe      release\
+          Copy-Item assimp-vc143-mt.dll            release\
+          Copy-Item x64\Release\Ultralight.dll     release\
+          Copy-Item x64\Release\UltralightCore.dll release\
+          Copy-Item x64\Release\WebCore.dll        release\
+          Copy-Item x64\Release\AppCore.dll        release\
+          Copy-Item config.toml                    release\
+
+          # --- Asset trees (Ultralight engine data + game resources) ---
+          Copy-Item x64\Release\resources release\resources -Recurse
+          Copy-Item resource              release\resource  -Recurse
+
+          # --- Visual C++ 2015-2022 runtime, app-local -------------------------
+          # The vendored Ultralight + assimp DLLs are built /MD and import
+          # MSVCP140*/VCRUNTIME140*; a clean Windows install ships only the UCRT,
+          # not these — without them TriggerOn.exe fails to launch on a fresh box
+          # ("VCRUNTIME140.dll was not found"). The exe itself is /MT so it needs
+          # none of its own; the dependency comes from the closed-source DLLs.
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vsRoot  = & $vswhere -latest -products '*' -property installationPath
+          if (-not $vsRoot) { throw 'vswhere could not locate a Visual Studio installation' }
+          $crtDir = Get-ChildItem "$vsRoot\VC\Redist\MSVC" -Directory |
+                    Sort-Object Name -Descending |
+                    ForEach-Object { Join-Path $_.FullName 'x64\Microsoft.VC143.CRT' } |
+                    Where-Object { Test-Path $_ } |
+                    Select-Object -First 1
+          if (-not $crtDir) { throw "No Microsoft.VC143.CRT redist found under $vsRoot\VC\Redist\MSVC" }
+          Copy-Item "$crtDir\*.dll" release\
+          Write-Host "Staged VC++ redist from: $crtDir"
+
+          # --- Manifest assertion: fail before publishing if anything is missing.
+          # Deep paths (icudt67l.dat, ui\index.html) also guard against a silent
+          # post-build miss that would ship a white-screen / crashing build.
+          $required = @(
+            'release\TriggerOn.exe',
+            'release\assimp-vc143-mt.dll',
+            'release\Ultralight.dll',
+            'release\UltralightCore.dll',
+            'release\WebCore.dll',
+            'release\AppCore.dll',
+            'release\msvcp140.dll',
+            'release\vcruntime140.dll',
+            'release\vcruntime140_1.dll',
+            'release\config.toml',
+            'release\resources\icudt67l.dat',
+            'release\resource\ui\index.html',
+            'release\resource\shader'
+          )
+          $missing = $required | Where-Object { -not (Test-Path -LiteralPath $_) }
+          if ($missing) {
+            Write-Host 'Missing required files:'
+            $missing | ForEach-Object { Write-Host "  $_" }
+            throw "Release staging incomplete: $($missing.Count) required file(s) missing"
+          }
+          Write-Host 'Release payload:'
+          Get-ChildItem release | Format-Table Name, Length -AutoSize
 
       - name: Create zip
         shell: pwsh
@@ -45,3 +105,6 @@ jobs:
         with:
           files: TriggerOn-${{ github.ref_name }}.zip
           generate_release_notes: true
+          # A tag containing '-' (v1.0.0-rc1, v2.0.0-beta) publishes as a
+          # pre-release instead of becoming the public "Latest" download.
+          prerelease: ${{ contains(github.ref_name, '-') }}
