@@ -187,22 +187,29 @@ void SceneEditor_Update([[maybe_unused]] double elapsed_time)
     // MSLogger's MODE_UI slot — the MODE_GAME x/y are zeroed each frame. Read the
     // *UI accessors (as ui_widget.cpp does) so the pick ray gets the real cursor.
     int mx = MSLogger_GetXUI(), my = MSLogger_GetYUI();
-    if (!g_MouseInit) { g_LastMouseX = mx; g_LastMouseY = my; g_LastWheel = MSLogger_GetScrollWheelValue(); g_MouseInit = true; }
+    if (!g_MouseInit) { g_LastMouseX = mx; g_LastMouseY = my; g_LastWheel = MSLogger_GetScrollWheelValueUI(); g_MouseInit = true; }
     float dx = static_cast<float>(mx - g_LastMouseX);
     float dy = static_cast<float>(my - g_LastMouseY);
     g_LastMouseX = mx; g_LastMouseY = my;
 
-    int wheel = MSLogger_GetScrollWheelValue();
+    // Wheel dolly: the editor runs in absolute/UI mouse mode (MousePolicy_Apply),
+    // so the sampler writes wheel state into MSLogger's UI slot — the MODE_GAME
+    // wheel value is frozen. Read the *UI accessor (matching the *UI x/y above).
+    int wheel = MSLogger_GetScrollWheelValueUI();
     float wheelSteps = static_cast<float>(wheel - g_LastWheel) / 120.0f;   // WHEEL_DELTA = 120
     g_LastWheel = wheel;
 
     const bool alt = KeyLogger_IsPressed(KK_LEFTALT);
 
-    // §8.3 arbitration: Alt+button => camera. (Pick/gizmo branches added in later tasks.)
+    // §8.3 arbitration: Alt+button => camera. The editor runs in absolute/UI mouse
+    // mode (MousePolicy_Apply forces every non-SCENE_GAME scene into absolute/UI),
+    // so the live button state lives in MSLogger's UI slot — the MODE_GAME buttons
+    // stay frozen at their init value. Read the *UI accessors (matching the T2 pick
+    // branch below), or tumble/track/dolly never fire.
     if (alt) {
-        if (MSLogger_IsPressed(MBT_LEFT))   EditorCamera_Tumble(dx, dy);
-        if (MSLogger_IsPressed(MBT_MIDDLE)) EditorCamera_Track(dx, dy);
-        if (MSLogger_IsPressed(MBT_RIGHT))  EditorCamera_Dolly(dx * 0.05f);
+        if (MSLogger_IsPressedUI(MBT_LEFT))   EditorCamera_Tumble(dx, dy);
+        if (MSLogger_IsPressedUI(MBT_MIDDLE)) EditorCamera_Track(dx, dy);
+        if (MSLogger_IsPressedUI(MBT_RIGHT))  EditorCamera_Dolly(dx * 0.05f);
     }
 
     // §8.2 tools: Q select / W move / E rotate / R scale. Ignored mid-drag: the

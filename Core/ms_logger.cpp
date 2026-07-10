@@ -87,6 +87,14 @@ int MSLogger_GetScrollWheelValue()
 	return g_Mode[MODE_GAME].current.scrollWheelValue;
 }
 
+int MSLogger_GetScrollWheelValueUI()
+{
+	// In absolute/UI mouse mode the sampler writes wheel state into MODE_UI, so
+	// callers running in that mode (e.g. SCENE_EDITOR) must read this slot — the
+	// MODE_GAME wheel value is frozen there. Mirrors the *UI x/y accessors.
+	return g_Mode[MODE_UI].current.scrollWheelValue;
+}
+
 Mouse_PositionMode MSLogger_GetPositionMode()
 {
 	return g_Mode[MODE_GAME].current.positionMode;

@@ -38,6 +38,8 @@ int MSLogger_GetYUI();
 
 int MSLogger_GetScrollWheelValue();
 
+int MSLogger_GetScrollWheelValueUI();
+
 Mouse_PositionMode MSLogger_GetPositionMode();
 
 bool isButtonDown(MSLogger_Buttons btn, const Mouse_State* pState);
