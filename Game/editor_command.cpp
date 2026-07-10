@@ -1,6 +1,7 @@
 //=============================================================================
 // editor_command.cpp
 //=============================================================================
+#ifdef EDITOR_ENABLED
 // Includes editor_command.h -> editor_map.h -> map_io.h (std::fopen); silence
 // C4996 (promoted to error by /sdl), per the plan's global constraints.
 #define _CRT_SECURE_NO_WARNINGS
@@ -121,3 +122,5 @@ void AddModelCommand::Do() {
 void AddModelCommand::Undo() { m_Map.colliders.pop_back(); m_Map.models.pop_back(); }
 
 } // namespace editor
+
+#endif // EDITOR_ENABLED

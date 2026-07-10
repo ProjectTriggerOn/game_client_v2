@@ -3,7 +3,9 @@
 #include "game.h"
 #include "title.h"
 #include "scene_ui_test.h"
+#ifdef EDITOR_ENABLED
 #include "scene_editor.h"
+#endif // EDITOR_ENABLED
 #include "ui_manager.h"
 #include "fade.h"
 
@@ -38,9 +40,11 @@ void Scene_Initialize()
 	case SCENE_UI_TEST:
 		UITest_Initialize();
 		break;
+#ifdef EDITOR_ENABLED
 	case SCENE_EDITOR:
 		SceneEditor_Initialize();
 		break;
+#endif // EDITOR_ENABLED
 	default:
 		break;
 	}
@@ -62,9 +66,11 @@ void Scene_Finalize()
 	case SCENE_UI_TEST:
 		UITest_Finalize();
 		break;
+#ifdef EDITOR_ENABLED
 	case SCENE_EDITOR:
 		SceneEditor_Finalize();
 		break;
+#endif // EDITOR_ENABLED
 	default:
 		break;
 	}
@@ -86,9 +92,11 @@ void Scene_Update(double elapsed_time)
 	case SCENE_UI_TEST:
 		UITest_Update(elapsed_time);
 		break;
+#ifdef EDITOR_ENABLED
 	case SCENE_EDITOR:
 		SceneEditor_Update(elapsed_time);
 		break;
+#endif // EDITOR_ENABLED
 	default:
 		break;
 	}
@@ -111,9 +119,11 @@ void Scene_Draw()
 	case SCENE_UI_TEST:
 		UITest_Draw();
 		break;
+#ifdef EDITOR_ENABLED
 	case SCENE_EDITOR:
 		SceneEditor_Draw();
 		break;
+#endif // EDITOR_ENABLED
 	default:
 		break;
 	}

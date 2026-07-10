@@ -1,6 +1,7 @@
 //=============================================================================
 // editor_camera.cpp — orbit camera (spec §8.1).
 //=============================================================================
+#ifdef EDITOR_ENABLED
 #include "editor_camera.h"
 #include "direct3d.h"
 #include <algorithm>
@@ -95,3 +96,5 @@ void EditorCamera_FrameBounds(const XMFLOAT3& mn, const XMFLOAT3& mx) {
 const XMFLOAT4X4& EditorCamera_GetView() { return g_View; }
 const XMFLOAT4X4& EditorCamera_GetProj() { return g_Proj; }
 const XMFLOAT3&   EditorCamera_GetEye()  { return g_Eye; }
+
+#endif // EDITOR_ENABLED

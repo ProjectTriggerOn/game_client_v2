@@ -158,7 +158,9 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,[[maybe_unused
 	{
 		const std::string bootScene = Config::GetInstance().GetString("debug", "start_scene", "game");
 		if      (bootScene == "ui_test") Scene_SetBootScene(SCENE_UI_TEST);
+#ifdef EDITOR_ENABLED
 		else if (bootScene == "editor")  Scene_SetBootScene(SCENE_EDITOR);
+#endif // EDITOR_ENABLED
 		else if (bootScene == "title")   Scene_SetBootScene(SCENE_TITLE);
 		else                             Scene_SetBootScene(SCENE_GAME);
 	}

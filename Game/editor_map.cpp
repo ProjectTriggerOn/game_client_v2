@@ -1,6 +1,7 @@
 //=============================================================================
 // editor_map.cpp — EditorMap <-> mapio::MapData conversion + .map IO.
 //=============================================================================
+#ifdef EDITOR_ENABLED
 // map_io.h uses std::fopen (portable C IO shared with the Linux server);
 // silence MSVC's fopen_s deprecation (C4996, promoted to error by /sdl).
 #define _CRT_SECURE_NO_WARNINGS
@@ -160,3 +161,5 @@ bool EditorMap_Save(const char* path, const EditorMap& m) {
 }
 
 } // namespace editor
+
+#endif // EDITOR_ENABLED

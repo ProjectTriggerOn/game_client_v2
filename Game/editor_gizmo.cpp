@@ -1,6 +1,7 @@
 //=============================================================================
 // editor_gizmo.cpp — manipulators (spec §3.4, §8.2).
 //=============================================================================
+#ifdef EDITOR_ENABLED
 #include "editor_gizmo.h"
 #include "editor_pick.h"
 #include <cmath>
@@ -215,3 +216,5 @@ void EditorGizmo_BeginRingDrag(GizmoAxis axis, const XMFLOAT3& center, const Ray
     if (EditorPick_RayPlane(ray, center, g_PlaneN, hit)) g_DragStartHit = hit;
     else g_DragStartHit = center;
 }
+
+#endif // EDITOR_ENABLED

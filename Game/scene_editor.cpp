@@ -4,6 +4,7 @@
 // In-engine level editor scene. M2: load + render + save an EditorMap.
 // (Camera/render/save are filled in by later M2 tasks; picking/gizmos are M3+.)
 //=============================================================================
+#ifdef EDITOR_ENABLED
 // Includes editor_map.h -> map_io.h (std::fopen); silence C4996 under /sdl.
 #define _CRT_SECURE_NO_WARNINGS
 
@@ -487,3 +488,5 @@ void SceneEditor_Draw()
     Direct3D_SetDepthEnable(true);
     Sprite_Begin();
 }
+
+#endif // EDITOR_ENABLED

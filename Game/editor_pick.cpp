@@ -1,6 +1,7 @@
 //=============================================================================
 // editor_pick.cpp — screen<->world math (spec §3.3, §8.2).
 //=============================================================================
+#ifdef EDITOR_ENABLED
 #include "editor_pick.h"
 #include "direct3d.h"
 #include <cmath>
@@ -79,3 +80,5 @@ bool EditorPick_WorldToScreen(const XMFLOAT3& wpt, const XMFLOAT4X4& view, const
 bool EditorPick_RayGroundY(const Ray& r, float planeY, XMFLOAT3& hit) {
     return EditorPick_RayPlane(r, { 0, planeY, 0 }, { 0, 1, 0 }, hit);
 }
+
+#endif // EDITOR_ENABLED

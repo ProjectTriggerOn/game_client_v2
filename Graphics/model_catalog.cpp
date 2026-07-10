@@ -1,6 +1,7 @@
 //=============================================================================
 // model_catalog.cpp
 //=============================================================================
+#ifdef EDITOR_ENABLED
 #include "model_catalog.h"
 #include <string>
 #include <vector>
@@ -46,3 +47,5 @@ void ModelCatalog_Finalize() {
     g_Cache.clear();
     g_Names.clear();
 }
+
+#endif // EDITOR_ENABLED
