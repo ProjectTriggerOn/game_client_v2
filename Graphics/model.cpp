@@ -42,7 +42,12 @@ MODEL* ModelLoad(const char* FileName, float scale, bool isBlender)
 {
 	MODEL* model = new MODEL;
 
-	model->AiScene = aiImportFile(FileName, aiProcessPreset_TargetRealtime_MaxQuality | aiProcess_ConvertToLeftHanded);
+	// aiProcess_GenBoundingBoxes fills aiMesh::mAABB; without it Assimp leaves the
+	// AABB at (0,0,0)/(0,0,0), so ModelGetAABB would return a zero-volume box
+	// (breaks the editor's model auto-collider + ray-pick selection — Task 6).
+	// static_cast: aiProcess_GenBoundingBoxes == 0x80000000 sets the sign bit, so the
+	// OR'd enum expression is a negative int; cast to unsigned for the flags param (C4245).
+	model->AiScene = aiImportFile(FileName, static_cast<unsigned int>(aiProcessPreset_TargetRealtime_MaxQuality | aiProcess_ConvertToLeftHanded | aiProcess_GenBoundingBoxes));
 	assert(model->AiScene);
 
 	model->VertexBuffer = new ID3D11Buffer * [model->AiScene->mNumMeshes];
