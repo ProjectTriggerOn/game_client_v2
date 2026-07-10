@@ -17,6 +17,8 @@
 #include "editor_gizmo.h"
 #include "cube.h"
 #include "mesh_field.h"
+#include "model.h"
+#include "model_catalog.h"
 #include "texture.h"
 #include "light.h"
 #include "collision.h"
@@ -42,6 +44,8 @@ namespace {
     int  g_LastMouseY = 0;
     int  g_LastWheel  = 0;
     bool g_MouseInit  = false;
+
+    int  g_CurCatalog = 0;   // which catalog model the FBX-place hotkey drops
 
     // AABB over everything drawable, for "frame all" (A). Falls back to a unit box.
     void MapWorldBounds(DirectX::XMFLOAT3& mn, DirectX::XMFLOAT3& mx)
@@ -80,7 +84,14 @@ namespace {
             out = { { c.min.x, c.min.y, c.min.z }, { c.max.x, c.max.y, c.max.z } };
             return true;
         }
-        return false;   // Model added in Task 6
+        if (kind == SelKind::Model && i >= 0 && i < (int)g_Map.models.size()) {
+            const auto& m = g_Map.models[i];
+            MODEL* mm = ModelCatalog_Get(m.asset.c_str());
+            if (!mm) return false;                  // ModelGetAABB derefs model; guard nullptr
+            out = ModelGetAABB(mm, m.pos);
+            return true;
+        }
+        return false;
     }
 
     DirectX::XMFLOAT3 AABBCenter(const AABB& a) {
@@ -98,6 +109,7 @@ namespace {
         };
         test(SelKind::Box, (int)g_Map.boxes.size());
         test(SelKind::Collider, (int)g_Map.colliders.size());
+        test(SelKind::Model, (int)g_Map.models.size());
         return best;
     }
 
@@ -148,6 +160,9 @@ void SceneEditor_Initialize()
     if (!editor::EditorMap_Load("resource/maps/default.map", g_Map))
         OutputDebugStringA("[EDITOR] WARNING: failed to load resource/maps/default.map\n");
 
+    ModelCatalog_Init("resource/model");
+    g_CurCatalog = 0;
+
     // g_Map/g_Cmds/g_Sel are namespace-scope statics that outlive a scene
     // teardown, so re-entering the editor reloads a fresh g_Map while any
     // command/selection from the previous session would still hold indices into
@@ -161,6 +176,7 @@ void SceneEditor_Finalize()
     // Pair the Camera_Initialize() from SceneEditor_Initialize (mirrors
     // Game_Finalize) so the constant buffers / debug text don't leak on exit.
     Camera_Finalize();
+    ModelCatalog_Finalize();
 }
 
 void SceneEditor_Update([[maybe_unused]] double elapsed_time)
@@ -199,6 +215,43 @@ void SceneEditor_Update([[maybe_unused]] double elapsed_time)
         if (KeyLogger_IsTrigger(KK_E)) g_Tool = Tool::Rotate;
         if (KeyLogger_IsTrigger(KK_R)) g_Tool = Tool::Scale;
     }
+
+    // B = drop a 1x1x1 box brush at the cursor's ground hit (grid-snapped).
+    if (KeyLogger_IsTrigger(KK_B)) {
+        Ray r = EditorPick_ScreenRay(mx, my, EditorCamera_GetView(), EditorCamera_GetProj());
+        XMFLOAT3 hit;
+        if (!EditorPick_RayGroundY(r, 0.0f, hit)) hit = SelectionCenter();
+        editor::PlacedBox box;
+        box.pos   = { SnapTo(hit.x, 0.5f), 0.5f, SnapTo(hit.z, 0.5f) };
+        box.scale = { 1, 1, 1 };
+        auto cmd = std::make_unique<editor::AddBoxCommand>(g_Map, box);
+        int idx = cmd->AddedIndex();   // -1 until Do(); read after Execute instead
+        g_Cmds.Execute(std::move(cmd));
+        g_Sel = { true, SelKind::Box, (int)g_Map.boxes.size() - 1 };
+        g_Tool = Tool::Move;
+        (void)idx;
+    }
+    // N = drop the current catalog FBX at the cursor; auto-seed its collider.
+    if (KeyLogger_IsTrigger(KK_N) && ModelCatalog_Count() > 0) {
+        Ray r = EditorPick_ScreenRay(mx, my, EditorCamera_GetView(), EditorCamera_GetProj());
+        XMFLOAT3 hit;
+        if (!EditorPick_RayGroundY(r, 0.0f, hit)) hit = SelectionCenter();
+        const char* asset = ModelCatalog_Name(g_CurCatalog % ModelCatalog_Count());
+        editor::PlacedModel pm;
+        pm.asset = asset;
+        pm.pos   = { SnapTo(hit.x, 0.5f), 0.0f, SnapTo(hit.z, 0.5f) };
+        editor::EditorCollider col;
+        MODEL* mm = ModelCatalog_Get(asset);
+        if (mm) { AABB a = ModelGetAABB(mm, pm.pos); col.min = a.min; col.max = a.max; }
+        else    { col.min = { pm.pos.x-0.5f, pm.pos.y, pm.pos.z-0.5f }; col.max = { pm.pos.x+0.5f, pm.pos.y+1.0f, pm.pos.z+0.5f }; }
+        col.isGround = false; col.ownerModel = (int)g_Map.models.size();
+        g_Cmds.Execute(std::make_unique<editor::AddModelCommand>(g_Map, pm, col));
+        g_Sel = { true, SelKind::Model, (int)g_Map.models.size() - 1 };
+        g_Tool = Tool::Move;
+    }
+    // [ / ] cycle which catalog model N drops.
+    if (KeyLogger_IsTrigger(KK_OEMOPENBRACKETS))  g_CurCatalog = (g_CurCatalog + ModelCatalog_Count() - 1) % (ModelCatalog_Count() > 0 ? ModelCatalog_Count() : 1);
+    if (KeyLogger_IsTrigger(KK_OEMCLOSEBRACKETS)) g_CurCatalog = (g_CurCatalog + 1) % (ModelCatalog_Count() > 0 ? ModelCatalog_Count() : 1);
 
     // §8.3 arbitration rule 2: no Alt => gizmo/pick. Begin a drag on a handle,
     // continue it (live-apply so the user sees the move), release => push ONE
@@ -369,6 +422,16 @@ void SceneEditor_Draw()
                    * XMMatrixRotationRollPitchYaw(b.rotEuler.x, b.rotEuler.y, b.rotEuler.z)
                    * XMMatrixTranslation(b.pos.x, b.pos.y, b.pos.z);
         Cube_Draw(g_CubeTexId, w);
+    }
+
+    // Placed FBX props (skip any that failed to load / resolve).
+    for (const auto& m : g_Map.models) {
+        MODEL* model = ModelCatalog_Get(m.asset.c_str());
+        if (!model) continue;
+        XMMATRIX w = XMMatrixScaling(m.scale.x, m.scale.y, m.scale.z)
+                   * XMMatrixRotationRollPitchYaw(m.rotEuler.x, m.rotEuler.y, m.rotEuler.z)
+                   * XMMatrixTranslation(m.pos.x, m.pos.y, m.pos.z);
+        ModelDraw(model, w);
     }
 
     // Colliders + spawns as debug geometry. Depth off so they read through the

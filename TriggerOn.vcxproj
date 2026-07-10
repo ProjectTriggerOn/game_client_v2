@@ -203,6 +203,7 @@ if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ui_src" "
     <ClCompile Include="Game\editor_gizmo.cpp" />
     <ClCompile Include="Graphics\mesh_field.cpp" />
     <ClCompile Include="Graphics\model.cpp" />
+    <ClCompile Include="Graphics\model_catalog.cpp" />
     <ClCompile Include="Graphics\model_ani.cpp" />
     <ClCompile Include="Core\mouse.cpp" />
     <ClCompile Include="Core\ms_logger.cpp" />
@@ -275,6 +276,7 @@ if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ui_src" "
     <ClInclude Include="Game\editor_gizmo.h" />
     <ClInclude Include="Graphics\mesh_field.h" />
     <ClInclude Include="Graphics\model.h" />
+    <ClInclude Include="Graphics\model_catalog.h" />
     <ClInclude Include="Graphics\model_ani.h" />
     <ClInclude Include="Core\mouse.h" />
     <ClInclude Include="Core\ms_logger.h" />

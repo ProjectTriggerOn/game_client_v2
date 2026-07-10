@@ -19,3 +19,6 @@ bool EditorPick_RayPlane(const Ray& r, const DirectX::XMFLOAT3& planePt,
 // Project a world point to pixel coords. false if behind the camera.
 bool EditorPick_WorldToScreen(const DirectX::XMFLOAT3& w, const DirectX::XMFLOAT4X4& view,
                               const DirectX::XMFLOAT4X4& proj, DirectX::XMFLOAT2& screen);
+
+// Intersect with the horizontal plane y == planeY. false if the ray is parallel / points away.
+bool EditorPick_RayGroundY(const Ray& r, float planeY, DirectX::XMFLOAT3& hit);

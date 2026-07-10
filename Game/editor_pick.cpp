@@ -75,3 +75,7 @@ bool EditorPick_WorldToScreen(const XMFLOAT3& wpt, const XMFLOAT4X4& view, const
     screen.y = (1.0f - (ndcY * 0.5f + 0.5f)) * h;
     return true;
 }
+
+bool EditorPick_RayGroundY(const Ray& r, float planeY, XMFLOAT3& hit) {
+    return EditorPick_RayPlane(r, { 0, planeY, 0 }, { 0, 1, 0 }, hit);
+}
