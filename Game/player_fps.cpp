@@ -133,6 +133,32 @@ void PlayerFps::SetTeam(uint8_t teamId)
 	}
 }
 
+//=============================================================================
+// ConsumeRound — the client mirror of GameServer::ProcessFiring's ammo path.
+//
+// The server re-arms the empty reload the INSTANT the mag runs dry, in a
+// post-decrement check right after `shooter.ammo--`. Every fire site here must
+// do the same, or the two sides disagree about when the reload started: fire the
+// last round and release the trigger, and the server silently runs its 2.7s
+// out-of-ammo reload while the client shows 0 and plays nothing — the reload only
+// began client-side on the NEXT trigger pull.
+//
+// Ammo is predicted and never rolled back (InputHistoryEntry carries no ammo), and
+// ApplyServerCorrection's ammo sync is suppressed while either side reloads, so
+// nothing downstream repairs this drift — it has to be right at the source.
+//
+// SetWeaponState never sets m_ReloadJustCompleted, so the refill still happens
+// only on the state machine's natural timeout — same as every other reload path.
+//=============================================================================
+void PlayerFps::ConsumeRound()
+{
+	m_Ammo--;
+	m_FireCounter++;
+
+	if (m_Ammo == 0 && m_AmmoReserve > 0)
+		m_StateMachine->SetWeaponState(WeaponState::RELOADING_OUT_OF_AMMO);
+}
+
 void PlayerFps::Update(double elapsed_time)
 {
 	const float frameDt = static_cast<float>(elapsed_time);
@@ -298,14 +324,14 @@ void PlayerFps::Update(double elapsed_time)
 				// First shot
 				m_TransitionFiring = true;
 				m_FireTimer = 0.0;
-				if (m_Ammo > 0) { m_Ammo--; m_FireCounter++; }
+				if (m_Ammo > 0) { ConsumeRound(); }
 			} else {
 				// Full-auto at RPM interval
 				m_FireTimer += frameDt;
 				const double fireInterval = 60.0 / m_WeaponRPM;
 				if (m_FireTimer >= fireInterval) {
 					m_FireTimer -= fireInterval;
-					if (m_Ammo > 0) { m_Ammo--; m_FireCounter++; }
+					if (m_Ammo > 0) { ConsumeRound(); }
 				}
 			}
 		}
@@ -322,8 +348,10 @@ void PlayerFps::Update(double elapsed_time)
 			// First shot on press
 			m_StateMachine->SetWeaponState(WeaponState::ADS_FIRING);
 			m_FireTimer = 0.0;
-			m_Ammo--; m_FireCounter++;
+			ConsumeRound();   // may immediately override *_FIRING with the empty reload
 		} else if (m_AmmoReserve > 0) {
+			// Fallback: only reachable if the mag was zeroed from outside a shot
+			// (e.g. an ammo sync), since ConsumeRound auto-reloads on the last round.
 			m_StateMachine->SetWeaponState(WeaponState::RELOADING_OUT_OF_AMMO);
 		}
 	}
@@ -342,8 +370,10 @@ void PlayerFps::Update(double elapsed_time)
 			if (m_FireTimer >= fireInterval) {
 				m_FireTimer -= fireInterval;
 				m_Animator->SetSameAniOverlapAllow(true);
-				if (m_Ammo > 0) { m_Ammo--; m_FireCounter++; }
+				if (m_Ammo > 0) { ConsumeRound(); }
 				else if (m_AmmoReserve > 0) {
+					// Fallback: only reachable if the mag was zeroed from outside
+					// a shot (e.g. an ammo sync), since ConsumeRound auto-reloads.
 					m_StateMachine->SetWeaponState(WeaponState::RELOADING_OUT_OF_AMMO);
 				}
 			}
@@ -357,8 +387,10 @@ void PlayerFps::Update(double elapsed_time)
 			// First shot on press
 			m_StateMachine->SetWeaponState(WeaponState::HIP_FIRING);
 			m_FireTimer = 0.0;
-			m_Ammo--; m_FireCounter++;
+			ConsumeRound();   // may immediately override *_FIRING with the empty reload
 		} else if (m_AmmoReserve > 0) {
+			// Fallback: only reachable if the mag was zeroed from outside a shot
+			// (e.g. an ammo sync), since ConsumeRound auto-reloads on the last round.
 			m_StateMachine->SetWeaponState(WeaponState::RELOADING_OUT_OF_AMMO);
 		}
 	}
@@ -372,8 +404,10 @@ void PlayerFps::Update(double elapsed_time)
 			if (m_FireTimer >= fireInterval) {
 				m_FireTimer -= fireInterval;
 				m_Animator->SetSameAniOverlapAllow(true);
-				if (m_Ammo > 0) { m_Ammo--; m_FireCounter++; }
+				if (m_Ammo > 0) { ConsumeRound(); }
 				else if (m_AmmoReserve > 0) {
+					// Fallback: only reachable if the mag was zeroed from outside
+					// a shot (e.g. an ammo sync), since ConsumeRound auto-reloads.
 					m_StateMachine->SetWeaponState(WeaponState::RELOADING_OUT_OF_AMMO);
 				}
 			}

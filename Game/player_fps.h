@@ -95,6 +95,12 @@ public:
 	float GetCorrectionError() const { return m_CorrectionError; }
 
 private:
+	// Consume one round and, if that emptied the mag, start the out-of-ammo
+	// reload IMMEDIATELY — mirroring GameServer::ProcessFiring. Every fire site
+	// must go through this; spelling the decrement out inline is what let the
+	// auto-reload go missing on the client in the first place.
+	void ConsumeRound();
+
 	// Logic State (authoritative for local player, predicted)
 	DirectX::XMFLOAT3 m_Position;         // Logic/Gameplay position
 	DirectX::XMFLOAT3 m_Velocity;
