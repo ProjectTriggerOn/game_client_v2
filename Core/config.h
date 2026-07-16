@@ -6,9 +6,12 @@
 // Header-only — include this file and call Config::GetInstance().Load(path).
 //
 // Usage:
-//   Config::GetInstance().Load("../config.toml");
+//   Config::GetInstance().Load(exeDir + "config\\config.toml",
+//                              exeDir + "config\\user_settings.toml");
 //   auto host = Config::GetInstance().ServerHost();
 //   int  port = Config::GetInstance().ServerPort();
+// main.cpp resolves those paths exe-relative first, falling back to the
+// CWD-relative config\ for the Debug/dev run.
 //=============================================================================
 
 #include <string>

@@ -77,23 +77,55 @@ static std::string g_NetworkMode;
 
 int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,[[maybe_unused]] _In_ LPSTR lpCmdLine, _In_ int nCmdShow)
 {
+	// MUST be first: the shipped build keeps every DLL in bin\ beside the exe,
+	// but the loader only searches the exe's OWN directory for imports. Every
+	// DLL we import is /DELAYLOAD-ed (see TriggerOn.vcxproj), so none of them
+	// has resolved yet — adding bin\ to the process search path here is in time
+	// for the first one, and their transitive deps (UltralightCore/WebCore, the
+	// VC++ CRT) resolve through the same path.
+	//
+	// NOTE: LOAD_LIBRARY_SEARCH_DEFAULT_DIRS also drops the CWD and PATH from the
+	// search order process-wide, which is why the post-build stages EVERY DLL
+	// (Ultralight's and assimp's) into $(TargetDir): assimp used to be found only
+	// via the CWD in Debug, and would otherwise fail to delay-load there.
+	SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
+	AddDllDirectory((ExeDirW() + L"bin").c_str());
+
+#if !defined(_DEBUG) && !defined(DEBUG)
+	// Release: every asset loader uses a CWD-relative literal
+	// ("resource/shader/*.cso", "resource/texture/*.png", "resource/model/*.fbx",
+	// "resource/maps/default.map"), so the game silently only worked when the CWD
+	// happened to be the exe dir — i.e. an Explorer double-click. A shortcut with
+	// a blank "Start in", or any script launch, made every shader load fail.
+	// The shipped layout puts all of it beside the exe, so pin the CWD there and
+	// the whole class is fixed at once. Debug is excluded — it deliberately runs
+	// on VS's CWD, the project dir, where its resource/ and config/ live.
+	//
+	// This targets the SHIPPED artifact. Running a locally-built x64\Release exe
+	// in place still won't work: the post-build stages resource\ to the project
+	// dir, not next to that exe. That was already broken before this (the UI
+	// white-screened for the same reason) — build the zip, or use Debug.
+	SetCurrentDirectoryW(ExeDirW().c_str());
+#endif
+
 	(void)CoInitializeEx(nullptr, COINIT_MULTITHREADED);
 
 	SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 
 	// Load global config early so window size settings are available.
-	// Resolve exe-relative first so the shipped build finds config.toml no
-	// matter the CWD (a shortcut with a blank "Start in", or a script launch);
-	// fall back to the CWD-relative name so the Debug/dev workflow — run from
-	// game_client/ where config.toml lives — still finds it. A truly missing
-	// file no longer crashes: Config::Load falls back to built-in defaults.
+	// Resolve exe-relative first so the shipped build finds config\config.toml
+	// no matter the CWD (a shortcut with a blank "Start in", or a script
+	// launch); fall back to the CWD-relative path so the Debug/dev workflow —
+	// run from game_client/, where config/ lives — still finds it. A truly
+	// missing file no longer crashes: Config::Load falls back to built-in
+	// defaults. user_settings.toml is written next to the config it overrides.
 	{
 		const std::string exeDir = ExeDirA();
-		std::string cfgPath  = exeDir + "config.toml";
-		std::string userPath = exeDir + "user_settings.toml";
+		std::string cfgPath  = exeDir + "config\\config.toml";
+		std::string userPath = exeDir + "config\\user_settings.toml";
 		if (!std::filesystem::exists(cfgPath)) {
-			cfgPath  = "config.toml";          // CWD (Debug: project dir)
-			userPath = "user_settings.toml";
+			cfgPath  = "config\\config.toml";          // CWD (Debug: project dir)
+			userPath = "config\\user_settings.toml";
 		}
 		Config::GetInstance().Load(cfgPath, userPath);
 	}

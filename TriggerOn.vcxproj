@@ -117,15 +117,21 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>d3d11.lib;ws2_32.lib;winmm.lib;Ultralight.lib;UltralightCore.lib;WebCore.lib;AppCore.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>d3d11.lib;ws2_32.lib;winmm.lib;Ultralight.lib;UltralightCore.lib;WebCore.lib;AppCore.lib;delayimp.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>./ThirdParty/assimp/lib;./ThirdParty/ultralight/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <!-- Deferred so nothing resolves before WinMain adds bin\ to the DLL search
+           path (main.cpp). Only DLLs the exe imports DIRECTLY belong here;
+           WebCore.dll is pulled in transitively by Ultralight.dll (listing it
+           earns LNK4199), and it plus the VC++ CRT resolve via that same path. -->
+      <DelayLoadDLLs>Ultralight.dll;UltralightCore.dll;AppCore.dll;assimp-vc143-mt.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
     <PostBuildEvent>
       <Command>xcopy /D /Y /I "$(TargetDir)*.cso" "$(ProjectDir)resource\shader\"
 xcopy /D /Y /I "$(TargetDir)ui\*.cso" "$(ProjectDir)resource\shader\ui\"
 xcopy /Y /D "$(ProjectDir)ThirdParty\ultralight\bin\*.dll" "$(TargetDir)"
-xcopy /Y /D /E /I "$(ProjectDir)ThirdParty\ultralight\resources" "$(TargetDir)resources\"
-if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ui_src" "$(ProjectDir)resource\ui\"</Command>
+xcopy /Y /D "$(ProjectDir)assimp-vc143-mt.dll" "$(TargetDir)"
+if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ui_src" "$(ProjectDir)resource\ui\"
+if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ThirdParty\ultralight\resources" "$(ProjectDir)resource\ultralight\resources\"</Command>
     </PostBuildEvent>
     <FxCompile>
       <ShaderType>Pixel</ShaderType>
@@ -154,15 +160,21 @@ if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ui_src" "
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>d3d11.lib;ws2_32.lib;winmm.lib;Ultralight.lib;UltralightCore.lib;WebCore.lib;AppCore.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>d3d11.lib;ws2_32.lib;winmm.lib;Ultralight.lib;UltralightCore.lib;WebCore.lib;AppCore.lib;delayimp.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>./ThirdParty/assimp/lib;./ThirdParty/ultralight/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <!-- Deferred so nothing resolves before WinMain adds bin\ to the DLL search
+           path (main.cpp). Only DLLs the exe imports DIRECTLY belong here;
+           WebCore.dll is pulled in transitively by Ultralight.dll (listing it
+           earns LNK4199), and it plus the VC++ CRT resolve via that same path. -->
+      <DelayLoadDLLs>Ultralight.dll;UltralightCore.dll;AppCore.dll;assimp-vc143-mt.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
     <PostBuildEvent>
       <Command>xcopy /D /Y /I "$(TargetDir)*.cso" "$(ProjectDir)resource\shader\"
 xcopy /D /Y /I "$(TargetDir)ui\*.cso" "$(ProjectDir)resource\shader\ui\"
 xcopy /Y /D "$(ProjectDir)ThirdParty\ultralight\bin\*.dll" "$(TargetDir)"
-xcopy /Y /D /E /I "$(ProjectDir)ThirdParty\ultralight\resources" "$(TargetDir)resources\"
-if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ui_src" "$(ProjectDir)resource\ui\"</Command>
+xcopy /Y /D "$(ProjectDir)assimp-vc143-mt.dll" "$(TargetDir)"
+if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ui_src" "$(ProjectDir)resource\ui\"
+if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ThirdParty\ultralight\resources" "$(ProjectDir)resource\ultralight\resources\"</Command>
     </PostBuildEvent>
     <FxCompile>
       <ShaderType>Pixel</ShaderType>
@@ -406,7 +418,7 @@ if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ui_src" "
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="config.toml" />
+    <None Include="config\config.toml" />
     <None Include="TriggerOn.sln" />
     <None Include="resource\model\sky.fbx" />
   </ItemGroup>

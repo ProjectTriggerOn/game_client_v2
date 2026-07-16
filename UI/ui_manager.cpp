@@ -4,6 +4,7 @@
 #include "ui_input_queue.h"
 #include "ui_bridge.h"
 #include "ui_hot_reload.h"
+#include "debug_log.h"   // DebugLog_LogsRoot — ultralight.log sits with the game logs
 
 #include <Ultralight/Ultralight.h>
 #include <Ultralight/platform/Platform.h>
@@ -25,6 +26,8 @@
 #include <memory>
 #include <vector>
 #include <array>
+#include <filesystem>
+#include <system_error>
 
 namespace {
 
@@ -126,6 +129,20 @@ std::string GetUiRoot() {
 #endif
 }
 
+// Ultralight's own engine data (cacert.pem, icudt67l.dat). Lives UNDER resource/
+// rather than in a sibling "resources/" — a one-letter twin of the game's
+// "resource/" was too easy to confuse. Debug reads the vendored SDK copy in
+// place (two levels up, like GetUiRoot); Release reads the exe-sibling mirror
+// the post-build produces. Trailing separator: Ultralight appends filenames to
+// this prefix directly.
+std::string GetUltralightResourcesRoot() {
+#if defined(_DEBUG) || defined(DEBUG)
+    return GetExeDirA() + "..\\..\\ThirdParty\\ultralight\\resources\\";
+#else
+    return GetExeDirA() + "resource\\ultralight\\resources\\";
+#endif
+}
+
 }  // namespace
 
 namespace UI {
@@ -137,7 +154,7 @@ void Initialize(ID3D11Device* dev, ID3D11DeviceContext* ctx, int w, int h, float
 
     // 1. Config — resource_path_prefix must be exe-relative, otherwise we crash
     //    whenever the CWD is wrong (see docs/ultralight_integration.md §3.5)
-    const std::string resPath = GetExeDirA() + "resources\\";
+    const std::string resPath = GetUltralightResourcesRoot();
     ultralight::Config config;
     config.resource_path_prefix = resPath.c_str();
     ultralight::Platform::instance().set_config(config);
@@ -151,9 +168,16 @@ void Initialize(ID3D11Device* dev, ID3D11DeviceContext* ctx, int w, int h, float
         ultralight::GetPlatformFontLoader()
     );
 
-    // 4. Logger
+    // 4. Logger — park it with the game's own logs instead of dropping it in the
+    //    CWD. DebugLog owns the resolved root; create it first because
+    //    GetDefaultLogger just opens an ofstream and silently no-ops if the
+    //    parent is missing (DebugLog skips creating it when [log].enabled=false).
+    const std::filesystem::path ulLog =
+        std::filesystem::path(DebugLog_LogsRoot()) / "ultralight.log";
+    std::error_code logEc;
+    std::filesystem::create_directories(ulLog.parent_path(), logEc);
     ultralight::Platform::instance().set_logger(
-        ultralight::GetDefaultLogger("ultralight.log")
+        ultralight::GetDefaultLogger(ulLog.string().c_str())
     );
 
     // 5. Renderer + View

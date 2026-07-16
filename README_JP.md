@@ -37,14 +37,14 @@ msbuild TriggerOn.sln /p:Configuration=Release /p:Platform=x64
 ポストビルドステップでは以下を行います。
 
 - HLSL シェーダーを `.cso` にコンパイル（UI 合成用の `ui_vs` / `ui_ps` を含む）し、`resource/shader/` にコピー
-- Ultralight の DLL と `resources/`（ICU データ + CA 証明書）を実行ファイルの隣にコピー
-- **Release** のみ: `ui_src/` を `resource/ui/` にミラーリングしてビルド成果物に同梱
+- Ultralight の DLL と `assimp-vc143-mt.dll` を実行ファイルの隣（`$(TargetDir)`）にコピーし、ビルドツリーのまま起動できるようにする（配布 zip ではこれらは `bin/` に配置されます）
+- **Release** のみ: `ui_src/` を `resource/ui/` に、`ThirdParty/ultralight/resources/` を `resource/ultralight/resources/` にミラーリングしてビルド成果物に同梱
 
-**Debug** では `ui_src/` を直接読み込むため（コピーなし）、ホットリロードが有効になります。
+**Debug** ではどちらもソースツリーから直接読み込むため（コピーなし）、ホットリロードが有効になります。
 
 ## 設定
 
-実行ファイルと同じディレクトリにある `config.toml` を編集してください。ゲーム内で変更した設定は別ファイル `user_settings.toml`（自動生成）に書き出され、`config.toml` より優先されます（手書きの `config.toml` がゲームによって上書きされることはありません）。
+実行ファイルの隣にある `config/` フォルダの `config/config.toml` を編集してください。ゲーム内で変更した設定は `config/user_settings.toml`（自動生成のオーバーレイ）に書き出され、`config.toml` より優先されます（手書きの `config.toml` がゲームによって上書きされることはありません）。
 
 ```toml
 [network]
@@ -79,25 +79,32 @@ start_scene = "title"
 
 ## 実行時に必要なファイル
 
-`TriggerOn.exe` と同じディレクトリに以下が必要です。
+配布 zip を展開した構成は以下のとおりです。
 
 ```
 TriggerOn.exe
-assimp-vc143-mt.dll
-Ultralight.dll  UltralightCore.dll  WebCore.dll  AppCore.dll
-config.toml
-resources/                 # Ultralight エンジンリソース（ビルドで配置）
-├── cacert.pem             # HTTPS ルート証明書
-└── icudt67l.dat           # ICU 国際化データ
+bin/                       # すべての DLL（下記の注記を参照）
+├── Ultralight.dll  UltralightCore.dll  WebCore.dll  AppCore.dll
+├── assimp-vc143-mt.dll    # モデル・アニメーション読み込み
+└── msvcp140*.dll  vcruntime140*.dll   # VC++ 再頒布可能パッケージ
+config/
+├── config.toml            # 同梱のデフォルト設定（手書き用）
+└── user_settings.toml     # 自動生成のオーバーレイ（実行時に作成）
+logs/                      # 実行時に作成
+├── ultralight.log
+└── <timestamp>/*.log
 resource/
-├── audio/                 # BGM・効果音 (.wav)
+├── maps/                  # マップデータ
 ├── model/                 # 3D モデル・アニメーション (.fbx)
 ├── shader/                # コンパイル済みシェーダー (.cso, ビルド時生成)
 ├── texture/               # テクスチャ (.png, .jpg)
-└── ui/                    # HTML/CSS/JS UI（Release ビルド時に ui_src/ からミラー）
+├── ui/                    # HTML/CSS/JS UI（Release ビルド時に ui_src/ からミラー）
+└── ultralight/resources/  # Ultralight エンジンリソース: cacert.pem, icudt67l.dat
 ```
 
-> 単数形 / 複数形に注意: `resources/` は Ultralight が要求するエンジンリソース用フォルダ、`resource/` はゲーム自身のアセット（音声・モデル・シェーダー・テクスチャ・UI）です。
+> Ultralight のエンジンリソースは `resource/ultralight/resources/` 配下に置かれるため、実行ファイルの隣に `resource/` と `resources/` が並ぶ紛らわしい構成はなくなりました。
+
+> `bin/` が機能する理由: Windows は exe の暗黙的インポートを `WinMain` より前に、しかも exe 自身のディレクトリからのみ解決します。そのため直接インポートしている DLL は遅延読み込みにし、exe は起動時に `bin\` を DLL 検索パスへ追加しています。
 
 ## ゲーム内 UI（`ui_src/`）
 

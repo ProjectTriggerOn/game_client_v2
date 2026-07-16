@@ -58,7 +58,7 @@ C++ → JS 推送（`window.onHealthChanged` 等）暂未模拟。Slice D 接入
 | 字体渲染 | 浏览器引擎 | WebKit + FreeType |
 | 性能特征 | V8 / SpiderMonkey | JavaScriptCore（WebKit 自带） |
 | DPI | 浏览器自己处理 | 物理像素，看 docs §6.4 |
-| `console.log` 输出 | 浏览器 DevTools | `ultralight.log` 文件 |
+| `console.log` 输出 | 浏览器 DevTools | VS 输出窗口（`[UI:console]` 前缀，由 ui_manager.cpp 的 `UIViewListener::OnAddConsoleMessage` 经 OutputDebugString 转发）；引擎日志另在 `logs/ultralight.log` |
 
 **意味着**：浏览器调出的视觉效果**和游戏不会 100% 一致**。最终验收必须在游戏里跑一遍。但 80% 的"布局对不对、颜色顺不顺、动效卡不卡"在浏览器里能直接判断。
 

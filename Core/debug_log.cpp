@@ -89,6 +89,20 @@ namespace {
     }
 }
 
+std::string DebugLog_LogsRoot()
+{
+    std::string root = Config::GetInstance().GetString("log", "root", "logs");
+    std::filesystem::path rootPath(root);
+#if !defined(_DEBUG) && !defined(DEBUG)
+    // Release: anchor a relative log root to the exe dir so a wrong CWD
+    // (shortcut/script launch) can't scatter logs. Debug keeps CWD-relative so
+    // dev logs stay in the project dir (mirrors UI/ui_manager.cpp GetUiRoot).
+    if (rootPath.is_relative())
+        rootPath = std::filesystem::path(ExeDirA()) / rootPath;
+#endif
+    return rootPath.string();
+}
+
 void DebugLog_Initialize()
 {
     // [log] — generic log system (path + master switch)
@@ -104,16 +118,7 @@ void DebugLog_Initialize()
 
     if (!g_enabled) return;
 
-    std::string root = Config::GetInstance().GetString("log", "root", "logs");
-    std::filesystem::path rootPath(root);
-#if !defined(_DEBUG) && !defined(DEBUG)
-    // Release: anchor a relative log root to the exe dir so a wrong CWD
-    // (shortcut/script launch) can't scatter logs. Debug keeps CWD-relative so
-    // dev logs stay in the project dir (mirrors UI/ui_manager.cpp GetUiRoot).
-    if (rootPath.is_relative())
-        rootPath = std::filesystem::path(ExeDirA()) / rootPath;
-#endif
-    std::filesystem::path runDir = rootPath / MakeRunTimestamp();
+    std::filesystem::path runDir = std::filesystem::path(DebugLog_LogsRoot()) / MakeRunTimestamp();
 
     std::error_code ec;
     std::filesystem::create_directories(runDir, ec);

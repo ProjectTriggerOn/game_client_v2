@@ -18,7 +18,7 @@ concurrency:
 jobs:
   build:
     runs-on: windows-latest
-    environment: production
+    environment: production-v2
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -36,20 +36,24 @@ jobs:
           # broken ZIP is published (the old shell:cmd block ignored intermediate
           # copy failures and could ship an incomplete release with a green run).
           $ErrorActionPreference = 'Stop'
-          New-Item -ItemType Directory -Force -Path release | Out-Null
+          New-Item -ItemType Directory -Force -Path release\bin, release\config | Out-Null
 
-          # --- App binary, vendored third-party DLLs, config ---
+          # --- App binary at the root; every DLL tucked into bin\ (the exe adds
+          #     bin\ to its DLL search path at startup — see main.cpp) ---
           Copy-Item x64\Release\TriggerOn.exe      release\
-          Copy-Item assimp-vc143-mt.dll            release\
-          Copy-Item x64\Release\Ultralight.dll     release\
-          Copy-Item x64\Release\UltralightCore.dll release\
-          Copy-Item x64\Release\WebCore.dll        release\
-          Copy-Item x64\Release\AppCore.dll        release\
-          Copy-Item config.toml                    release\
+          Copy-Item assimp-vc143-mt.dll            release\bin\
+          Copy-Item x64\Release\Ultralight.dll     release\bin\
+          Copy-Item x64\Release\UltralightCore.dll release\bin\
+          Copy-Item x64\Release\WebCore.dll        release\bin\
+          Copy-Item x64\Release\AppCore.dll        release\bin\
 
-          # --- Asset trees (Ultralight engine data + game resources) ---
-          Copy-Item x64\Release\resources release\resources -Recurse
-          Copy-Item resource              release\resource  -Recurse
+          # --- Config (defaults only; user_settings.toml is written at runtime) ---
+          Copy-Item config\config.toml release\config\
+
+          # --- Asset tree. Ultralight's engine data rides along inside it at
+          #     resource\ultralight\resources (post-build mirrors it there), so
+          #     there is no second near-identical "resources\" folder any more. ---
+          Copy-Item resource release\resource -Recurse
 
           # --- Visual C++ 2015-2022 runtime, app-local -------------------------
           # The vendored Ultralight + assimp DLLs are built /MD and import
@@ -66,7 +70,7 @@ jobs:
                     Where-Object { Test-Path $_ } |
                     Select-Object -First 1
           if (-not $crtDir) { throw "No Microsoft.VC143.CRT redist found under $vsRoot\VC\Redist\MSVC" }
-          Copy-Item "$crtDir\*.dll" release\
+          Copy-Item "$crtDir\*.dll" release\bin\
           Write-Host "Staged VC++ redist from: $crtDir"
 
           # --- Manifest assertion: fail before publishing if anything is missing.
@@ -74,16 +78,17 @@ jobs:
           # post-build miss that would ship a white-screen / crashing build.
           $required = @(
             'release\TriggerOn.exe',
-            'release\assimp-vc143-mt.dll',
-            'release\Ultralight.dll',
-            'release\UltralightCore.dll',
-            'release\WebCore.dll',
-            'release\AppCore.dll',
-            'release\msvcp140.dll',
-            'release\vcruntime140.dll',
-            'release\vcruntime140_1.dll',
-            'release\config.toml',
-            'release\resources\icudt67l.dat',
+            'release\bin\assimp-vc143-mt.dll',
+            'release\bin\Ultralight.dll',
+            'release\bin\UltralightCore.dll',
+            'release\bin\WebCore.dll',
+            'release\bin\AppCore.dll',
+            'release\bin\msvcp140.dll',
+            'release\bin\vcruntime140.dll',
+            'release\bin\vcruntime140_1.dll',
+            'release\config\config.toml',
+            'release\resource\ultralight\resources\icudt67l.dat',
+            'release\resource\ultralight\resources\cacert.pem',
             'release\resource\ui\index.html',
             'release\resource\shader'
           )
@@ -93,8 +98,10 @@ jobs:
             $missing | ForEach-Object { Write-Host "  $_" }
             throw "Release staging incomplete: $($missing.Count) required file(s) missing"
           }
-          Write-Host 'Release payload:'
+          Write-Host 'Release payload (root):'
           Get-ChildItem release | Format-Table Name, Length -AutoSize
+          Write-Host 'Release payload (bin):'
+          Get-ChildItem release\bin | Format-Table Name, Length -AutoSize
 
       - name: Create zip
         shell: pwsh

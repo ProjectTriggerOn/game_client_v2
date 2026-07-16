@@ -369,11 +369,16 @@ FodyWeavers.xsdFodyWeavers.xsd
 # Ultralight post-build output (mirrored from ui_src/ on Release)
 resource/ui/
 
+# Ultralight engine data (cacert.pem / icudt67l.dat), mirrored from
+# ThirdParty/ultralight/resources/ on Release. Debug reads the SDK copy in place.
+resource/ultralight/
+
 # Machine-written user settings (overrides config.toml; see Core/config.h)
 user_settings.toml
 user_settings.toml.tmp
 
-# Ultralight engine log (written to CWD by GetDefaultLogger)
+# Ultralight engine log (written under [log].root by UI::Initialize; see
+# Core/debug_log.h DebugLog_LogsRoot). Kept as a catch for legacy root strays.
 ultralight.log
 
 # Editor scratch save output (M2 save/reload probe)
