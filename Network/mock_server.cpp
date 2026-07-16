@@ -836,9 +836,14 @@ static void PaceBot(NetPlayerState& s, const DirectX::XMFLOAT3& base,
 // UpdateBots - Advance every remote bot one tick.
 //
 // Each live bot moves with the shared display-bot pace (PaceBot), runs its
-// intermittent-fire / auto-reload AI (UpdateBotWeapon), then publishes ammo +
-// tick into its wire state. Dead bots hold still and count down to respawn.
+// intermittent-fire / auto-reload AI (UpdateBotWeapon), then stamps the tick
+// into its wire state. Dead bots hold still and count down to respawn.
 // Movement is identical to before — only the combat/fire behaviour is new.
+//
+// UpdateBotWeapon burns state.ammo directly, so there is no mirror pass here.
+// state.ammoReserve is set once at Initialize and again in RespawnBot: nothing
+// decrements a bot's reserve (bots never run dry), so it is a constant rather
+// than something worth rewriting every tick.
 //
 // NOTE: the pace peaks at amp*w = 0.9 m/s, so the 62.5ms interpolation delay
 // displaces a rendered bot only ~0.056m — inside the 0.3m capsule radius. The
@@ -865,8 +870,6 @@ void MockServer::UpdateBots()
         PaceBot(b.state, b.base, t, b.phase);
         UpdateBotWeapon(b, i);
 
-        b.state.ammo        = b.ammo;
-        b.state.ammoReserve = WeaponConfig::MAX_RESERVE;  // bots never run dry
         b.state.tickId      = m_CurrentTick;
     }
 }
@@ -892,7 +895,7 @@ void MockServer::UpdateBotWeapon(Bot& b, int index)
         if (b.reloadTimer <= 0.0)
         {
             b.reloadTimer = 0.0;
-            b.ammo = WeaponConfig::MAG_SIZE;
+            b.state.ammo = WeaponConfig::MAG_SIZE;
             flags &= ~(NetStateFlags::IS_RELOADING | NetStateFlags::IS_RELOAD_EMPTY);
             b.firing = false;
             b.burstTimer = BOT_GAP_TIME;        // short pause before resuming
@@ -910,13 +913,13 @@ void MockServer::UpdateBotWeapon(Bot& b, int index)
         if (b.fireTimer <= 0.0)
         {
             b.fireTimer += 60.0 / BOT_FIRE_RPM;
-            if (b.ammo > 0)
+            if (b.state.ammo > 0)
             {
-                b.ammo--;
+                b.state.ammo--;
                 b.state.fireCounter++;
                 BotFireShot(b, index);   // live hitscan: can damage bots / player
             }
-            if (b.ammo == 0)
+            if (b.state.ammo == 0)
             {
                 // Magazine emptied -> auto-reload (out-of-ammo timing).
                 b.reloadTimer = WeaponConfig::RELOAD_OUT_OF_AMMO_DURATION;
@@ -968,12 +971,11 @@ void MockServer::RespawnBot(Bot& b, int index)
     s.stateFlags |= NetStateFlags::IS_GROUNDED;
 
     b.respawnTimer = 0.0;
-    b.ammo = WeaponConfig::MAG_SIZE;
     b.reloadTimer = 0.0;
     b.fireTimer = 0.0;
     b.firing = false;
     b.burstTimer = BOT_GAP_TIME + 0.2 * index;  // re-stagger
-    s.ammo = b.ammo;
+    s.ammo = WeaponConfig::MAG_SIZE;
     s.ammoReserve = WeaponConfig::MAX_RESERVE;
 }
 

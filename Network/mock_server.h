@@ -75,8 +75,8 @@ private:
 
         double respawnTimer = 0.0;         // counts down while IS_DEAD
 
-        // Intermittent-fire AI
-        uint8_t ammo        = WeaponConfig::MAG_SIZE;
+        // Intermittent-fire AI. Ammo lives in state — bots burn state.ammo
+        // directly, so nothing here shadows a wire field.
         double  reloadTimer = 0.0;         // >0 while reloading
         double  fireTimer   = 0.0;         // per-shot cadence inside a burst
         double  burstTimer  = 0.0;         // time left in the current burst / gap
