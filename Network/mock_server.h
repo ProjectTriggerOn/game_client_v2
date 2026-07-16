@@ -189,9 +189,10 @@ private:
     // now a shootable, intermittently-firing, auto-reloading combat bot.
     Bot m_Bots[NUM_BOTS]{};
 
-    // Local player combat state
+    // Local player combat state. Ammo / fireCounter live in m_PlayerState — it is
+    // the single source of truth for everything that goes on the wire. Only the
+    // server-private timers have no wire twin.
     double   m_FireTimer = 0.0;
-    uint16_t m_FireCounter = 0;
     double   m_PlayerRespawnTimer = 0.0;  // counts down while the player IS_DEAD
 
     // Match / scoring state (broadcast in every Snapshot header) — mirrors
@@ -203,10 +204,6 @@ private:
     double   m_MatchTimeRemaining = MatchConfig::MATCH_DURATION;
     uint32_t m_KillSeq = 0;
     KillFeedEntry m_RecentKills[KILL_FEED_SIZE] = {};
-
-    // Ammo
-    uint8_t m_Ammo = WeaponConfig::MAG_SIZE;
-    uint8_t m_AmmoReserve = WeaponConfig::MAX_RESERVE;
 
     // Player collision parameters (must match PlayerFps)
     static constexpr float PLAYER_HEIGHT = 1.6f;

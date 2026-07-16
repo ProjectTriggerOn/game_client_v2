@@ -45,14 +45,13 @@ void MockServer::Initialize(INetwork* pNetwork, CollisionWorld* pCollisionWorld)
     m_PlayerState.fireCounter = 0;
     m_PlayerState.kills = 0;
     m_PlayerState.deaths = 0;
-    m_Ammo = WeaponConfig::MAG_SIZE;
-    m_AmmoReserve = WeaponConfig::MAX_RESERVE;
+    m_PlayerState.ammo = WeaponConfig::MAG_SIZE;
+    m_PlayerState.ammoReserve = WeaponConfig::MAX_RESERVE;
 
     // Initialize last input
     m_LastInputCmd = {};
 
     m_FireTimer = 0.0;
-    m_FireCounter = 0;
 
     // Fresh match (ResetSession routes through Initialize, so this also re-arms
     // a new round on every game-scene re-entry).
@@ -214,9 +213,6 @@ void MockServer::Tick()
     // 5. Update tick ID in local state (and ack of last processed input — see GameServer)
     m_PlayerState.tickId = m_CurrentTick;
     m_PlayerState.lastProcessedInputTick = m_LastInputCmd.tickId;
-    m_PlayerState.fireCounter = m_FireCounter;
-    m_PlayerState.ammo = m_Ammo;
-    m_PlayerState.ammoReserve = m_AmmoReserve;
 
     // 5b. Record lag-compensation history for every bot — exactly the state
     // BroadcastSnapshot() is about to send (incl. respawn teleports).
@@ -285,9 +281,9 @@ void MockServer::ProcessInputCmd(const InputCmd& cmd)
 
     if (cmd.buttons & InputButtons::RELOAD)
     {
-        if (m_ReloadTimer <= 0.0 && m_Ammo < WeaponConfig::MAG_SIZE && m_AmmoReserve > 0)
+        if (m_ReloadTimer <= 0.0 && m_PlayerState.ammo < WeaponConfig::MAG_SIZE && m_PlayerState.ammoReserve > 0)
         {
-            if (m_Ammo == 0) {
+            if (m_PlayerState.ammo == 0) {
                 m_ReloadTimer = WeaponConfig::RELOAD_OUT_OF_AMMO_DURATION;
                 flags |= NetStateFlags::IS_RELOAD_EMPTY;
             } else {
@@ -349,10 +345,10 @@ void MockServer::UpdateReloadTimer()
             flags &= ~NetStateFlags::IS_RELOAD_EMPTY;
 
             // Refill magazine from reserve
-            int needed = WeaponConfig::MAG_SIZE - m_Ammo;
-            int refill = (m_AmmoReserve >= needed) ? needed : m_AmmoReserve;
-            m_Ammo += static_cast<uint8_t>(refill);
-            m_AmmoReserve -= static_cast<uint8_t>(refill);
+            int needed = WeaponConfig::MAG_SIZE - m_PlayerState.ammo;
+            int refill = (m_PlayerState.ammoReserve >= needed) ? needed : m_PlayerState.ammoReserve;
+            m_PlayerState.ammo += static_cast<uint8_t>(refill);
+            m_PlayerState.ammoReserve -= static_cast<uint8_t>(refill);
         }
     }
     else
@@ -704,10 +700,10 @@ void MockServer::ProcessFiring()
 
     if (!shouldFire) return;
 
-    if (m_Ammo == 0)
+    if (m_PlayerState.ammo == 0)
     {
         // Auto-reload: handles empty-fire after interrupted reload, or held FIRE on empty mag
-        if (m_AmmoReserve > 0 && m_ReloadTimer <= 0.0) {
+        if (m_PlayerState.ammoReserve > 0 && m_ReloadTimer <= 0.0) {
             m_ReloadTimer = WeaponConfig::RELOAD_OUT_OF_AMMO_DURATION;
             m_PlayerState.stateFlags |= NetStateFlags::IS_RELOADING;
             m_PlayerState.stateFlags |= NetStateFlags::IS_RELOAD_EMPTY;
@@ -715,11 +711,11 @@ void MockServer::ProcessFiring()
         return;
     }
 
-    m_Ammo--;
-    m_FireCounter++;
+    m_PlayerState.ammo--;
+    m_PlayerState.fireCounter++;
 
     // Auto-reload IMMEDIATELY when last bullet just fired
-    if (m_Ammo == 0 && m_AmmoReserve > 0 && m_ReloadTimer <= 0.0) {
+    if (m_PlayerState.ammo == 0 && m_PlayerState.ammoReserve > 0 && m_ReloadTimer <= 0.0) {
         m_ReloadTimer = WeaponConfig::RELOAD_OUT_OF_AMMO_DURATION;
         m_PlayerState.stateFlags |= NetStateFlags::IS_RELOADING;
         m_PlayerState.stateFlags |= NetStateFlags::IS_RELOAD_EMPTY;
@@ -1151,8 +1147,8 @@ void MockServer::UpdatePlayerRespawn()
                                   NetStateFlags::IS_RELOADING | NetStateFlags::IS_RELOAD_EMPTY |
                                   NetStateFlags::IS_INSPECTING);
     m_PlayerState.stateFlags |= NetStateFlags::IS_GROUNDED;
-    m_Ammo = WeaponConfig::MAG_SIZE;
-    m_AmmoReserve = WeaponConfig::MAX_RESERVE;
+    m_PlayerState.ammo = WeaponConfig::MAG_SIZE;
+    m_PlayerState.ammoReserve = WeaponConfig::MAX_RESERVE;
     m_ReloadTimer = 0.0;
     m_FireTimer = 0.0;
     m_PrevButtons = 0;  // reset edge detection across respawn
