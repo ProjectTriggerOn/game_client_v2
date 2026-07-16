@@ -32,6 +32,7 @@
 namespace {
 
 ultralight::RefPtr<ultralight::Renderer> g_renderer;
+ultralight::RefPtr<ultralight::Session>  g_session;     // must outlive the View
 ultralight::RefPtr<ultralight::View>     g_view;
 UI::D3D11BitmapRenderer                  g_d3d_renderer;
 std::unique_ptr<UI::UIFileSystem>        g_filesystem;  // must outlive the View; Ultralight keeps a raw pointer
@@ -187,12 +188,19 @@ void Initialize(ID3D11Device* dev, ID3D11DeviceContext* ctx, int w, int h, float
         return;
     }
 
+    // Passing a null session would use Ultralight's DEFAULT session, which is
+    // persistent and named "default" — it backs its storage (cookies, localStorage,
+    // IndexedDB) with an on-disk folder named after itself, dumping an empty
+    // "default\" directory into the artifact root. Our pages store nothing, so use
+    // an in-memory session instead: no storage, no folder.
+    g_session = g_renderer->CreateSession(/*is_persistent=*/false, "triggeron");
+
     ultralight::ViewConfig vc;
     vc.is_accelerated = false;        // CPU / BitmapSurface path
     vc.is_transparent = true;         // unpainted HTML regions reveal the 3D scene underneath
     g_deviceScale = DeviceScaleFor(w);
     vc.initial_device_scale = (double)g_deviceScale;  // DPI zoom, clamped by width
-    g_view = g_renderer->CreateView((uint32_t)w, (uint32_t)h, vc, nullptr);
+    g_view = g_renderer->CreateView((uint32_t)w, (uint32_t)h, vc, g_session);
     if (!g_view) {
         OutputDebugStringA("[UI] CreateView failed\n");
         return;
@@ -322,6 +330,7 @@ void Finalize() {
     UI::Bridge::Unbind();  // drop the bridge's cached view before we release it
     g_d3d_renderer.Finalize();
     g_view     = nullptr;  // RefPtr release
+    g_session  = nullptr;  // after the View that borrows it
     g_renderer = nullptr;
     g_filesystem.reset();
 }
