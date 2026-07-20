@@ -42,7 +42,7 @@ bool Shader_3DUnlit_Initialize([[maybe_unused]] ID3D11Device* pDevice, [[maybe_u
 	hr = Direct3D_GetDevice()->CreateVertexShader(vsbinary_pointer, filesize, nullptr, &g_pVertexShader);
 
 	if (FAILED(hr)) {
-		hal::dout << "Shader_3D_Initialize()" << std::endl;
+		hal::dout << "Shader_3DUnlit_Initialize() : failed to create the vertex shader" << std::endl;
 		delete[] vsbinary_pointer; //
 		return false;
 	}
@@ -63,7 +63,7 @@ bool Shader_3DUnlit_Initialize([[maybe_unused]] ID3D11Device* pDevice, [[maybe_u
 	delete[] vsbinary_pointer; //
 
 	if (FAILED(hr)) {
-		hal::dout << "Shader_3D_Initialize() :" << std::endl;
+		hal::dout << "Shader_3DUnlit_Initialize() : failed to create the input layout" << std::endl;
 		return false;
 	}
 
@@ -95,7 +95,7 @@ bool Shader_3DUnlit_Initialize([[maybe_unused]] ID3D11Device* pDevice, [[maybe_u
 	delete[] psbinary_pointer; //
 
 	if (FAILED(hr)) {
-		hal::dout << "Shader_Billboard_Initialize() Error" << std::endl;
+		hal::dout << "Shader_3DUnlit_Initialize() : failed to create the pixel shader" << std::endl;
 		return false;
 	}
 

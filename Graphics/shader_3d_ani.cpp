@@ -31,7 +31,7 @@ bool Shader_3D_Ani_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pConte
 	HRESULT hr;
 
 	if (!pDevice || !pContext) {
-		hal::dout << "Shader_3D_Ani_Initialize() : ERROR" << std::endl;
+		hal::dout << "Shader_3D_Ani_Initialize() : the given device or device context is invalid" << std::endl;
 		return false;
 	}
 
@@ -55,7 +55,7 @@ bool Shader_3D_Ani_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pConte
 
 	hr = g_pDevice->CreateVertexShader(vsbinary.data(), filesize, nullptr, &g_pVertexShader);
 	if (FAILED(hr)) {
-		hal::dout << "Shader_3D_Ani_Initialize() CreateVertexShader failed" << std::endl;
+		hal::dout << "Shader_3D_Ani_Initialize() : failed to create the vertex shader" << std::endl;
 		return false;
 	}
 
@@ -71,7 +71,7 @@ bool Shader_3D_Ani_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pConte
 
 	hr = g_pDevice->CreateInputLayout(layout, ARRAYSIZE(layout), vsbinary.data(), filesize, &g_pInputLayout);
 	if (FAILED(hr)) {
-		hal::dout << "Shader_3D_Ani_Initialize() CreateInputLayout failed" << std::endl;
+		hal::dout << "Shader_3D_Ani_Initialize() : failed to create the input layout" << std::endl;
 		return false;
 	}
 
@@ -104,7 +104,7 @@ bool Shader_3D_Ani_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pConte
 
 	hr = g_pDevice->CreatePixelShader(psbinary.data(), filesize, nullptr, &g_pPixelShader);
 	if (FAILED(hr)) {
-		hal::dout << "Shader_3D_Ani_Initialize() CreatePixelShader failed" << std::endl;
+		hal::dout << "Shader_3D_Ani_Initialize() : failed to create the pixel shader" << std::endl;
 		return false;
 	}
 

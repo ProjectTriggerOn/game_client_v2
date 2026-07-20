@@ -27,7 +27,7 @@ bool Shader_3D_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 
 	// デバイスとデバイスコンテキストのチェック
 	if (!pDevice || !pContext) {
-		hal::dout << "Shader_3D_Initialize() : ERROR" << std::endl;
+		hal::dout << "Shader_3D_Initialize() : the given device or device context is invalid" << std::endl;
 		return false;
 	}
 
@@ -59,7 +59,7 @@ bool Shader_3D_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 	hr = g_pDevice->CreateVertexShader(vsbinary_pointer, filesize, nullptr, &g_pVertexShader);
 
 	if (FAILED(hr)) {
-		hal::dout << "Shader_3D_Initialize()" << std::endl;
+		hal::dout << "Shader_3D_Initialize() : failed to create the vertex shader" << std::endl;
 		delete[] vsbinary_pointer; //
 		return false;
 	}
@@ -115,7 +115,7 @@ bool Shader_3D_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 	delete[] psbinary_pointer; //
 
 	if (FAILED(hr)) {
-		hal::dout << "Shader_3D_Initialize() Error" << std::endl;
+		hal::dout << "Shader_3D_Initialize() : failed to create the pixel shader" << std::endl;
 		return false;
 	}
 

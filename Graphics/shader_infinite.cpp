@@ -38,7 +38,7 @@ bool Shader_InfiniteGrid_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* 
 
 	// デバイスとデバイスコンテキストのチェック
 	if (!pDevice || !pContext) {
-		hal::dout << "Shader_Grid_Initialize() : ERROR" << std::endl;
+		hal::dout << "Shader_InfiniteGrid_Initialize() : the given device or device context is invalid" << std::endl;
 		return false;
 	}
 
@@ -65,7 +65,7 @@ bool Shader_InfiniteGrid_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* 
 	hr = g_pDevice->CreateVertexShader(vsbinary_pointer, filesize, nullptr, &g_pVertexShader);
 
 	if (FAILED(hr)) {
-		hal::dout << "Shader_Grid_Initialize()" << std::endl;
+		hal::dout << "Shader_InfiniteGrid_Initialize() : failed to create the vertex shader" << std::endl;
 		delete[] vsbinary_pointer; //
 		return false;
 	}
@@ -83,7 +83,7 @@ bool Shader_InfiniteGrid_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* 
 	delete[] vsbinary_pointer;
 
 	if (FAILED(hr)) {
-		hal::dout << "Shader_Grid_Initialize() :" << std::endl;
+		hal::dout << "Shader_InfiniteGrid_Initialize() : failed to create the input layout" << std::endl;
 		return false;
 	}
 
@@ -122,7 +122,7 @@ bool Shader_InfiniteGrid_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* 
 	delete[] psbinary_pointer; //
 
 	if (FAILED(hr)) {
-		hal::dout << "Shader_Grid_Initialize() Error" << std::endl;
+		hal::dout << "Shader_InfiniteGrid_Initialize() : failed to create the pixel shader" << std::endl;
 		return false;
 	}
 	return true;

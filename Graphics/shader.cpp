@@ -114,7 +114,7 @@ bool Shader_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 	delete[] psbinary_pointer; //
 
 	if (FAILED(hr)) {
-		hal::dout << "Shader_Initialize() Error" << std::endl;
+		hal::dout << "Shader_Initialize() : failed to create the pixel shader" << std::endl;
 		return false;
 	}
 
