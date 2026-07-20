@@ -68,6 +68,13 @@ void PlayerCamFps_Initialize()
 		//               [](const ConfigValue& v) { g_Fov = XMConvertToRadians((float)v.AsFloat()); });
 	}
 
+	// Debug-only, like the sibling overlays in main.cpp and camera.cpp. The one consumer,
+	// PlayerCamFps_Debug, runs only under game.cpp's isDebugCollision, which Release
+	// defines as constexpr false — so this was built and destroyed undrawn on every
+	// game-scene entry. The "if (!g_DebugText) return;" in PlayerCamFps_Debug is what
+	// keeps it a safe no-op now; don't remove it.
+#if defined(_DEBUG) || defined(DEBUG)
+
 	g_DebugText = new hal::DebugText(Direct3D_GetDevice(), Direct3D_GetDeviceContext(),
 		L"resource/texture/consolab_ascii_512.png",
 		Direct3D_GetBackBufferWidth(), Direct3D_GetBackBufferHeight(),
@@ -75,6 +82,8 @@ void PlayerCamFps_Initialize()
 		0, 0,
 		0.0f, 16.0f
 	);
+
+#endif // _DEBUG || DEBUG
 }
 
 void PlayerCamFps_Finalize()
