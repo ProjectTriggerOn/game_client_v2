@@ -126,12 +126,31 @@
       <DelayLoadDLLs>Ultralight.dll;UltralightCore.dll;AppCore.dll;assimp-vc143-mt.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
     <PostBuildEvent>
+      <!-- The xcopy lines populate $(ProjectDir)resource\, which release.yml packages
+           into the ZIP; that leaves $(TargetDir) itself unrunnable. Release pins the CWD
+           to the exe dir (main.cpp) and ui_manager.cpp resolves its roots exe-relative
+           with no CWD fallback, so the assets have to BE beside the exe — hence the
+           Release-only robocopy, which also makes a local build rehearse the shipped
+           layout. It must stay LAST: the lines above write this build's fresh .cso.
+
+           /MIR rather than xcopy because xcopy cannot delete, and a stale leftover here
+           would mask the missing-file bug this staging exists to catch (x64\Debug\resources\
+           is 6 MB of exactly that, orphaned by c79f6fc). It is incremental, so the 65 MB is
+           paid once. robocopy calls 0-7 success, which MSBuild reads as failure — hence the
+           errorlevel reset, kept inside the Release guard so Debug still propagates its own. -->
       <Command>xcopy /D /Y /I "$(TargetDir)*.cso" "$(ProjectDir)resource\shader\"
 xcopy /D /Y /I "$(TargetDir)ui\*.cso" "$(ProjectDir)resource\shader\ui\"
 xcopy /Y /D "$(ProjectDir)ThirdParty\ultralight\bin\*.dll" "$(TargetDir)"
 xcopy /Y /D "$(ProjectDir)assimp-vc143-mt.dll" "$(TargetDir)"
 if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ui_src" "$(ProjectDir)resource\ui\"
-if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ThirdParty\ultralight\resources" "$(ProjectDir)resource\ultralight\resources\"</Command>
+if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ThirdParty\ultralight\resources" "$(ProjectDir)resource\ultralight\resources\"
+if "$(ConfigurationName)" == "Release" (
+robocopy "$(ProjectDir)resource" "$(TargetDir)resource" /MIR /NJH /NJS /NFL /NDL /NP
+if errorlevel 8 exit /b 1
+xcopy /Y /D /I "$(ProjectDir)config\config.toml" "$(TargetDir)config\"
+if errorlevel 1 exit /b 1
+exit /b 0
+)</Command>
     </PostBuildEvent>
     <FxCompile>
       <ShaderType>Pixel</ShaderType>
@@ -169,12 +188,31 @@ if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ThirdPart
       <DelayLoadDLLs>Ultralight.dll;UltralightCore.dll;AppCore.dll;assimp-vc143-mt.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
     <PostBuildEvent>
+      <!-- The xcopy lines populate $(ProjectDir)resource\, which release.yml packages
+           into the ZIP; that leaves $(TargetDir) itself unrunnable. Release pins the CWD
+           to the exe dir (main.cpp) and ui_manager.cpp resolves its roots exe-relative
+           with no CWD fallback, so the assets have to BE beside the exe — hence the
+           Release-only robocopy, which also makes a local build rehearse the shipped
+           layout. It must stay LAST: the lines above write this build's fresh .cso.
+
+           /MIR rather than xcopy because xcopy cannot delete, and a stale leftover here
+           would mask the missing-file bug this staging exists to catch (x64\Debug\resources\
+           is 6 MB of exactly that, orphaned by c79f6fc). It is incremental, so the 65 MB is
+           paid once. robocopy calls 0-7 success, which MSBuild reads as failure — hence the
+           errorlevel reset, kept inside the Release guard so Debug still propagates its own. -->
       <Command>xcopy /D /Y /I "$(TargetDir)*.cso" "$(ProjectDir)resource\shader\"
 xcopy /D /Y /I "$(TargetDir)ui\*.cso" "$(ProjectDir)resource\shader\ui\"
 xcopy /Y /D "$(ProjectDir)ThirdParty\ultralight\bin\*.dll" "$(TargetDir)"
 xcopy /Y /D "$(ProjectDir)assimp-vc143-mt.dll" "$(TargetDir)"
 if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ui_src" "$(ProjectDir)resource\ui\"
-if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ThirdParty\ultralight\resources" "$(ProjectDir)resource\ultralight\resources\"</Command>
+if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ThirdParty\ultralight\resources" "$(ProjectDir)resource\ultralight\resources\"
+if "$(ConfigurationName)" == "Release" (
+robocopy "$(ProjectDir)resource" "$(TargetDir)resource" /MIR /NJH /NJS /NFL /NDL /NP
+if errorlevel 8 exit /b 1
+xcopy /Y /D /I "$(ProjectDir)config\config.toml" "$(TargetDir)config\"
+if errorlevel 1 exit /b 1
+exit /b 0
+)</Command>
     </PostBuildEvent>
     <FxCompile>
       <ShaderType>Pixel</ShaderType>

@@ -101,10 +101,11 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,[[maybe_unused
 	// the whole class is fixed at once. Debug is excluded — it deliberately runs
 	// on VS's CWD, the project dir, where its resource/ and config/ live.
 	//
-	// This targets the SHIPPED artifact. Running a locally-built x64\Release exe
-	// in place still won't work: the post-build stages resource\ to the project
-	// dir, not next to that exe. That was already broken before this (the UI
-	// white-screened for the same reason) — build the zip, or use Debug.
+	// A locally-built x64\Release exe works in place too: the post-build now mirrors
+	// resource\ into $(TargetDir) as well, so exeDir and the CWD are the same complete
+	// layout the ZIP ships. Left unconditional on purpose — probing for resource\ and
+	// skipping the pin when it is absent would turn a loud failure into a quiet run on
+	// whatever assets some inherited CWD happened to hold.
 	SetCurrentDirectoryW(ExeDirW().c_str());
 #endif
 
