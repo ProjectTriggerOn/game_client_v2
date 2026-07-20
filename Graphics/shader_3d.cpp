@@ -81,7 +81,7 @@ bool Shader_3D_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 	delete[] vsbinary_pointer; // �o�C�i���f�[�^�̃o�b�t�@����
 
 	if (FAILED(hr)) {
-		hal::dout << "Shader_3D_Initialize() : ���_���C�A�E�g�̍쐬�Ɏ��s���܂���" << std::endl;
+		hal::dout << "Shader_3D_Initialize() : failed to create the input layout" << std::endl;
 		return false;
 	}
 

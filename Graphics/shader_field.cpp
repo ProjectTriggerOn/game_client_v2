@@ -78,7 +78,7 @@ bool Shader_Field_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContex
 	delete[] vsbinary_pointer; 
 
 	if (FAILED(hr)) {
-		hal::dout << "Shader_Field_Initialize() : ���_���C�A�E�g�̍쐬�Ɏ��s���܂���" << std::endl;
+		hal::dout << "Shader_Field_Initialize() : failed to create the input layout" << std::endl;
 		return false;
 	}
 
