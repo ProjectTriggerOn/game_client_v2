@@ -41,7 +41,7 @@ bool Shader_3D_Ani_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pConte
 	// Load Vertex Shader
 	std::ifstream ifs_vs("resource/shader/shader_vertex_3d_ani.cso", std::ios::binary);
 	if (!ifs_vs) {
-		MessageBox(nullptr, "shader_vertex_3d_ani.cso not found", "error", MB_OK);
+		MessageBox(nullptr, "Failed to load the vertex shader.\n\nshader_vertex_3d_ani.cso", "Error", MB_OK | MB_ICONERROR);
 		return false;
 	}
 
@@ -90,7 +90,7 @@ bool Shader_3D_Ani_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pConte
 	// Load Pixel Shader
 	std::ifstream ifs_ps("resource/shader/shader_pixel_3d_ani.cso", std::ios::binary);
 	if (!ifs_ps) {
-		MessageBox(nullptr, "shader_pixel_3d_ani.cso not found", "error", MB_OK);
+		MessageBox(nullptr, "Failed to load the pixel shader.\n\nshader_pixel_3d_ani.cso", "Error", MB_OK | MB_ICONERROR);
 		return false;
 	}
 

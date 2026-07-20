@@ -48,7 +48,7 @@ bool Shader_InfiniteGrid_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* 
 	std::ifstream ifs_vs("resource/shader/infinite_grid_vertex.cso", std::ios::binary);
 
 	if (!ifs_vs) {
-		MessageBox(nullptr, "", "error", MB_OK);
+		MessageBox(nullptr, "Failed to load the vertex shader.\n\ninfinite_grid_vertex.cso", "Error", MB_OK | MB_ICONERROR);
 		return false;
 	}
 
@@ -104,7 +104,7 @@ bool Shader_InfiniteGrid_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* 
 	//
 	std::ifstream ifs_ps("resource/shader/infinite_grid_pixel.cso", std::ios::binary);
 	if (!ifs_ps) {
-		MessageBox(nullptr, "\n infinite_grid_pixel.cso", "error", MB_OK);
+		MessageBox(nullptr, "Failed to load the pixel shader.\n\ninfinite_grid_pixel.cso", "Error", MB_OK | MB_ICONERROR);
 		return false;
 	}
 

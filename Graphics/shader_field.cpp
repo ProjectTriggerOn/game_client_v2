@@ -37,7 +37,7 @@ bool Shader_Field_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContex
 	std::ifstream ifs_vs("resource/shader/shader_vertex_field.cso", std::ios::binary);
 
 	if (!ifs_vs) {
-		MessageBox(nullptr, "", "error", MB_OK);
+		MessageBox(nullptr, "Failed to load the vertex shader.\n\nshader_vertex_field.cso", "Error", MB_OK | MB_ICONERROR);
 		return false;
 	}
 
@@ -94,7 +94,7 @@ bool Shader_Field_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContex
 	//
 	std::ifstream ifs_ps("resource/shader/shader_pixel_field.cso", std::ios::binary);
 	if (!ifs_ps) {
-		MessageBox(nullptr, "\n\nshader_pixel_3d.cso", "error", MB_OK);
+		MessageBox(nullptr, "Failed to load the pixel shader.\n\nshader_pixel_field.cso", "Error", MB_OK | MB_ICONERROR);
 		return false;
 	}
 

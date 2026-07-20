@@ -64,7 +64,9 @@ int Texture_LoadFromFile(const wchar_t* pFilename)
 		g_Textures[i].height = t2desc.Height;
 
 		if (FAILED(hr)) {
-			MessageBoxW(nullptr, L"テクスチャの読み込みに失敗しました", pFilename, MB_OK | MB_ICONERROR);
+			std::wstring message = L"Failed to load the texture.\n\n";
+			message += pFilename;
+			MessageBoxW(nullptr, message.c_str(), L"Error", MB_OK | MB_ICONERROR);
 			return -1; // 読み込み失敗
 		}
 
