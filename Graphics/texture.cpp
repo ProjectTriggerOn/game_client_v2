@@ -57,18 +57,22 @@ int Texture_LoadFromFile(const wchar_t* pFilename)
 		HRESULT hr;
 		hr = CreateWICTextureFromFile(g_pDevice, g_pContext, pFilename, &g_Textures[i].pTexture, &g_Textures[i].pTextureView);
 
-		ID3D11Texture2D* pTexture = (ID3D11Texture2D*)g_Textures[i].pTexture;
-		D3D11_TEXTURE2D_DESC t2desc;
-		pTexture->GetDesc(&t2desc);
-		g_Textures[i].width = t2desc.Width;
-		g_Textures[i].height = t2desc.Height;
-
+		// Check the result BEFORE touching the texture. On failure
+		// CreateWICTextureFromFile leaves pTexture null, so reading the description
+		// first — as this did — access-violates on exactly the path the message box
+		// below exists to report, and the box never got to show at all.
 		if (FAILED(hr)) {
 			std::wstring message = L"Failed to load the texture.\n\n";
 			message += pFilename;
 			MessageBoxW(nullptr, message.c_str(), L"Error", MB_OK | MB_ICONERROR);
 			return -1; // 読み込み失敗
 		}
+
+		ID3D11Texture2D* pTexture = (ID3D11Texture2D*)g_Textures[i].pTexture;
+		D3D11_TEXTURE2D_DESC t2desc;
+		pTexture->GetDesc(&t2desc);
+		g_Textures[i].width = t2desc.Width;
+		g_Textures[i].height = t2desc.Height;
 
 		g_Textures[i].filename = pFilename; // ファイル名を保存
 
