@@ -34,7 +34,9 @@ namespace hal
 		}
 		else {
 			if (FAILED(CreateWICTextureFromFile(pDevice, pFontTextureFileName, &m_pTexture, &m_pTextureView))) {
-				MessageBoxW(nullptr, L"�t�H���g�e�N�X�`���̓ǂݍ��݂Ɏ��s���܂���", pFontTextureFileName, MB_OK | MB_ICONERROR);
+				std::wstring message = L"Failed to load the font texture.\n\n";
+				message += pFontTextureFileName;
+				MessageBoxW(nullptr, message.c_str(), L"Error", MB_OK | MB_ICONERROR);
 				return;
 			}
 

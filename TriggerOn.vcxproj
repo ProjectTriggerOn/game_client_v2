@@ -1,14 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
-    <ProjectConfiguration Include="Debug|Win32">
-      <Configuration>Debug</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release|Win32">
-      <Configuration>Release</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
       <Platform>x64</Platform>
@@ -27,19 +19,6 @@
     <ProjectName>TriggerOn</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
-    <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
-    <CharacterSet>Unicode</CharacterSet>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
-    <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
-    <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>Unicode</CharacterSet>
-  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
@@ -58,12 +37,6 @@
   </ImportGroup>
   <ImportGroup Label="Shared">
   </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-  </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-  </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
@@ -71,36 +44,6 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <ClCompile>
-      <AdditionalIncludeDirectories>./Core;./Graphics;./Game;./Network;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <WarningLevel>Level3</WarningLevel>
-      <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;EDITOR_ENABLED;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ConformanceMode>true</ConformanceMode>
-    </ClCompile>
-    <Link>
-      <SubSystem>Windows</SubSystem>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-    </Link>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <ClCompile>
-      <AdditionalIncludeDirectories>./Core;./Graphics;./Game;./Network;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <WarningLevel>Level3</WarningLevel>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
-      <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ConformanceMode>true</ConformanceMode>
-    </ClCompile>
-    <Link>
-      <SubSystem>Windows</SubSystem>
-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <OptimizeReferences>true</OptimizeReferences>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-    </Link>
-  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <AdditionalIncludeDirectories>.;./Core;./Graphics;./Game;./Network;./UI;./ThirdParty/enet/include;./ThirdParty/assimp/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -126,12 +69,31 @@
       <DelayLoadDLLs>Ultralight.dll;UltralightCore.dll;AppCore.dll;assimp-vc143-mt.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
     <PostBuildEvent>
+      <!-- The xcopy lines populate $(ProjectDir)resource\, which release.yml packages
+           into the ZIP; that leaves $(TargetDir) itself unrunnable. Release pins the CWD
+           to the exe dir (main.cpp) and ui_manager.cpp resolves its roots exe-relative
+           with no CWD fallback, so the assets have to BE beside the exe — hence the
+           Release-only robocopy, which also makes a local build rehearse the shipped
+           layout. It must stay LAST: the lines above write this build's fresh .cso.
+
+           /MIR rather than xcopy because xcopy cannot delete, and a stale leftover here
+           would mask the missing-file bug this staging exists to catch (x64\Debug\resources\
+           is 6 MB of exactly that, orphaned by c79f6fc). It is incremental, so the 65 MB is
+           paid once. robocopy calls 0-7 success, which MSBuild reads as failure — hence the
+           errorlevel reset, kept inside the Release guard so Debug still propagates its own. -->
       <Command>xcopy /D /Y /I "$(TargetDir)*.cso" "$(ProjectDir)resource\shader\"
 xcopy /D /Y /I "$(TargetDir)ui\*.cso" "$(ProjectDir)resource\shader\ui\"
 xcopy /Y /D "$(ProjectDir)ThirdParty\ultralight\bin\*.dll" "$(TargetDir)"
 xcopy /Y /D "$(ProjectDir)assimp-vc143-mt.dll" "$(TargetDir)"
 if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ui_src" "$(ProjectDir)resource\ui\"
-if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ThirdParty\ultralight\resources" "$(ProjectDir)resource\ultralight\resources\"</Command>
+if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ThirdParty\ultralight\resources" "$(ProjectDir)resource\ultralight\resources\"
+if "$(ConfigurationName)" == "Release" (
+robocopy "$(ProjectDir)resource" "$(TargetDir)resource" /MIR /NJH /NJS /NFL /NDL /NP
+if errorlevel 8 exit /b 1
+xcopy /Y /D /I "$(ProjectDir)config\config.toml" "$(TargetDir)config\"
+if errorlevel 1 exit /b 1
+exit /b 0
+)</Command>
     </PostBuildEvent>
     <FxCompile>
       <ShaderType>Pixel</ShaderType>
@@ -169,12 +131,31 @@ if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ThirdPart
       <DelayLoadDLLs>Ultralight.dll;UltralightCore.dll;AppCore.dll;assimp-vc143-mt.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
     <PostBuildEvent>
+      <!-- The xcopy lines populate $(ProjectDir)resource\, which release.yml packages
+           into the ZIP; that leaves $(TargetDir) itself unrunnable. Release pins the CWD
+           to the exe dir (main.cpp) and ui_manager.cpp resolves its roots exe-relative
+           with no CWD fallback, so the assets have to BE beside the exe — hence the
+           Release-only robocopy, which also makes a local build rehearse the shipped
+           layout. It must stay LAST: the lines above write this build's fresh .cso.
+
+           /MIR rather than xcopy because xcopy cannot delete, and a stale leftover here
+           would mask the missing-file bug this staging exists to catch (x64\Debug\resources\
+           is 6 MB of exactly that, orphaned by c79f6fc). It is incremental, so the 65 MB is
+           paid once. robocopy calls 0-7 success, which MSBuild reads as failure — hence the
+           errorlevel reset, kept inside the Release guard so Debug still propagates its own. -->
       <Command>xcopy /D /Y /I "$(TargetDir)*.cso" "$(ProjectDir)resource\shader\"
 xcopy /D /Y /I "$(TargetDir)ui\*.cso" "$(ProjectDir)resource\shader\ui\"
 xcopy /Y /D "$(ProjectDir)ThirdParty\ultralight\bin\*.dll" "$(TargetDir)"
 xcopy /Y /D "$(ProjectDir)assimp-vc143-mt.dll" "$(TargetDir)"
 if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ui_src" "$(ProjectDir)resource\ui\"
-if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ThirdParty\ultralight\resources" "$(ProjectDir)resource\ultralight\resources\"</Command>
+if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ThirdParty\ultralight\resources" "$(ProjectDir)resource\ultralight\resources\"
+if "$(ConfigurationName)" == "Release" (
+robocopy "$(ProjectDir)resource" "$(TargetDir)resource" /MIR /NJH /NJS /NFL /NDL /NP
+if errorlevel 8 exit /b 1
+xcopy /Y /D /I "$(ProjectDir)config\config.toml" "$(TargetDir)config\"
+if errorlevel 1 exit /b 1
+exit /b 0
+)</Command>
     </PostBuildEvent>
     <FxCompile>
       <ShaderType>Pixel</ShaderType>
@@ -339,20 +320,12 @@ if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ThirdPart
     <FxCompile Include="Shaders\infinite_grid_pixel.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compute</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">4.0</ShaderModel>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compute</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">4.0</ShaderModel>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
     </FxCompile>
     <FxCompile Include="Shaders\infinite_grid_vertex.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compute</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">4.0</ShaderModel>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compute</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">4.0</ShaderModel>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
     </FxCompile>
@@ -384,20 +357,14 @@ if "$(ConfigurationName)" == "Release" xcopy /Y /D /E /I "$(ProjectDir)ThirdPart
     </FxCompile>
     <FxCompile Include="Shaders\shader_vertex_3d_ani.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
     </FxCompile>
     <FxCompile Include="Shaders\shader_vertex_field.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
     </FxCompile>
     <FxCompile Include="Shaders\shader_pixel_3d_ani.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
     </FxCompile>
     <FxCompile Include="Shaders\ui_vs.hlsl">

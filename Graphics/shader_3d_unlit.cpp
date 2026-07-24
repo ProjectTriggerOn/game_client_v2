@@ -23,7 +23,7 @@ bool Shader_3DUnlit_Initialize([[maybe_unused]] ID3D11Device* pDevice, [[maybe_u
 	std::ifstream ifs_vs("resource/shader/shader_vertex_3dunlit.cso", std::ios::binary);
 
 	if (!ifs_vs) {
-		MessageBox(nullptr, "", "error", MB_OK);
+		MessageBox(nullptr, "Failed to load the vertex shader.\n\nshader_vertex_3dunlit.cso", "Error", MB_OK | MB_ICONERROR);
 		return false;
 	}
 
@@ -42,7 +42,7 @@ bool Shader_3DUnlit_Initialize([[maybe_unused]] ID3D11Device* pDevice, [[maybe_u
 	hr = Direct3D_GetDevice()->CreateVertexShader(vsbinary_pointer, filesize, nullptr, &g_pVertexShader);
 
 	if (FAILED(hr)) {
-		hal::dout << "Shader_3D_Initialize()" << std::endl;
+		hal::dout << "Shader_3DUnlit_Initialize() : failed to create the vertex shader" << std::endl;
 		delete[] vsbinary_pointer; //
 		return false;
 	}
@@ -63,7 +63,7 @@ bool Shader_3DUnlit_Initialize([[maybe_unused]] ID3D11Device* pDevice, [[maybe_u
 	delete[] vsbinary_pointer; //
 
 	if (FAILED(hr)) {
-		hal::dout << "Shader_3D_Initialize() :" << std::endl;
+		hal::dout << "Shader_3DUnlit_Initialize() : failed to create the input layout" << std::endl;
 		return false;
 	}
 
@@ -77,7 +77,7 @@ bool Shader_3DUnlit_Initialize([[maybe_unused]] ID3D11Device* pDevice, [[maybe_u
 	//
 	std::ifstream ifs_ps("resource/shader/shader_pixel_3dunlit.cso", std::ios::binary);
 	if (!ifs_ps) {
-		MessageBox(nullptr, "\n\nshader_pixel_billboard.cso", "error", MB_OK);
+		MessageBox(nullptr, "Failed to load the pixel shader.\n\nshader_pixel_3dunlit.cso", "Error", MB_OK | MB_ICONERROR);
 		return false;
 	}
 
@@ -95,7 +95,7 @@ bool Shader_3DUnlit_Initialize([[maybe_unused]] ID3D11Device* pDevice, [[maybe_u
 	delete[] psbinary_pointer; //
 
 	if (FAILED(hr)) {
-		hal::dout << "Shader_Billboard_Initialize() Error" << std::endl;
+		hal::dout << "Shader_3DUnlit_Initialize() : failed to create the pixel shader" << std::endl;
 		return false;
 	}
 

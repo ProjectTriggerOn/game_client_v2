@@ -27,7 +27,7 @@ bool Shader_3D_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 
 	// デバイスとデバイスコンテキストのチェック
 	if (!pDevice || !pContext) {
-		hal::dout << "Shader_3D_Initialize() : ERROR" << std::endl;
+		hal::dout << "Shader_3D_Initialize() : the given device or device context is invalid" << std::endl;
 		return false;
 	}
 
@@ -40,7 +40,7 @@ bool Shader_3D_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 	std::ifstream ifs_vs("resource/shader/shader_vertex_3d.cso", std::ios::binary);
 
 	if (!ifs_vs) {
-		MessageBox(nullptr, "", "error", MB_OK);
+		MessageBox(nullptr, "Failed to load the vertex shader.\n\nshader_vertex_3d.cso", "Error", MB_OK | MB_ICONERROR);
 		return false;
 	}
 
@@ -59,7 +59,7 @@ bool Shader_3D_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 	hr = g_pDevice->CreateVertexShader(vsbinary_pointer, filesize, nullptr, &g_pVertexShader);
 
 	if (FAILED(hr)) {
-		hal::dout << "Shader_3D_Initialize()" << std::endl;
+		hal::dout << "Shader_3D_Initialize() : failed to create the vertex shader" << std::endl;
 		delete[] vsbinary_pointer; //
 		return false;
 	}
@@ -81,7 +81,7 @@ bool Shader_3D_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 	delete[] vsbinary_pointer; // �o�C�i���f�[�^�̃o�b�t�@����
 
 	if (FAILED(hr)) {
-		hal::dout << "Shader_3D_Initialize() : ���_���C�A�E�g�̍쐬�Ɏ��s���܂���" << std::endl;
+		hal::dout << "Shader_3D_Initialize() : failed to create the input layout" << std::endl;
 		return false;
 	}
 
@@ -97,7 +97,7 @@ bool Shader_3D_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 	//
 	std::ifstream ifs_ps("resource/shader/shader_pixel_3d.cso", std::ios::binary);
 	if (!ifs_ps) {
-		MessageBox(nullptr, "\n\nshader_pixel_3d.cso", "error", MB_OK);
+		MessageBox(nullptr, "Failed to load the pixel shader.\n\nshader_pixel_3d.cso", "Error", MB_OK | MB_ICONERROR);
 		return false;
 	}
 
@@ -115,7 +115,7 @@ bool Shader_3D_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 	delete[] psbinary_pointer; //
 
 	if (FAILED(hr)) {
-		hal::dout << "Shader_3D_Initialize() Error" << std::endl;
+		hal::dout << "Shader_3D_Initialize() : failed to create the pixel shader" << std::endl;
 		return false;
 	}
 

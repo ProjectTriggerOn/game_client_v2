@@ -27,7 +27,7 @@ bool Shader_Field_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContex
 
 	// デバイスとデバイスコンテキストのチェック
 	if (!pDevice || !pContext) {
-		hal::dout << "Shader_Field_Initialize() : ERROR" << std::endl;
+		hal::dout << "Shader_Field_Initialize() : the given device or device context is invalid" << std::endl;
 		return false;
 	}
 
@@ -37,7 +37,7 @@ bool Shader_Field_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContex
 	std::ifstream ifs_vs("resource/shader/shader_vertex_field.cso", std::ios::binary);
 
 	if (!ifs_vs) {
-		MessageBox(nullptr, "", "error", MB_OK);
+		MessageBox(nullptr, "Failed to load the vertex shader.\n\nshader_vertex_field.cso", "Error", MB_OK | MB_ICONERROR);
 		return false;
 	}
 
@@ -55,7 +55,7 @@ bool Shader_Field_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContex
 	hr = g_pDevice->CreateVertexShader(vsbinary_pointer, filesize, nullptr, &g_pVertexShader);
 
 	if (FAILED(hr)) {
-		hal::dout << "Shader_Field_Initialize()" << std::endl;
+		hal::dout << "Shader_Field_Initialize() : failed to create the vertex shader" << std::endl;
 		delete[] vsbinary_pointer; //
 		return false;
 	}
@@ -78,7 +78,7 @@ bool Shader_Field_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContex
 	delete[] vsbinary_pointer; 
 
 	if (FAILED(hr)) {
-		hal::dout << "Shader_Field_Initialize() : ���_���C�A�E�g�̍쐬�Ɏ��s���܂���" << std::endl;
+		hal::dout << "Shader_Field_Initialize() : failed to create the input layout" << std::endl;
 		return false;
 	}
 
@@ -94,7 +94,7 @@ bool Shader_Field_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContex
 	//
 	std::ifstream ifs_ps("resource/shader/shader_pixel_field.cso", std::ios::binary);
 	if (!ifs_ps) {
-		MessageBox(nullptr, "\n\nshader_pixel_3d.cso", "error", MB_OK);
+		MessageBox(nullptr, "Failed to load the pixel shader.\n\nshader_pixel_field.cso", "Error", MB_OK | MB_ICONERROR);
 		return false;
 	}
 
@@ -112,7 +112,7 @@ bool Shader_Field_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContex
 	delete[] psbinary_pointer; //
 
 	if (FAILED(hr)) {
-		hal::dout << "Shader_Field_Initialize() Error" << std::endl;
+		hal::dout << "Shader_Field_Initialize() : failed to create the pixel shader" << std::endl;
 		return false;
 	}
 

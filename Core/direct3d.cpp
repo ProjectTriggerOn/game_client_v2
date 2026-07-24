@@ -96,7 +96,7 @@ bool Direct3D_Initialize(HWND hWnd)
         &g_pDeviceContext);
 
     if (FAILED(hr)) {
-		MessageBox(hWnd, "Direct3Dの初期化に失敗しました", "エラー", MB_OK);
+		MessageBox(hWnd, "Failed to initialize Direct3D.", "Error", MB_OK | MB_ICONERROR);
         return false;
     }
 
@@ -111,7 +111,7 @@ bool Direct3D_Initialize(HWND hWnd)
 	}
 
 	if (!configureBackBuffer()) {
-		MessageBox(hWnd, "バックバッファの設定に失敗しました", "エラー", MB_OK);
+		MessageBox(hWnd, "Failed to configure the back buffer.", "Error", MB_OK | MB_ICONERROR);
 		return false;
 	}
 
