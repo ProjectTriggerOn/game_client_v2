@@ -1,0 +1,44 @@
+/* Flood debug panel (Debug builds only) — a persistent corner overlay, toggled
+   by F8 via window.FloodPanel. Not a .page, so the router never touches it. */
+#flood-panel {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    width: 268px;
+    padding: 12px 14px;
+    background: rgba(20, 22, 28, 0.92);
+    border: 1px solid #c0392b;
+    border-radius: 6px;
+    color: #eee;
+    font: 13px/1.5 monospace;
+    z-index: 9000;
+}
+#flood-panel.hidden { display: none; }
+#flood-panel h3 {
+    margin: 0 0 8px;
+    font-size: 13px;
+    color: #e74c3c;
+    letter-spacing: 1px;
+}
+#flood-panel .row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 6px 0;
+}
+#flood-panel input[type=range] { flex: 1; }
+#flood-panel select {
+    background: #222;
+    color: #eee;
+    border: 1px solid #555;
+}
+#flood-readout {
+    margin-top: 8px;
+    color: #f1c40f;
+}
+#flood-panel .hint {
+    margin-top: 8px;
+    font-size: 11px;
+    color: #888;
+}

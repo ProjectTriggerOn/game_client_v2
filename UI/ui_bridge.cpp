@@ -13,6 +13,14 @@
 #include <windows.h>
 #include <string>
 
+#if defined(_DEBUG)
+#include "enet_client_network.h"   // flood debug control (Debug builds only)
+#include <cstdio>                  // snprintf for the stats JSON
+// Set by main.cpp after the ENet client is initialized (null when using the
+// mock network, so every use is null-guarded).
+extern ENetClientNetwork* g_pFloodNet;
+#endif
+
 namespace {
 
 using namespace ultralight;
@@ -284,6 +292,28 @@ void Register(ultralight::View* view) {
         if (args.empty()) return;
         DebugLog("[UI:js] ", JSValueToStdString(args[0]));
     };
+
+#if defined(_DEBUG)
+    // --- flood debug (Debug builds ONLY — attack tool, absent from Release) ----
+    // game.setFloodDebug(on:bool, ratePerSec:int, mode:int)  mode 0=valid 1=junk 2=oversized
+    game["setFloodDebug"] = (JSCallback)[](const JSObject&, const JSArgs& args) {
+        if (!g_pFloodNet || args.size() < 3) return;
+        const bool on   = JSValueToInt(args[0]) != 0;   // helper binds a named lvalue (avoids C4238)
+        const int  rate = JSValueToInt(args[1]);
+        const int  mode = JSValueToInt(args[2]);
+        g_pFloodNet->SetFloodDebug(on, rate, mode);
+    };
+    // game.getFloodStats() -> JSON the panel polls: {active, sendRate, snapMs}
+    game["getFloodStats"] = (JSCallbackWithRetval)[](const JSObject&, const JSArgs&) -> JSValue {
+        if (!g_pFloodNet) return JSValue("{\"active\":false,\"sendRate\":0,\"snapMs\":0}");
+        char buf[128];
+        snprintf(buf, sizeof(buf), "{\"active\":%s,\"sendRate\":%.0f,\"snapMs\":%.1f}",
+                 g_pFloodNet->IsFloodActive() ? "true" : "false",
+                 g_pFloodNet->GetFloodSendRate(),
+                 g_pFloodNet->GetFloodSnapIntervalMs());
+        return JSValue(buf);
+    };
+#endif
 
     DebugLog("[UI:bridge] game.* registered", "");
 }

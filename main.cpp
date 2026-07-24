@@ -71,6 +71,10 @@ MockServer* g_pMockServer = nullptr;
 
 // Global network interface pointer (used by game.cpp etc.)
 INetwork* g_pNetwork = nullptr;
+#if defined(_DEBUG)
+ENetClientNetwork* g_pFloodNet = nullptr;   // flood debug target (used by ui_bridge.cpp)
+bool g_FloodPanelOpen = false;              // F8-toggled flood panel (used by ui_policy.cpp)
+#endif
 
 // Network mode: "mock", "local", or "remote" (read from config.toml)
 static std::string g_NetworkMode;
@@ -243,6 +247,9 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,[[maybe_unused
 		g_ENetNetwork.Initialize();
 		g_ENetNetwork.SetExpectedMapChecksum(Map_GetCollisionChecksum());
 		g_pNetwork = &g_ENetNetwork;
+#if defined(_DEBUG)
+		g_pFloodNet = &g_ENetNetwork;   // enable flood debug via the UI bridge
+#endif
 		g_pMockServer = nullptr;
 	}
 	else
@@ -374,6 +381,15 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,[[maybe_unused
 			// (e.g. paused); the scene gate here also freezes the mock simulation.
 			// ENet PollEvents always runs to keep the connection alive.
 			const bool inGameScene = (Scene_GetCurrent() == SCENE_GAME);
+#if defined(_DEBUG)
+			// F8 toggles the flood debug panel. The panel is Modal while open
+			// (UIPolicy_Apply); the flood itself runs in the background.
+			if (inGameScene && KeyLogger_IsTrigger(KK_F8))
+			{
+				g_FloodPanelOpen = !g_FloodPanelOpen;
+				UI::SetFloodPanelVisible(g_FloodPanelOpen);
+			}
+#endif
 
 			if (inGameScene)
 			{
@@ -383,6 +399,9 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,[[maybe_unused
 			if (g_NetworkMode == "local" || g_NetworkMode == "remote")
 			{
 				g_ENetNetwork.PollEvents();
+#if defined(_DEBUG)
+				g_ENetNetwork.DriveFloodDebug(elapsed_time);   // flood debug mode (background)
+#endif
 			}
 			else if (inGameScene)
 			{

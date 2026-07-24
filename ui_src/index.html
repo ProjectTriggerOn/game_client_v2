@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="pages/game/hud.css">
     <link rel="stylesheet" href="pages/game/pause.css">
     <link rel="stylesheet" href="pages/game/result.css">
+    <link rel="stylesheet" href="flood.css">
 </head>
 <body>
     <div id="page-title"    class="page hidden"></div>
@@ -27,12 +28,33 @@
         <div class="curtain-label">LOADING</div>
     </div>
 
+    <!-- Flood debug panel (Debug builds only; toggled by F8 via window.FloodPanel).
+         Not a .page — persists across page swaps like #curtain. Inert in Release:
+         never shown (no F8 wiring) and flood.js feature-checks the bridge API. -->
+    <div id="flood-panel" class="hidden">
+        <h3>FLOOD DEBUG (F8)</h3>
+        <div class="row"><label><input type="checkbox" id="flood-on"> flood on</label></div>
+        <div class="row"><span>rate</span>
+            <input type="range" id="flood-rate" min="60" max="100000" step="60" value="2000">
+            <span id="flood-rate-val">2000</span>/s</div>
+        <div class="row"><span>mode</span>
+            <select id="flood-mode">
+                <option value="0">valid (L1/L3)</option>
+                <option value="1">junk (L3)</option>
+                <option value="2">oversized (L2)</option>
+            </select></div>
+        <div id="flood-readout">send 0/s   snap 0ms</div>
+        <div class="hint">flood runs in background; F8 to close &amp; observe</div>
+    </div>
+
     <!-- Page JS (IIFEs defining the PageXxx hooks) -->
     <script src="pages/title.js"></script>
     <script src="pages/settings.js"></script>
     <script src="pages/game/hud.js"></script>
     <script src="pages/game/pause.js"></script>
     <script src="pages/game/result.js"></script>
+
+    <script src="flood.js"></script>
 
     <!-- Router: fetches page markup → injects into divs → shows title by default -->
     <script src="router.js"></script>

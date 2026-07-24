@@ -71,6 +71,12 @@ void ShowPageDeferred(const char* name);
 // inside a JS callback (it EvaluateScripts synchronously — see ShowPageDeferred).
 void SetCurtain(bool visible);
 
+#if defined(_DEBUG)
+// Flood debug panel overlay (Debug builds only): show/hide #flood-panel via
+// window.FloodPanel. Call from the main loop, never from a JS callback.
+void SetFloodPanelVisible(bool visible);
+#endif
+
 // --- Hot reload helpers (Slice F, docs §10) ---------------------------------
 // Called by UI::HotReload::Poll (main thread) when watched files change. These
 // own the View, so the hot-reload module stays free of Ultralight headers.

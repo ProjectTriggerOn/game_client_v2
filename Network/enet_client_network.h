@@ -60,6 +60,21 @@ public:
     // Expected local map checksum for the MAP_INFO handshake (0 = skip check)
     void SetExpectedMapChecksum(uint32_t c) { m_ExpectedMapChecksum = c; }
 
+#if defined(_DEBUG)
+    //-------------------------------------------------------------------------
+    // Flood debug mode (Debug builds ONLY — an attack tool, never in Release).
+    // Blasts packets at the server to stress-test its inbound-flood mitigation
+    // from the real client; deliberately bypasses InputProducer's 60Hz send
+    // throttle.
+    //-------------------------------------------------------------------------
+    enum class FloodMode { Valid = 0, Junk = 1, Oversized = 2 };
+    void   SetFloodDebug(bool active, int ratePerSec, int mode);
+    void   DriveFloodDebug(double deltaTime);   // call once per frame
+    bool   IsFloodActive() const           { return m_FloodActive; }
+    double GetFloodSendRate() const        { return m_FloodSendRate; }        // pkts/s actually sent
+    double GetFloodSnapIntervalMs() const  { return m_FloodSnapIntervalMs; }  // this client's snapshot gap
+#endif
+
 private:
     ENetHost* m_pClient;
     ENetPeer* m_pServerPeer;
@@ -78,4 +93,17 @@ private:
 
     // MAP_INFO handshake: checksum of the locally loaded map (0 = don't verify)
     uint32_t m_ExpectedMapChecksum = 0;
+
+#if defined(_DEBUG)
+    // Flood debug mode state (Debug builds only).
+    bool      m_FloodActive = false;
+    int       m_FloodRatePerSec = 1000;
+    FloodMode m_FloodMode = FloodMode::Valid;
+    double    m_FloodSendAccumulator = 0.0;   // fractional packets carried between frames
+    double    m_FloodStatTimer = 0.0;         // ~1s window for the readout
+    uint32_t  m_FloodSentThisWindow = 0;
+    uint32_t  m_FloodSnapAtWindowStart = 0;
+    double    m_FloodSendRate = 0.0;          // pkts/s actually sent (readout)
+    double    m_FloodSnapIntervalMs = 0.0;    // this client's own snapshot interval (readout)
+#endif
 };

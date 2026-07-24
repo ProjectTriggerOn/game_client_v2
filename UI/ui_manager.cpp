@@ -466,6 +466,15 @@ void SetCurtain(bool visible) {
     g_view->EvaluateScript(ultralight::String(visible ? "Curtain.show()" : "Curtain.hide()"));
 }
 
+#if defined(_DEBUG)
+void SetFloodPanelVisible(bool visible) {
+    if (!g_view) return;
+    // Same main-loop-only contract as SetCurtain (direct EvaluateScript).
+    g_view->EvaluateScript(ultralight::String(
+        visible ? "FloodPanel.show()" : "FloodPanel.hide()"));
+}
+#endif
+
 void ShowPage(const char* name) {
     if (!g_view || !name) return;
     // Minimal escaping to guard against stray quotes. Replaced by the real Bridge in Slice D.

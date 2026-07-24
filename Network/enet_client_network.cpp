@@ -244,6 +244,91 @@ uint32_t ENetClientNetwork::GetPacketLoss() const
     return 0;
 }
 
+#if defined(_DEBUG)
+//-----------------------------------------------------------------------------
+// Flood debug mode (Debug builds only).
+//-----------------------------------------------------------------------------
+void ENetClientNetwork::SetFloodDebug(bool active, int ratePerSec, int mode)
+{
+    m_FloodActive = active;
+    m_FloodRatePerSec = (ratePerSec < 0) ? 0 : ratePerSec;
+    m_FloodMode = (mode >= 0 && mode <= 2) ? static_cast<FloodMode>(mode) : FloodMode::Valid;
+    if (!active)
+    {
+        m_FloodSendAccumulator = 0.0;
+        m_FloodSendRate = 0.0;
+    }
+}
+
+void ENetClientNetwork::DriveFloodDebug(double deltaTime)
+{
+    // Readout window (~1s): actual send rate + this client's own snapshot interval.
+    m_FloodStatTimer += deltaTime;
+    if (m_FloodStatTimer >= 1.0)
+    {
+        m_FloodSendRate = m_FloodSentThisWindow / m_FloodStatTimer;
+        uint32_t snaps = m_TotalSnapshotsReceived - m_FloodSnapAtWindowStart;
+        m_FloodSnapIntervalMs = (snaps > 0) ? (m_FloodStatTimer * 1000.0 / snaps) : 0.0;
+        m_FloodStatTimer = 0.0;
+        m_FloodSentThisWindow = 0;
+        m_FloodSnapAtWindowStart = m_TotalSnapshotsReceived;
+    }
+
+    if (!m_FloodActive || !m_pServerPeer || !m_IsConnected) return;
+
+    // Packets owed this frame to approach the target rate, with a per-frame cap so
+    // one long frame can't emit a giant burst.
+    m_FloodSendAccumulator += deltaTime * m_FloodRatePerSec;
+    int toSend = static_cast<int>(m_FloodSendAccumulator);
+    m_FloodSendAccumulator -= toSend;
+    const int MAX_PER_FRAME = 8192;
+    if (toSend > MAX_PER_FRAME) { toSend = MAX_PER_FRAME; m_FloodSendAccumulator = 0.0; }
+
+    for (int i = 0; i < toSend; ++i)
+    {
+        ENetPacket* packet = nullptr;
+        switch (m_FloodMode)
+        {
+        case FloodMode::Valid:
+        {
+            // 33-byte valid INPUT_CMD (zeroed = all-finite, passes the server's
+            // NaN gate and reaches the tagged-input queue), UNSEQUENCED like the
+            // real client — exercises L1 (token bucket) / L3.
+            uint8_t buf[1 + sizeof(InputCmd)];
+            buf[0] = static_cast<uint8_t>(PacketType::INPUT_CMD);
+            InputCmd cmd{};
+            std::memcpy(buf + 1, &cmd, sizeof(InputCmd));
+            packet = enet_packet_create(buf, sizeof(buf), ENET_PACKET_FLAG_UNSEQUENCED);
+            break;
+        }
+        case FloodMode::Junk:
+        {
+            // Wrong length + unknown type — exercises the L3 junk-packet path.
+            uint8_t buf[5] = { 0xEE, 1, 2, 3, 4 };
+            packet = enet_packet_create(buf, sizeof(buf), ENET_PACKET_FLAG_UNSEQUENCED);
+            break;
+        }
+        case FloodMode::Oversized:
+        {
+            // >1024 bytes, unreliable (sequenced) so ENet fragments it — exercises
+            // the server's L2 maximumPacketSize reassembly cap without a reliable
+            // retransmit backlog. Use a modest rate for this mode.
+            uint8_t buf[1500];
+            std::memset(buf, 0xAB, sizeof(buf));
+            buf[0] = static_cast<uint8_t>(PacketType::INPUT_CMD);
+            packet = enet_packet_create(buf, sizeof(buf), 0);
+            break;
+        }
+        }
+        if (packet)
+        {
+            enet_peer_send(m_pServerPeer, 0, packet);
+            m_FloodSentThisWindow++;
+        }
+    }
+}
+#endif // _DEBUG
+
 //-----------------------------------------------------------------------------
 // No-ops on client side
 //-----------------------------------------------------------------------------

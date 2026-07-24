@@ -84,4 +84,12 @@ void UIPolicy_Apply()
     }
 
     s_lastScene = s;
+
+#if defined(_DEBUG)
+    // Flood debug panel (F8): force Modal so its controls are clickable while the
+    // background flood runs; overrides the state-derived level for this frame.
+    extern bool g_FloodPanelOpen;
+    if (g_FloodPanelOpen)
+        UI::SetInteractiveLevel(UI::InteractiveLevel::Modal);
+#endif
 }
