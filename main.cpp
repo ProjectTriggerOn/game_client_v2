@@ -377,7 +377,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,[[maybe_unused
 
 			if (inGameScene)
 			{
-				g_InputProducer.Update();
+				g_InputProducer.Update(elapsed_time);
 			}
 
 			if (g_NetworkMode == "local" || g_NetworkMode == "remote")

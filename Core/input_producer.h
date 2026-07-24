@@ -23,9 +23,11 @@ public:
     void Finalize();
 
     //-------------------------------------------------------------------------
-    // Called every render frame - samples input and sends InputCmd
+    // Called every render frame - samples input each frame, but sends InputCmd
+    // at a fixed rate (decoupled from frame rate) so a high-fps client cannot
+    // flood the server. deltaTime is this frame's elapsed seconds.
     //-------------------------------------------------------------------------
-    void Update();
+    void Update(double deltaTime);
 
     //-------------------------------------------------------------------------
     // Get current input state (for client-side prediction)
@@ -65,7 +67,14 @@ private:
     float m_Yaw;                // Camera yaw (radians)
     float m_Pitch;              // Camera pitch (radians)
     uint32_t m_Buttons;         // Button bitfield
-    
+
+    // Send throttle: decouple the network send rate from the (possibly very high)
+    // frame rate. Input is sampled every frame; m_PendingEdges OR-accumulates the
+    // one-shot button edges (RELOAD/INSPECT) seen since the last send so a
+    // throttled send never drops one.
+    double m_SendAccumulator;   // seconds accumulated toward the next send
+    uint32_t m_PendingEdges;    // one-shot edges seen since the last send
+
     bool m_JumpPending;         // Sticky jump: persists until server processes
 
     InputCmd m_LastCmd;         // Most recent command sent
