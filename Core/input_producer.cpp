@@ -18,6 +18,17 @@
 // Global accessor
 InputProducer* g_pInputProducer = nullptr;
 
+// Fixed client->server send rate, decoupled from frame rate. Must stay >= the
+// 32Hz server tick (the server consumes one input per tick); 60Hz gives ~2x
+// margin and matches the common vsync default, while capping high-fps clients.
+static constexpr double SEND_RATE_HZ  = 60.0;
+static constexpr double SEND_INTERVAL = 1.0 / SEND_RATE_HZ;
+
+// RELOAD/INSPECT are single-frame client edges (KeyLogger_IsTrigger); they must
+// be OR-accumulated between throttled sends so one is never dropped. FIRE/ADS/
+// SPRINT are held (level) and JUMP is sticky, so those use the latest frame.
+static constexpr uint32_t EDGE_BUTTONS = InputButtons::RELOAD | InputButtons::INSPECT;
+
 InputProducer::InputProducer()
     : m_pNetwork(nullptr)
     , m_TargetTick(0)
@@ -26,6 +37,8 @@ InputProducer::InputProducer()
     , m_Yaw(0.0f)
     , m_Pitch(0.0f)
     , m_Buttons(InputButtons::NONE)
+    , m_SendAccumulator(0.0)
+    , m_PendingEdges(0)
     , m_JumpPending(false)
     , m_LastCmd{}
 {
@@ -40,6 +53,8 @@ void InputProducer::Initialize(INetwork* pNetwork)
     m_Yaw = 0.0f;
     m_Pitch = 0.0f;
     m_Buttons = InputButtons::NONE;
+    m_SendAccumulator = 0.0;
+    m_PendingEdges = 0;
     m_JumpPending = false;
     m_LastCmd = {};
     m_LastServerState = {};
@@ -58,27 +73,45 @@ void InputProducer::Finalize()
 // 2. Build InputCmd
 // 3. Send to server via MockNetwork
 //-----------------------------------------------------------------------------
-void InputProducer::Update()
+void InputProducer::Update(double deltaTime)
 {
     if (!m_pNetwork) return;
 
-    // 1. Sample current input
+    // 1. Sample + build EVERY frame so client-side prediction (which reads
+    //    GetLastInputCmd() on its own fixed 32Hz tick) always sees fresh input,
+    //    and so one-shot triggers on non-send frames are not missed.
     SampleInput();
-
-    // 2. Build command
     m_LastCmd = BuildInputCmd();
 
-    // 3. Send to server
-    m_pNetwork->SendInputCmd(m_LastCmd);
+    // 2. OR-accumulate one-shot edges so the throttled send below never drops a
+    //    RELOAD/INSPECT that landed on a non-send frame.
+    m_PendingEdges |= (m_LastCmd.buttons & EDGE_BUTTONS);
+
+    // 3. Throttle the SEND to a fixed rate, decoupled from frame rate — a high-fps
+    //    client must not flood the server. Prediction/history/client-tick are
+    //    already fixed 32Hz, so this leaves them (and reconciliation) untouched.
+    m_SendAccumulator += deltaTime;
+    if (m_SendAccumulator < SEND_INTERVAL)
+        return;
+    // Carry the remainder for steady cadence; drop the backlog after a big hitch
+    // so we never burst more than one cmd per frame.
+    m_SendAccumulator = (m_SendAccumulator > SEND_INTERVAL * 2.0)
+        ? 0.0 : (m_SendAccumulator - SEND_INTERVAL);
+
+    // 4. Send the latest cmd with the accumulated edges folded in.
+    InputCmd cmd = m_LastCmd;
+    cmd.buttons = (cmd.buttons & ~EDGE_BUTTONS) | m_PendingEdges;
+    m_PendingEdges = 0;
+    m_pNetwork->SendInputCmd(cmd);
 
     // Log every InputCmd that carries the JUMP bit so we can trace the full pipeline:
     //   SPACE_TRIG  -> SENT (one or more) -> CONSUMED_BY_SERVER -> LOCAL_PREDICT_JUMP
     if (DebugLog_IsEnabled() && DebugLog_LogJumpEvents() &&
-        (m_LastCmd.buttons & InputButtons::JUMP))
+        (cmd.buttons & InputButtons::JUMP))
     {
         DebugLog_Printf("JUMP",
             "SENT targetTick=%u cmdTick=%u buttons=0x%02X JumpPending=%d",
-            m_TargetTick, m_LastCmd.tickId, m_LastCmd.buttons, (int)m_JumpPending);
+            m_TargetTick, cmd.tickId, cmd.buttons, (int)m_JumpPending);
     }
 
     // 4. Clear sticky jump only when server confirms we're airborne
