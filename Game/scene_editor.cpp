@@ -439,6 +439,10 @@ void SceneEditor_Draw()
         Light_SetFog(false, { 0.0f, 0.0f, 0.0f }, 0.0f, 0.0f);
     }
 
+    // Keep the point-light cbuffer populated with the lights closest to the
+    // editor camera as it orbits / pans through the scene.
+    Map_UpdatePointLightsNearCamera(EditorCamera_GetEye());
+
     // Single upload point for all lighting cbuffers (see light.cpp).
     Light_Flush();
 

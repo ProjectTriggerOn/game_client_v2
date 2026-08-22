@@ -46,11 +46,15 @@ namespace {
 	}
 
 	// Push the loaded map's point lights into the lighting pipeline. If the
-	// map has more than LIGHT_MAX_POINT_LIGHTS entries, keep the closest
-	// LIGHT_MAX_POINT_LIGHTS to the reference position (editor origin) and
-	// warn — the rest are dropped, not silently mis-limited by the shader's
-	// array bound.
-	void Map_UploadPointLights() {
+	// map has more than LIGHT_MAX_POINT_LIGHTS entries, keep the closest N to
+	// `origin` and warn — the rest are dropped, not silently mis-limited by
+	// the shader's array bound.
+	//
+	// Called once at load with the map origin, then re-called every frame
+	// from Map_UpdatePointLightsNearCamera with the active camera position
+	// so moving through a large level picks up local lights without a full
+	// reload.
+	void Map_UploadPointLights(const DirectX::XMFLOAT3& origin) {
 		const auto& mapLights = g_LoadedMap.lights;
 		std::vector<const mapio::MapLight*> candidates;
 		candidates.reserve(mapLights.size());
@@ -58,10 +62,10 @@ namespace {
 			if (l.type == mapio::LIGHT_POINT) candidates.push_back(&l);
 		}
 
-		// Sort by squared distance from map origin so the "most relevant"
-		// lights survive the cap. Map origin is the right anchor here: the
-		// camera moves every frame, but this upload happens once on load.
-		const XMFLOAT3 origin{ 0.0f, 0.0f, 0.0f };
+		// Sort by squared distance from `origin` so the "most relevant" lights
+		// survive the cap.  The choice of origin differs per call site:
+		//   - load time  : {0,0,0}  (no camera yet — pick anything stable)
+		//   - per-frame  : the active camera position
 		std::sort(candidates.begin(), candidates.end(),
 			[&](const mapio::MapLight* a, const mapio::MapLight* b) {
 				const float da = (a->pos[0] - origin.x) * (a->pos[0] - origin.x)
@@ -95,7 +99,7 @@ bool Map_LoadFromFile(const char* path) {
 	g_LoadedMap = mapio::MapData{};
 	bool ok = mapio::Read(path, g_LoadedMap);
 	g_MapLoaded = true;   // mark loaded even on failure so EnsureLoaded doesn't overwrite
-	if (ok) Map_UploadPointLights();
+	if (ok) Map_UploadPointLights({ 0.0f, 0.0f, 0.0f });
 	return ok;
 }
 
@@ -130,6 +134,10 @@ float Map_GetFogStart() {
 float Map_GetFogEnd() {
 	EnsureLoaded();
 	return g_LoadedMap.env.fogEnd;
+}
+
+void Map_UpdatePointLightsNearCamera(const DirectX::XMFLOAT3& cameraPos) {
+	Map_UploadPointLights(cameraPos);
 }
 
 bool Map_GetDirectionalLight(DirectX::XMFLOAT3* outDir, DirectX::XMFLOAT3* outColor) {
@@ -182,7 +190,7 @@ void Map_Initialize() {
 	// Push map lights into the lighting pipeline. Directional lights are
 	// intentionally ignored for now — they will be folded into the
 	// LightEnvironment once the MapEnv path lands in a later rework step.
-	Map_UploadPointLights();
+	Map_UploadPointLights({ 0.0f, 0.0f, 0.0f });
 }
 
 //-----------------------------------------------------------------------------

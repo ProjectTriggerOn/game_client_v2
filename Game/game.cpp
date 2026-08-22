@@ -467,6 +467,11 @@ void Game_Draw()
 		Light_SetFog(false, { 0.0f, 0.0f, 0.0f }, 0.0f, 0.0f);
 	}
 
+	// Keep the point-light cbuffer populated with the lights closest to the
+	// camera as it moves through the level.  No-ops (and no GPU traffic)
+	// once the active set hasn't changed.
+	Map_UpdatePointLightsNearCamera(cam_pos);
+
 	// Single upload point for all lighting cbuffers (see light.cpp).
 	Light_Flush();
 

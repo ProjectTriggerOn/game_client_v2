@@ -54,6 +54,13 @@ float             Map_GetFogEnd();
 bool Map_GetDirectionalLight(DirectX::XMFLOAT3* outDir,
                              DirectX::XMFLOAT3* outColor);
 
+// Re-sort map point lights by distance to `cameraPos`, then re-upload the
+// closest LIGHT_MAX_POINT_LIGHTS into the lighting pipeline.  Call once per
+// frame after Camera_SetMatrixToShader so eye_pos is valid; the upload is
+// dirty-flagged (no GPU traffic when camera didn't move enough to change
+// the top-16).
+void Map_UpdatePointLightsNearCamera(const DirectX::XMFLOAT3& cameraPos);
+
 // Returns true if the loaded map authored a non-empty environment block.
 // Currently visualSize==0 on default.map (the legacy map ships no env), so
 // callers use this to fall back to the hardcoded in-code defaults. Remove
