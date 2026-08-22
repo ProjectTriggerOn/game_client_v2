@@ -421,9 +421,15 @@ void SceneEditor_Draw()
     XMMATRIX proj = XMLoadFloat4x4(&p4);
     Camera_SetMatrixToShader(view, proj);
 
+    XMFLOAT3 sunDir  = { 0.0f, -1.0f, 0.0f };
+    XMFLOAT3 sunColor = { 1.0f, 1.0f, 1.0f };
+    XMFLOAT3 authored;
+    if (Map_GetDirectionalLight(&authored, &sunColor)) {
+        sunDir = authored;
+    }
     XMFLOAT4 dir;
-    XMStoreFloat4(&dir, XMVector3Normalize(XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f)));
-    Light_SetDirectionalWorld(dir, { 1.0f, 1.0f, 1.0f, 1.0f });
+    XMStoreFloat4(&dir, XMVector3Normalize(XMLoadFloat3(&sunDir)));
+    Light_SetDirectionalWorld(dir, { sunColor.x, sunColor.y, sunColor.z, 1.0f });
     Light_SetSpecularWorld(EditorCamera_GetEye(), 4.0f, { 0.3f, 0.3f, 0.3f, 1.0f });
 
     // Fog from the map env (same source as the game scene).

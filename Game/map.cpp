@@ -132,6 +132,22 @@ float Map_GetFogEnd() {
 	return g_LoadedMap.env.fogEnd;
 }
 
+bool Map_GetDirectionalLight(DirectX::XMFLOAT3* outDir, DirectX::XMFLOAT3* outColor) {
+	EnsureLoaded();
+	for (const auto& l : g_LoadedMap.lights) {
+		if (l.type != mapio::LIGHT_DIRECTIONAL) continue;
+		if (outDir)   *outDir   = { l.dir[0], l.dir[1], l.dir[2] };
+		// Colour is premultiplied by intensity here so the shader remains
+		// a pure multiplier; .map authors see "intensity 2.0 warm-white" as
+		// one knob, not two.
+		if (outColor) *outColor = { l.color[0] * l.intensity,
+		                            l.color[1] * l.intensity,
+		                            l.color[2] * l.intensity };
+		return true;
+	}
+	return false;
+}
+
 bool Map_HasEnvironment() {
 	EnsureLoaded();
 	// A legacy default.map ships with visualSize == 0, which means its

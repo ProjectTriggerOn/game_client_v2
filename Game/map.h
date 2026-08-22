@@ -42,6 +42,18 @@ DirectX::XMFLOAT3 Map_GetFogColor();
 float             Map_GetFogStart();
 float             Map_GetFogEnd();
 
+// Directional light.  If the map authored at least one LIGHT_DIRECTIONAL
+// entry, returns its direction and color into outDir / outColor and
+// returns true.  If no directional light is authored the outputs are
+// untouched and the function returns false; the caller should fall back
+// to its own default.
+//
+// Only the first LIGHT_DIRECTIONAL record is consumed.  Authoring more
+// than one is permitted by the format but ignored here; revisit if
+// multi-directional support is ever needed.
+bool Map_GetDirectionalLight(DirectX::XMFLOAT3* outDir,
+                             DirectX::XMFLOAT3* outColor);
+
 // Returns true if the loaded map authored a non-empty environment block.
 // Currently visualSize==0 on default.map (the legacy map ships no env), so
 // callers use this to fall back to the hardcoded in-code defaults. Remove

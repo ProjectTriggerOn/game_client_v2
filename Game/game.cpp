@@ -439,11 +439,22 @@ void Game_Draw()
 
 	Camera_SetMatrixToShader(view, proj);
 
-	XMVECTOR v{ 0.0f, -1.0f, 0.0f };
-	v = XMVector3Normalize(v);
-	XMFLOAT4 dir;
-	XMStoreFloat4(&dir, v);
-	Light_SetDirectionalWorld(dir, { 1.0f, 1.0f, 1.0f, 1.0f });
+	// Directional light: authored in the .map as the first LIGHT_DIRECTIONAL
+	// record; falls back to the historical straight-down white sun when the
+	// map ships none (default.map has an empty visual section).
+	{
+		XMFLOAT3 sunDir  = { 0.0f, -1.0f, 0.0f };
+		XMFLOAT3 sunColor = { 1.0f, 1.0f, 1.0f };
+		XMFLOAT3 authored;
+		if (Map_GetDirectionalLight(&authored, &sunColor)) {
+			sunDir = authored;
+		}
+		XMVECTOR v = XMLoadFloat3(&sunDir);
+		v = XMVector3Normalize(v);
+		XMFLOAT4 dir;
+		XMStoreFloat4(&dir, v);
+		Light_SetDirectionalWorld(dir, { sunColor.x, sunColor.y, sunColor.z, 1.0f });
+	}
 
 	Light_SetSpecularWorld(cam_pos, 4.0f, { 0.3f, 0.3f, 0.3f, 1.0f });
 
