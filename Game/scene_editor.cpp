@@ -426,6 +426,13 @@ void SceneEditor_Draw()
     Light_SetDirectionalWorld(dir, { 1.0f, 1.0f, 1.0f, 1.0f });
     Light_SetSpecularWorld(EditorCamera_GetEye(), 4.0f, { 0.3f, 0.3f, 0.3f, 1.0f });
 
+    // Fog from the map env (same source as the game scene).
+    if (Map_HasEnvironment()) {
+        Light_SetFog(true, Map_GetFogColor(), Map_GetFogStart(), Map_GetFogEnd());
+    } else {
+        Light_SetFog(false, { 0.0f, 0.0f, 0.0f }, 0.0f, 0.0f);
+    }
+
     // Single upload point for all lighting cbuffers (see light.cpp).
     Light_Flush();
 

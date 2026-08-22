@@ -24,6 +24,8 @@ cbuffer PS_CONSTANT_BUFFER : register(b3)
     float3 eye_pos;
     float specular_power = 30.0f;
     float4 specular_color = { 0.1f, 0.1f, 0.1f, 1.0f };
+    float3 fog_color;
+    float2 fog_params;   // x = start, y = end; end <= start disables fog
 }
 
 struct PointLight
@@ -100,6 +102,12 @@ float4 main(PS_IN pi):SV_TARGET
             point_light[i].posW,
             point_light[i].range,
             point_light[i].color);
+    }
+
+    // Distance fog — skip when the env has not authored a range.
+    if (fog_params.y > fog_params.x)
+    {
+        color = ApplyFog(color, pi.posW.xyz);
     }
 
     // Field is opaque regardless of texture alpha — it is a floor/terrain.

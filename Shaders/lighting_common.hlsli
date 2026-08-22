@@ -16,6 +16,12 @@
 //   cbuffer b3: float3 eye_pos
 //               float  specular_power
 //               float4 specular_color
+//               float3 fog_color
+//               float2 fog_params       // x = start, y = end (distances)
+//
+// fog_params.y <= fog_params.x (or == 0) means "fog disabled" — the caller
+// gates ApplyFog() on that condition.
+//
 //
 // The PointLight struct itself is caller-declared (legacy; see the three
 // shader files). See Shaders/lighting_defines.h for the constant that pins
@@ -103,6 +109,24 @@ float3 PointLightContribution(
     float3 spec  = light_color.rgb * t;
 
     return diffuse + spec;
+}
+
+//-----------------------------------------------------------------------------
+// Distance fog. factor = saturate((dist - start) / (end - start)). The
+// caller decides whether to apply at all (fogEnd > fogStart gate keeps an
+// all-zero env block "off by default" without needing a separate flag).
+// Applied to the lit color BEFORE alpha — alpha is untouched.
+//-----------------------------------------------------------------------------
+float3 ApplyFog(float3 color, float3 posW)
+{
+    float dist = length(eye_pos - posW);
+    float fogStart = fog_params.x;
+    float fogEnd   = fog_params.y;
+    float range    = max(fogEnd - fogStart, 1e-6f);
+    float factor   = saturate((dist - fogStart) / range);
+    // Linear interpolation between the lit color and the fog color. Fog is
+    // applied last so the unlit sky / UI can skip it cleanly.
+    return lerp(color, fog_color, factor);
 }
 
 #endif // TRIGGERON_LIGHTING_COMMON_HLSLI

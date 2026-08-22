@@ -34,6 +34,14 @@ uint32_t Map_GetCollisionChecksum();
 DirectX::XMFLOAT3 Map_GetAmbient();
 const char*       Map_GetSkyAsset();
 
+// Fog.  The fog "enabled" flag isn't in the wire format — it's derived on
+// load from fogEnd > fogStart (> is the on/off test).  When fogStart == 0
+// and fogEnd == 0 the env has no fog authored; treat that as disabled and
+// Light_SetFog()'s `enabled` flag becomes redundant with the cbuffer data.
+DirectX::XMFLOAT3 Map_GetFogColor();
+float             Map_GetFogStart();
+float             Map_GetFogEnd();
+
 // Returns true if the loaded map authored a non-empty environment block.
 // Currently visualSize==0 on default.map (the legacy map ships no env), so
 // callers use this to fall back to the hardcoded in-code defaults. Remove

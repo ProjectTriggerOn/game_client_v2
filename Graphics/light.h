@@ -68,9 +68,21 @@ struct DirectionalLight
 
 struct SpecularLight
 {
-    DirectX::XMFLOAT3 CameraPosition;
-    float SpecularPower;
-    DirectX::XMFLOAT4 SpecularColor;
+    DirectX::XMFLOAT3 CameraPosition;   // offset 0, 12 B
+    float SpecularPower;                // offset 12, 4 B
+    DirectX::XMFLOAT4 SpecularColor;    // offset 16, 16 B
+
+    // Fog fields piggyback on the specular cbuffer (register b3) so we do
+    // not grow the lighting state to a 5th cbuffer today. When fog, shadow
+    // parameters, or wind get their own data they can move to b5.
+    // Packed to avoid implicit padding:
+    //   offset 32: FogColor float3 (12 B) + FogColorPad float (4 B) = 16 B
+    //   offset 48: FogStart float (4 B) + FogEnd float (4 B) + pad (8 B) = 16 B
+    DirectX::XMFLOAT3 FogColor;
+    float FogColorPad;
+    float FogStart;
+    float FogEnd;
+    DirectX::XMFLOAT2 _pad;             // tail padding to 64 B
 };
 
 // ---- CPU-side lighting environment ---------------------------------------
@@ -85,6 +97,14 @@ struct LightEnvironment
     DirectX::XMFLOAT4 sunColor      = { 1.0f, 1.0f, 1.0f, 1.0f };
     float             specularPower = 30.0f;
     DirectX::XMFLOAT4 specularColor = { 0.1f, 0.1f, 0.1f, 1.0f };
+
+    // Fog.  Applied as  final = mix(foggedColor, fogColor, fogFactor)  with
+    // fogFactor = saturate((dist - fogStart) / (fogEnd - fogStart)); when
+    // fogEnabled == 0 the shader skips the call entirely.
+    DirectX::XMFLOAT3 fogColor   = { 0.0f, 0.0f, 0.0f };
+    float             fogStart   = 0.0f;
+    float             fogEnd     = 0.0f;
+    int               fogEnabled = 0;      // non-zero => apply fog
 
     // Point lights remain under the legacy (mutable-index) API for now; the
     // env only carries the count so a future bulk-set has a place to park.
@@ -121,6 +141,14 @@ void Light_SetSpecularWorld(
     float specular_power,
     const DirectX::XMFLOAT4& specular_color);
 
+// Fog.  enabled == false disables fog regardless of color/range.  fogStart
+// and fogEnd are distances from the camera in world units; swap their order
+// and the shader's saturate(fogFactor) stays valid.
+void Light_SetFog(bool enabled,
+                  const DirectX::XMFLOAT3& color,
+                  float fogStart,
+                  float fogEnd);
+
 // Point-light state remains array-based. These update the internal list and
 // mark the point-light cbuffer dirty; the actual upload happens in Flush.
 void Light_SetPointLightByList(const PointLightList& list);
@@ -145,6 +173,6 @@ static_assert(sizeof(PointLight)     == 32, "PointLight must match the HLSL floa
 static_assert(sizeof(PointLightList) == sizeof(PointLight) * LIGHT_MAX_POINT_LIGHTS + 16, "PointLightList must match HLSL cbuffer layout (4-byte count + 12-byte pad)");
 static_assert(sizeof(AmbientCB)      == 16, "AmbientCB must be exactly one float4");
 static_assert(sizeof(DirectionalLight) == 32, "DirectionalLight must be two float4s");
-static_assert(sizeof(SpecularLight)  == 32, "SpecularLight must be float3+float+float4");
+static_assert(sizeof(SpecularLight)  == 64, "SpecularLight must pack to 64 B: float3+float+float4+float3+float+float+float+float2");
 
 #endif // LIGHT_H

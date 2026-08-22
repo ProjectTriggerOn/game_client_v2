@@ -117,6 +117,21 @@ const char* Map_GetSkyAsset() {
 	return g_LoadedMap.env.skyAsset;
 }
 
+DirectX::XMFLOAT3 Map_GetFogColor() {
+	EnsureLoaded();
+	return DirectX::XMFLOAT3{ g_LoadedMap.env.fogColor[0], g_LoadedMap.env.fogColor[1], g_LoadedMap.env.fogColor[2] };
+}
+
+float Map_GetFogStart() {
+	EnsureLoaded();
+	return g_LoadedMap.env.fogStart;
+}
+
+float Map_GetFogEnd() {
+	EnsureLoaded();
+	return g_LoadedMap.env.fogEnd;
+}
+
 bool Map_HasEnvironment() {
 	EnsureLoaded();
 	// A legacy default.map ships with visualSize == 0, which means its

@@ -447,6 +447,15 @@ void Game_Draw()
 
 	Light_SetSpecularWorld(cam_pos, 4.0f, { 0.3f, 0.3f, 0.3f, 1.0f });
 
+	// Fog comes from the map env.  The shader gate is (fogEnd > fogStart), so
+	// we pass the values through as-is and only mark the pipeline dirty when
+	// the loaded map actually authored them.
+	if (Map_HasEnvironment()) {
+		Light_SetFog(true, Map_GetFogColor(), Map_GetFogStart(), Map_GetFogEnd());
+	} else {
+		Light_SetFog(false, { 0.0f, 0.0f, 0.0f }, 0.0f, 0.0f);
+	}
+
 	// Single upload point for all lighting cbuffers (see light.cpp).
 	Light_Flush();
 

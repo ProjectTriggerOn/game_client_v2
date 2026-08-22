@@ -152,6 +152,23 @@ void Light_SetEnvironment(const LightEnvironment& env)
         g_dirty |= DIRTY_SPECULAR;
     }
 
+    if (env.fogEnabled != g_environment.fogEnabled
+     || env.fogColor.x != g_environment.fogColor.x
+     || env.fogColor.y != g_environment.fogColor.y
+     || env.fogColor.z != g_environment.fogColor.z
+     || env.fogStart   != g_environment.fogStart
+     || env.fogEnd     != g_environment.fogEnd)
+    {
+        g_environment.fogEnabled = env.fogEnabled;
+        g_environment.fogColor   = env.fogColor;
+        g_environment.fogStart   = env.fogStart;
+        g_environment.fogEnd     = env.fogEnd;
+        g_specularPacked.FogColor = env.fogColor;
+        g_specularPacked.FogStart = env.fogStart;
+        g_specularPacked.FogEnd   = env.fogEnd;
+        g_dirty |= DIRTY_SPECULAR;
+    }
+
     if (env.pointLightCount != g_environment.pointLightCount)
     {
         g_environment.pointLightCount = env.pointLightCount;
@@ -208,6 +225,35 @@ void Light_SetSpecularWorld(const DirectX::XMFLOAT3& camera_position,
     // Mirror into the env so Light_GetEnvironment reports the latest values.
     g_environment.specularPower = specular_power;
     g_environment.specularColor = specular_color;
+
+    g_dirty |= DIRTY_SPECULAR;
+}
+
+void Light_SetFog(bool enabled,
+                  const DirectX::XMFLOAT3& color,
+                  float fogStart,
+                  float fogEnd)
+{
+    const int enabledInt = enabled ? 1 : 0;
+    const bool changed =
+           g_environment.fogEnabled != enabledInt
+        || g_environment.fogColor.x != color.x
+        || g_environment.fogColor.y != color.y
+        || g_environment.fogColor.z != color.z
+        || g_environment.fogStart   != fogStart
+        || g_environment.fogEnd     != fogEnd;
+
+    if (!changed) return;
+
+    g_environment.fogEnabled = enabledInt;
+    g_environment.fogColor   = color;
+    g_environment.fogStart   = fogStart;
+    g_environment.fogEnd     = fogEnd;
+
+    // Fog shares the specular cbuffer — piggyback the new fields onto it.
+    g_specularPacked.FogColor = color;
+    g_specularPacked.FogStart = fogStart;
+    g_specularPacked.FogEnd   = fogEnd;
 
     g_dirty |= DIRTY_SPECULAR;
 }
