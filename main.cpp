@@ -171,7 +171,17 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,[[maybe_unused
 
 	Shader_3DUnlit_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
 
-	Light_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
+	// Lighting is load-bearing: if its PS cbuffers fail to create, every lit
+	// shader samples zero-filled memory.  Surface the failure rather than
+	// silently continuing — the other shader inits above are void today and
+	// print-and-return on their own errors, but we do want boot to stop here.
+	if (!Light_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext())) {
+		MessageBox(hWnd,
+			"Lighting subsystem failed to initialize (one of the PS cbuffers could not be created).",
+			"TriggerOn: Light_Initialize failed",
+			MB_OK | MB_ICONERROR);
+		return -1;
+	}
 
 	Sampler_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
 
