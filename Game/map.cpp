@@ -140,6 +140,13 @@ void Map_UpdatePointLightsNearCamera(const DirectX::XMFLOAT3& cameraPos) {
 	Map_UploadPointLights(cameraPos);
 }
 
+void Map_SetLoadedData(const mapio::MapData& d) {
+	g_LoadedMap = d;
+	g_MapLoaded = true;
+	// Re-upload points so the runtime immediately matches the new map.
+	Map_UploadPointLights({ 0.0f, 0.0f, 0.0f });
+}
+
 bool Map_GetDirectionalLight(DirectX::XMFLOAT3* outDir, DirectX::XMFLOAT3* outColor) {
 	EnsureLoaded();
 	for (const auto& l : g_LoadedMap.lights) {

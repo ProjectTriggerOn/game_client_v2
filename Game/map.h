@@ -10,6 +10,7 @@
 
 // Forward declaration
 class CollisionWorld;
+namespace mapio { struct MapData; }
 
 void Map_Initialize();
 void Map_Finalize();
@@ -60,6 +61,12 @@ bool Map_GetDirectionalLight(DirectX::XMFLOAT3* outDir,
 // dirty-flagged (no GPU traffic when camera didn't move enough to change
 // the top-16).
 void Map_UpdatePointLightsNearCamera(const DirectX::XMFLOAT3& cameraPos);
+
+// Editor hook: push a fresh MapData (typically produced by EditorMap_ToMapData
+// in the scene editor) into the module's loaded-map slot so that the runtime
+// accessors below (Map_GetAmbient, Map_GetSkyAsset, etc.) observe it
+// immediately.  Does NOT touch the .map file on disk.
+void Map_SetLoadedData(const mapio::MapData& d);
 
 // Returns true if the loaded map authored a non-empty environment block.
 // Currently visualSize==0 on default.map (the legacy map ships no env), so

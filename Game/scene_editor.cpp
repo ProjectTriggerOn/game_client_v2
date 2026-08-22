@@ -386,6 +386,12 @@ void SceneEditor_Update([[maybe_unused]] double elapsed_time)
 
     if (KeyLogger_IsTrigger(KK_F9)) {
         bool ok = editor::EditorMap_Save(kEditorSavePath, g_Map);
+        if (ok) {
+            // Mirror the fresh map into the runtime accessor so the game's
+            // next Map_Get* call (and any future play-test in the same
+            // session) sees exactly what we just saved.
+            Map_SetLoadedData(editor::EditorMap_ToMapData(g_Map));
+        }
         OutputDebugStringA(ok ? "[EDITOR] saved resource/maps/_editor_save.map\n"
                               : "[EDITOR] save FAILED (is resource/maps/ writable?)\n");
     }
@@ -397,6 +403,9 @@ void SceneEditor_Update([[maybe_unused]] double elapsed_time)
             // would insert/erase/read out of bounds. Drop both.
             g_Cmds.Clear();
             g_Sel = Selection{};
+            // Same reasoning as F9: keep the runtime cache aligned with the
+            // editor's current copy.
+            Map_SetLoadedData(editor::EditorMap_ToMapData(g_Map));
             OutputDebugStringA("[EDITOR] reloaded resource/maps/_editor_save.map\n");
         } else {
             OutputDebugStringA("[EDITOR] reload FAILED (save with F9 first)\n");
