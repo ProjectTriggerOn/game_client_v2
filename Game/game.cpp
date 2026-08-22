@@ -152,7 +152,7 @@ void Game_Initialize()
 	Map_Initialize();
 	Map_RegisterColliders(g_CollisionWorld);
 
-	SkyDome_Initialize();
+	SkyDome_Initialize(Map_GetSkyAsset());
 	g_PlayerFps = new PlayerFps();
 	g_PlayerFps->Initialize({ -7.0f, 0.0f, -7.0f }, { 0.0f, 0.0f, 1.0f }, &g_CollisionWorld);
 
@@ -422,7 +422,14 @@ void Game_Draw()
 {
 	Sampler_SetFilterAnisotropic();
 
-	Light_SetAmbient({ 0.5f,0.5f,0.5f });
+	// Ambient comes from the loaded map's MapEnv when one is authored.
+	// default.map ships with no env block (visualSize == 0), so fall back to
+	// the historical hardcoded ambient to avoid a visible dark regression.
+	if (Map_HasEnvironment()) {
+		Light_SetAmbient(Map_GetAmbient());
+	} else {
+		Light_SetAmbient({ 0.5f, 0.5f, 0.5f });
+	}
 
 	XMFLOAT4X4 mtxView = isDebugCam ? PlayerCamTps_GetViewMatrix() : PlayerCamFps_GetViewMatrix();
 	XMFLOAT4X4 mtxProj = isDebugCam ? PlayerCamTps_GetPerspectiveMatrix() : PlayerCamFps_GetProjectMatrix();
@@ -432,41 +439,41 @@ void Game_Draw()
 
 	Camera_SetMatrixToShader(view, proj);
 
-	
-
-	XMMATRIX mtxW = XMMatrixIdentity();
-
-	mtxW = XMMatrixTranslation(0.0f,-1.0f,0.0f)* mtxW;
-
-	XMVECTOR v{ 0.0f, -1.0f, 0.0f };
-	v = XMVector3Normalize(v);
-	XMFLOAT4 dir;
-	XMStoreFloat4(&dir, v);
-	Light_SetDirectionalWorld(dir, { 1.0f, 1.0f, 1.0f, 1.0f });
-
-	PointLightList list{
+	// Directional light: authored in the .map as the first LIGHT_DIRECTIONAL
+	// record; falls back to the historical straight-down white sun when the
+	// map ships none (default.map has an empty visual section).
 	{
-			{XMFLOAT3(0.0f,0.2f,0.0f),5.0f,XMFLOAT4(0.0f,1.0f,1.0f,1.0f)},
-			{XMFLOAT3(2.0f,2.0f,0.0f),5.0f,XMFLOAT4(1.0f,0.0f,1.0f,1.0f)},
-			{XMFLOAT3(-2.0f,0.2f,0.0f),5.0f,XMFLOAT4(1.0f,1.0f,0.0f,1.0f)},
-			{XMFLOAT3(0.0f,0.2f,2.0f),5.0f,XMFLOAT4(0.0f,0.0f,1.0f,1.0f)},
-	},
-	4,
-	XMFLOAT3(0,0,0)
-	};
+		XMFLOAT3 sunDir  = { 0.0f, -1.0f, 0.0f };
+		XMFLOAT3 sunColor = { 1.0f, 1.0f, 1.0f };
+		XMFLOAT3 authored;
+		if (Map_GetDirectionalLight(&authored, &sunColor)) {
+			sunDir = authored;
+		}
+		XMVECTOR v = XMLoadFloat3(&sunDir);
+		v = XMVector3Normalize(v);
+		XMFLOAT4 dir;
+		XMStoreFloat4(&dir, v);
+		Light_SetDirectionalWorld(dir, { sunColor.x, sunColor.y, sunColor.z, 1.0f });
+	}
 
-	PointLightList whiteList{
-{
-		{XMFLOAT3(0.0f,0.2f,0.0f),5.0f,XMFLOAT4(1.0f,1.0f,1.0f,1.0f)},
-		{XMFLOAT3(2.0f,2.0f,0.0f),5.0f,XMFLOAT4(1.0f,1.0f,1.0f,1.0f)},
-		{XMFLOAT3(-2.0f,0.2f,0.0f),5.0f,XMFLOAT4(1.0f,1.0f,1.0f,1.0f)},
-		{XMFLOAT3(0.0f,0.2f,2.0f),5.0f,XMFLOAT4(1.0f,1.0f,1.0f,1.0f)},
-	},
-	4,
-	XMFLOAT3(0,0,0)
-	};
+	Light_SetSpecularWorld(cam_pos, 4.0f, { 0.3f, 0.3f, 0.3f, 1.0f });
 
-	Light_SetSpecularWorld(cam_pos, 4.0f, { 0.3f,0.3f,0.3f,1.0f });
+	// Fog comes from the map env.  The shader gate is (fogEnd > fogStart), so
+	// we pass the values through as-is and only mark the pipeline dirty when
+	// the loaded map actually authored them.
+	if (Map_HasEnvironment()) {
+		Light_SetFog(true, Map_GetFogColor(), Map_GetFogStart(), Map_GetFogEnd());
+	} else {
+		Light_SetFog(false, { 0.0f, 0.0f, 0.0f }, 0.0f, 0.0f);
+	}
+
+	// Keep the point-light cbuffer populated with the lights closest to the
+	// camera as it moves through the level.  No-ops (and no GPU traffic)
+	// once the active set hasn't changed.
+	Map_UpdatePointLightsNearCamera(cam_pos);
+
+	// Single upload point for all lighting cbuffers (see light.cpp).
+	Light_Flush();
 
 	SkyDome_Draw();
 

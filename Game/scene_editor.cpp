@@ -22,6 +22,7 @@
 #include "model_catalog.h"
 #include "texture.h"
 #include "light.h"
+#include "map.h"
 #include "collision.h"
 #include "sampler.h"
 #include "sprite.h"
@@ -385,6 +386,12 @@ void SceneEditor_Update([[maybe_unused]] double elapsed_time)
 
     if (KeyLogger_IsTrigger(KK_F9)) {
         bool ok = editor::EditorMap_Save(kEditorSavePath, g_Map);
+        if (ok) {
+            // Mirror the fresh map into the runtime accessor so the game's
+            // next Map_Get* call (and any future play-test in the same
+            // session) sees exactly what we just saved.
+            Map_SetLoadedData(editor::EditorMap_ToMapData(g_Map));
+        }
         OutputDebugStringA(ok ? "[EDITOR] saved resource/maps/_editor_save.map\n"
                               : "[EDITOR] save FAILED (is resource/maps/ writable?)\n");
     }
@@ -396,6 +403,9 @@ void SceneEditor_Update([[maybe_unused]] double elapsed_time)
             // would insert/erase/read out of bounds. Drop both.
             g_Cmds.Clear();
             g_Sel = Selection{};
+            // Same reasoning as F9: keep the runtime cache aligned with the
+            // editor's current copy.
+            Map_SetLoadedData(editor::EditorMap_ToMapData(g_Map));
             OutputDebugStringA("[EDITOR] reloaded resource/maps/_editor_save.map\n");
         } else {
             OutputDebugStringA("[EDITOR] reload FAILED (save with F9 first)\n");
@@ -406,7 +416,13 @@ void SceneEditor_Update([[maybe_unused]] double elapsed_time)
 void SceneEditor_Draw()
 {
     Sampler_SetFilterAnisotropic();
-    Light_SetAmbient({ 0.5f, 0.5f, 0.5f });
+    // Same ambient source as the game scene — the map env owns it when
+    // authored; fall back to the historical default otherwise.
+    if (Map_HasEnvironment()) {
+        Light_SetAmbient(Map_GetAmbient());
+    } else {
+        Light_SetAmbient({ 0.5f, 0.5f, 0.5f });
+    }
 
     XMFLOAT4X4 v4 = EditorCamera_GetView();
     XMFLOAT4X4 p4 = EditorCamera_GetProj();
@@ -414,10 +430,30 @@ void SceneEditor_Draw()
     XMMATRIX proj = XMLoadFloat4x4(&p4);
     Camera_SetMatrixToShader(view, proj);
 
+    XMFLOAT3 sunDir  = { 0.0f, -1.0f, 0.0f };
+    XMFLOAT3 sunColor = { 1.0f, 1.0f, 1.0f };
+    XMFLOAT3 authored;
+    if (Map_GetDirectionalLight(&authored, &sunColor)) {
+        sunDir = authored;
+    }
     XMFLOAT4 dir;
-    XMStoreFloat4(&dir, XMVector3Normalize(XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f)));
-    Light_SetDirectionalWorld(dir, { 1.0f, 1.0f, 1.0f, 1.0f });
+    XMStoreFloat4(&dir, XMVector3Normalize(XMLoadFloat3(&sunDir)));
+    Light_SetDirectionalWorld(dir, { sunColor.x, sunColor.y, sunColor.z, 1.0f });
     Light_SetSpecularWorld(EditorCamera_GetEye(), 4.0f, { 0.3f, 0.3f, 0.3f, 1.0f });
+
+    // Fog from the map env (same source as the game scene).
+    if (Map_HasEnvironment()) {
+        Light_SetFog(true, Map_GetFogColor(), Map_GetFogStart(), Map_GetFogEnd());
+    } else {
+        Light_SetFog(false, { 0.0f, 0.0f, 0.0f }, 0.0f, 0.0f);
+    }
+
+    // Keep the point-light cbuffer populated with the lights closest to the
+    // editor camera as it orbits / pans through the scene.
+    Map_UpdatePointLightsNearCamera(EditorCamera_GetEye());
+
+    // Single upload point for all lighting cbuffers (see light.cpp).
+    Light_Flush();
 
     // Ground plane (same Y offset as the game scene).
     MeshField_Draw(XMMatrixTranslation(0.0f, -1.0f, 0.0f));

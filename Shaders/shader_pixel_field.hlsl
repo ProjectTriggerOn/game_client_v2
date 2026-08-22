@@ -1,3 +1,7 @@
+// Constants shared with C++ — see Shaders/lighting_defines.h.
+// The path is relative to the project root so fxc resolves it.
+#include "lighting_defines.h"
+
 cbuffer PS_CONSTANT_BUFFER : register(b0)
 {
     float4 diffuse_color;
@@ -20,6 +24,8 @@ cbuffer PS_CONSTANT_BUFFER : register(b3)
     float3 eye_pos;
     float specular_power = 30.0f;
     float4 specular_color = { 0.1f, 0.1f, 0.1f, 1.0f };
+    float3 fog_color;
+    float2 fog_params;   // x = start, y = end; end <= start disables fog
 }
 
 struct PointLight
@@ -31,10 +37,14 @@ struct PointLight
 
 cbuffer PS_CONSTANT_BUFFER : register(b4)
 {
-    PointLight point_light[4];
+    PointLight point_light[LIGHT_MAX_POINT_LIGHTS];
     int point_light_count;
     float3 dummy;
 }
+
+// lighting_common.hlsli included AFTER cbuffers — fxc is single-pass and
+// its functions reference these globals by name.
+#include "lighting_common.hlsli"
 
 struct PS_IN
 {
@@ -49,12 +59,9 @@ Texture2D tex0 : register(t0);
 Texture2D tex1 : register(t1);
 SamplerState samp;
 
-//float4 main(PS_IN ps_in) : SV_TARGET
-
-
 float4 main(PS_IN pi):SV_TARGET
 {
-	//UV
+	//UV (45-degree rotation kept for the field material's checker look)
     float2 uv;
     float angle = 3.1415926535f * 45 / 180.0f;
     uv.x = pi.uv.x * cos(angle) + pi.uv.y * sin(angle);
@@ -68,58 +75,42 @@ float4 main(PS_IN pi):SV_TARGET
 	//材質の色
     float3 material_color = tex_color.rgb * diffuse_color.rgb;
 
-    //並行光源
-    float4 normalW = normalize(pi.normalW);
-    //float dl = max(0.0f, dot(-directional_world_vector, normalW));
-    float dl = (dot(-directional_world_vector, normalW) + 1.0f) * 0.5f;
-    float3 diffuse = material_color * directional_color.rgb * dl;
+    // Base lighting from the shared pipeline (hard-Lambert directional +
+    // ambient + Phong spec). The historical half-Lambert wrap is layered on
+    // below as a soft-lighting tweak so we don't fork the shared pipeline
+    // just for this one legacy term.
+    float3 color = ApplyLighting(material_color, pi.normalW.xyz, pi.posW.xyz);
 
-    //環境光
-    float3 ambient = material_color * ambient_color.rgb;
+    // Half-Lambert wrap: replace the hard-Lambert diffuse with a remapped
+    // soft version (dot -1..1 -> 0..1). This is the historical behaviour on
+    // terrain, kept intentionally.
+    {
+        float3 normalW = normalize(pi.normalW).xyz;
+        float3 dir     = directional_world_vector.xyz;
+        float  hardDl  = max(0.0f, dot(-dir, normalW));
+        float  softDl  = (dot(-dir, normalW) + 1.0f) * 0.5f;
+        color += material_color * directional_color.rgb * (softDl - hardDl);
+    }
 
-    //スペキュラ
-    float3 toEye = normalize(eye_pos - pi.posW.xyz); //視点方向ベクトル(視点座標 - 頂点座標)
-    float3 r = reflect(normalize(directional_world_vector), normalW).xyz; //反射ベクトル
-    float t = pow(max(dot(r, toEye), 0.0f), specular_power); //スペキュラ強度
-    float3 specular = specular_color.rgb * t;
-
-    //float alpha = tex.Sample(samp, pi.uv).a * diffuse_color.a;
-    float3 color = ambient + diffuse + specular; //最終的な目に届く色
-
+    // lighting_common.hlsli: accumulate point lights
     for (int i = 0; i < point_light_count; i++)
     {
-
-        //面（ピクセル）から点光源へのベクトルを求める
-        float3 lightToPixel = pi.posW.xyz - point_light[i].posW;
-
-    	//面（ピクセル）とライトの距離を測る
-        float distance = length(lightToPixel);
-
-        //点光源の減衰を求める
-        float A = pow(max(1.0f - 1.0f / point_light[i].range * distance, 0.0f), 2.0f);
-
-	    //range = 400 length = 0   -> A =    1 A * A = 1
-	    //range = 400 length = 100 -> A = 0.75 A * A = 0.5625
-		//range = 400 length = 200 -> A =  0.5 A * A = 0.25
-		//range = 400 length = 300 -> A = 0.25 A * A = 0.0625
-		//range = 400 length = 400 -> A =    0 A * A = 0
-
-		//color += float3(A,A,A);
-
-        //点光源の方向と面（ピクセル）の法線の内積を求める
-        float point_light_dl = max(0.0f, dot(-normalize(lightToPixel), normalW.xyz));
-
-        //color += point_light[i].color.rgb * A ;
-        color += material_color * point_light[i].color.rgb * A * point_light_dl;
-
-        //スペキュラ
-        float3 point_light_r = reflect(normalize(lightToPixel), normalW.xyz).xyz; //反射ベクトル
-        float point_light_t = pow(max(dot(point_light_r, toEye), 0.0f), specular_power); //スペキュラ強度
-
-        //
-        color += point_light[i].color.rgb * point_light_t;
-
+        color += PointLightContribution(
+            material_color,
+            pi.normalW.xyz,
+            pi.posW.xyz,
+            point_light[i].posW,
+            point_light[i].range,
+            point_light[i].color);
     }
+
+    // Distance fog — skip when the env has not authored a range.
+    if (fog_params.y > fog_params.x)
+    {
+        color = ApplyFog(color, pi.posW.xyz);
+    }
+
+    // Field is opaque regardless of texture alpha — it is a floor/terrain.
     return float4(color, 1.0f);
 
 }

@@ -1,3 +1,6 @@
+// Constants shared with C++ — see Shaders/lighting_defines.h.
+#include "lighting_defines.h"
+
 cbuffer PS_CONSTANT_BUFFER : register(b0)
 {
     float4 diffuse_color;
@@ -18,7 +21,9 @@ cbuffer PS_CONSTANT_BUFFER : register(b3)
 {
     float3 eye_pos;
     float specular_power = 30.0f;
-	float4 specular_color = {0.1f, 0.1f, 0.1f, 1.0f};
+    float4 specular_color = { 0.1f, 0.1f, 0.1f, 1.0f };
+    float3 fog_color;
+    float2 fog_params;   // x = start, y = end; end <= start disables fog
 }
 
 struct PointLight
@@ -30,10 +35,14 @@ struct PointLight
 
 cbuffer PS_CONSTANT_BUFFER : register(b4)
 {
-    PointLight point_light[4];
+    PointLight point_light[LIGHT_MAX_POINT_LIGHTS];
     int point_light_count;
     float3 dummy;
 }
+
+// lighting_common.hlsli included AFTER cbuffers — fxc is single-pass and
+// its functions reference these globals by name.
+#include "lighting_common.hlsli"
 
 struct PS_IN
 {
@@ -49,51 +58,28 @@ SamplerState samp;
 
 float4 main(PS_IN pi) : SV_TARGET
 {
-    //材質の色
+    // 材質の色
     float3 material_color = tex.Sample(samp, pi.uv).rgb * pi.color.rgb * diffuse_color.rgb;
 
-    //並行光源
-    float4 normalW = normalize(pi.normalW);
-    float dl = max(0.0f, dot(-directional_world_vector, normalW));
-    float3 diffuse = material_color * directional_color.rgb * dl;
-
-    //環境光
-    float3 ambient = material_color * ambient_color.rgb ;
-
-    //スペキュラ
-    float3 toEye = normalize(eye_pos - pi.posW.xyz); //視点方向ベクトル(視点座標 - 頂点座標)
-    float3 r = reflect(normalize(directional_world_vector), normalW).xyz; //反射ベクトル
-    float t = pow(max(dot(r, toEye), 0.0f), specular_power); //スペキュラ強度
-    float3 specular = specular_color.rgb * t;
-    
-    float alpha = tex.Sample(samp, pi.uv).a * pi.color.a * diffuse_color.a;
-    float3 color = ambient + diffuse + specular; //最終的な目に届く色
-
-    //リムライト
-    float rim = 1.0f -  max(dot(normalW.xyz, toEye),0.0f);
-    rim = pow(saturate(rim), 3.2f);
+    float3 color = ApplyLighting(material_color, pi.normalW.xyz, pi.posW.xyz);
 
     for (int i = 0; i < point_light_count; i++)
     {
-        //面（ピクセル）から点光源へのベクトルを求める
-        float3 lightToPixel = pi.posW.xyz - point_light[i].posW;
-
-    	//面（ピクセル）とライトの距離を測る
-        float distance = length(lightToPixel);
-
-        //点光源の減衰を求める
-        float A = pow(max(1.0f - 1.0f / point_light[i].range * distance, 0.0f), 2.0f);
-
-        //点光源の方向と面（ピクセル）の法線の内積を求める
-        float point_light_dl = max(0.0f, dot(-normalize(lightToPixel), normalW.xyz));
-
-        color += material_color * point_light[i].color.rgb * A * point_light_dl;
-
-        //スペキュラ
-        float3 point_light_r = reflect(normalize(lightToPixel), normalW.xyz).xyz; //反射ベクトル
-        float point_light_t = pow(max(dot(point_light_r, toEye), 0.0f), specular_power); //スペキュラ強度
-
-		color += point_light[i].color.rgb * point_light_t;
+        color += PointLightContribution(
+            material_color,
+            pi.normalW.xyz,
+            pi.posW.xyz,
+            point_light[i].posW,
+            point_light[i].range,
+            point_light[i].color);
     }
+
+    // Distance fog — skip when the env has not authored a range.
+    if (fog_params.y > fog_params.x)
+    {
+        color = ApplyFog(color, pi.posW.xyz);
+    }
+
+    float alpha = tex.Sample(samp, pi.uv).a * pi.color.a * diffuse_color.a;
     return float4(color, alpha);
 }
