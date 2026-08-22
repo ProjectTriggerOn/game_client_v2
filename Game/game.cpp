@@ -152,7 +152,7 @@ void Game_Initialize()
 	Map_Initialize();
 	Map_RegisterColliders(g_CollisionWorld);
 
-	SkyDome_Initialize();
+	SkyDome_Initialize(Map_GetSkyAsset());
 	g_PlayerFps = new PlayerFps();
 	g_PlayerFps->Initialize({ -7.0f, 0.0f, -7.0f }, { 0.0f, 0.0f, 1.0f }, &g_CollisionWorld);
 
@@ -422,7 +422,14 @@ void Game_Draw()
 {
 	Sampler_SetFilterAnisotropic();
 
-	Light_SetAmbient({ 0.5f,0.5f,0.5f });
+	// Ambient comes from the loaded map's MapEnv when one is authored.
+	// default.map ships with no env block (visualSize == 0), so fall back to
+	// the historical hardcoded ambient to avoid a visible dark regression.
+	if (Map_HasEnvironment()) {
+		Light_SetAmbient(Map_GetAmbient());
+	} else {
+		Light_SetAmbient({ 0.5f, 0.5f, 0.5f });
+	}
 
 	XMFLOAT4X4 mtxView = isDebugCam ? PlayerCamTps_GetViewMatrix() : PlayerCamFps_GetViewMatrix();
 	XMFLOAT4X4 mtxProj = isDebugCam ? PlayerCamTps_GetPerspectiveMatrix() : PlayerCamFps_GetProjectMatrix();

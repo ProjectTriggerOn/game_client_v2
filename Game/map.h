@@ -26,3 +26,16 @@ bool Map_LoadFromFile(const char* path);
 // FNV-1a checksum over the loaded map's collision section (for the connect
 // handshake). Forces a lazy load if needed.
 uint32_t Map_GetCollisionChecksum();
+
+// Lighting environment accessors. Ambient is the map's ambient light color;
+// SkyAsset is the FBX path of the sky dome model (may be empty if the map
+// does not author one — callers fall back to a default).
+// Call after Map_Initialize so the lazy default-map load has run.
+DirectX::XMFLOAT3 Map_GetAmbient();
+const char*       Map_GetSkyAsset();
+
+// Returns true if the loaded map authored a non-empty environment block.
+// Currently visualSize==0 on default.map (the legacy map ships no env), so
+// callers use this to fall back to the hardcoded in-code defaults. Remove
+// once every shipped map carries an env block.
+bool Map_HasEnvironment();

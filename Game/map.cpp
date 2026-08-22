@@ -104,6 +104,34 @@ uint32_t Map_GetCollisionChecksum() {
 	return mapio::CollisionChecksum(g_LoadedMap);
 }
 
+DirectX::XMFLOAT3 Map_GetAmbient() {
+	EnsureLoaded();
+	return DirectX::XMFLOAT3{ g_LoadedMap.env.ambient[0], g_LoadedMap.env.ambient[1], g_LoadedMap.env.ambient[2] };
+}
+
+const char* Map_GetSkyAsset() {
+	EnsureLoaded();
+	// MapEnv::skyAsset is fixed-size char[64]; return a pointer into the
+	// loaded map. The EditorMap path converts to an empty std::string; here
+	// we hand back the raw char[] so an empty entry reads as "".
+	return g_LoadedMap.env.skyAsset;
+}
+
+bool Map_HasEnvironment() {
+	EnsureLoaded();
+	// A legacy default.map ships with visualSize == 0, which means its
+	// MapEnv block is all zeros. Rather than silently returning pure-black
+	// ambient and no sky — a visible regression vs the historical hardcoded
+	// look — treat "all zeros" as "no env authored". Once every shipped map
+	// carries an env block this can become a plain header-flags read.
+	const auto& e = g_LoadedMap.env;
+	const bool skyEmpty  = e.skyAsset[0] == '\0';
+	const bool ambZero   = (e.ambient[0] == 0.0f && e.ambient[1] == 0.0f && e.ambient[2] == 0.0f);
+	const bool fogZero   = (e.fogColor[0] == 0.0f && e.fogColor[1] == 0.0f && e.fogColor[2] == 0.0f);
+	const bool rangeZero = (e.fogStart == 0.0f && e.fogEnd == 0.0f);
+	return !(skyEmpty && ambZero && fogZero && rangeZero);
+}
+
 //-----------------------------------------------------------------------------
 // Initialize — build box-brush draw instances from the loaded map's visual data
 //-----------------------------------------------------------------------------

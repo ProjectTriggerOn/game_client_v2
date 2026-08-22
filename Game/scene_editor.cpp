@@ -22,6 +22,7 @@
 #include "model_catalog.h"
 #include "texture.h"
 #include "light.h"
+#include "map.h"
 #include "collision.h"
 #include "sampler.h"
 #include "sprite.h"
@@ -406,7 +407,13 @@ void SceneEditor_Update([[maybe_unused]] double elapsed_time)
 void SceneEditor_Draw()
 {
     Sampler_SetFilterAnisotropic();
-    Light_SetAmbient({ 0.5f, 0.5f, 0.5f });
+    // Same ambient source as the game scene — the map env owns it when
+    // authored; fall back to the historical default otherwise.
+    if (Map_HasEnvironment()) {
+        Light_SetAmbient(Map_GetAmbient());
+    } else {
+        Light_SetAmbient({ 0.5f, 0.5f, 0.5f });
+    }
 
     XMFLOAT4X4 v4 = EditorCamera_GetView();
     XMFLOAT4X4 p4 = EditorCamera_GetProj();
