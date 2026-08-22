@@ -18,7 +18,9 @@
 #include "shader_3d.h"
 #include "light.h"
 #include "player_cam_fps.h"
+#include "debug_ostream.h"
 #include <DirectXMath.h>
+#include <algorithm>
 #include <vector>
 #include <cstring>
 
@@ -42,12 +44,58 @@ namespace {
 		}
 		g_MapLoaded = true;
 	}
+
+	// Push the loaded map's point lights into the lighting pipeline. If the
+	// map has more than LIGHT_MAX_POINT_LIGHTS entries, keep the closest
+	// LIGHT_MAX_POINT_LIGHTS to the reference position (editor origin) and
+	// warn — the rest are dropped, not silently mis-limited by the shader's
+	// array bound.
+	void Map_UploadPointLights() {
+		const auto& mapLights = g_LoadedMap.lights;
+		std::vector<const mapio::MapLight*> candidates;
+		candidates.reserve(mapLights.size());
+		for (const auto& l : mapLights) {
+			if (l.type == mapio::LIGHT_POINT) candidates.push_back(&l);
+		}
+
+		// Sort by squared distance from map origin so the "most relevant"
+		// lights survive the cap. Map origin is the right anchor here: the
+		// camera moves every frame, but this upload happens once on load.
+		const XMFLOAT3 origin{ 0.0f, 0.0f, 0.0f };
+		std::sort(candidates.begin(), candidates.end(),
+			[&](const mapio::MapLight* a, const mapio::MapLight* b) {
+				const float da = (a->pos[0] - origin.x) * (a->pos[0] - origin.x)
+				              + (a->pos[1] - origin.y) * (a->pos[1] - origin.y)
+				              + (a->pos[2] - origin.z) * (a->pos[2] - origin.z);
+				const float db = (b->pos[0] - origin.x) * (b->pos[0] - origin.x)
+				              + (b->pos[1] - origin.y) * (b->pos[1] - origin.y)
+				              + (b->pos[2] - origin.z) * (b->pos[2] - origin.z);
+				return da < db;
+			});
+
+		const int total = static_cast<int>(candidates.size());
+		const int kept  = total < LIGHT_MAX_POINT_LIGHTS ? total : LIGHT_MAX_POINT_LIGHTS;
+		if (total > kept) {
+			hal::dout << "Map_UploadPointLights() : map has " << total
+			          << " point lights, keeping closest " << kept
+			          << " to origin; " << (total - kept) << " dropped" << std::endl;
+		}
+
+		Light_SetPointLightCount(kept);
+		for (int i = 0; i < kept; i++) {
+			const mapio::MapLight* l = candidates[i];
+			const XMFLOAT3 pos{ l->pos[0], l->pos[1], l->pos[2] };
+			const XMFLOAT3 col{ l->color[0], l->color[1], l->color[2] };
+			Light_SetPointLightWorldByCount(i, pos, l->intensity, col);
+		}
+	}
 }
 
 bool Map_LoadFromFile(const char* path) {
 	g_LoadedMap = mapio::MapData{};
 	bool ok = mapio::Read(path, g_LoadedMap);
 	g_MapLoaded = true;   // mark loaded even on failure so EnsureLoaded doesn't overwrite
+	if (ok) Map_UploadPointLights();
 	return ok;
 }
 
@@ -71,6 +119,11 @@ void Map_Initialize() {
 		g_Boxes.push_back({ { m.pos[0], m.pos[1], m.pos[2] },
 		                    { m.scale[0], m.scale[1], m.scale[2] } });
 	}
+
+	// Push map lights into the lighting pipeline. Directional lights are
+	// intentionally ignored for now — they will be folded into the
+	// LightEnvironment once the MapEnv path lands in a later rework step.
+	Map_UploadPointLights();
 }
 
 //-----------------------------------------------------------------------------

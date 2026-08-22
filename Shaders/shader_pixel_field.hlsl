@@ -1,3 +1,7 @@
+// Constants shared with C++ — see Shaders/lighting_defines.h.
+// The path is relative to the project root so fxc resolves it.
+#include "lighting_defines.h"
+
 cbuffer PS_CONSTANT_BUFFER : register(b0)
 {
     float4 diffuse_color;
@@ -31,7 +35,7 @@ struct PointLight
 
 cbuffer PS_CONSTANT_BUFFER : register(b4)
 {
-    PointLight point_light[4];
+    PointLight point_light[LIGHT_MAX_POINT_LIGHTS];
     int point_light_count;
     float3 dummy;
 }

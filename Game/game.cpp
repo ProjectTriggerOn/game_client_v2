@@ -432,41 +432,16 @@ void Game_Draw()
 
 	Camera_SetMatrixToShader(view, proj);
 
-	
-
-	XMMATRIX mtxW = XMMatrixIdentity();
-
-	mtxW = XMMatrixTranslation(0.0f,-1.0f,0.0f)* mtxW;
-
 	XMVECTOR v{ 0.0f, -1.0f, 0.0f };
 	v = XMVector3Normalize(v);
 	XMFLOAT4 dir;
 	XMStoreFloat4(&dir, v);
 	Light_SetDirectionalWorld(dir, { 1.0f, 1.0f, 1.0f, 1.0f });
 
-	PointLightList list{
-	{
-			{XMFLOAT3(0.0f,0.2f,0.0f),5.0f,XMFLOAT4(0.0f,1.0f,1.0f,1.0f)},
-			{XMFLOAT3(2.0f,2.0f,0.0f),5.0f,XMFLOAT4(1.0f,0.0f,1.0f,1.0f)},
-			{XMFLOAT3(-2.0f,0.2f,0.0f),5.0f,XMFLOAT4(1.0f,1.0f,0.0f,1.0f)},
-			{XMFLOAT3(0.0f,0.2f,2.0f),5.0f,XMFLOAT4(0.0f,0.0f,1.0f,1.0f)},
-	},
-	4,
-	XMFLOAT3(0,0,0)
-	};
+	Light_SetSpecularWorld(cam_pos, 4.0f, { 0.3f, 0.3f, 0.3f, 1.0f });
 
-	PointLightList whiteList{
-{
-		{XMFLOAT3(0.0f,0.2f,0.0f),5.0f,XMFLOAT4(1.0f,1.0f,1.0f,1.0f)},
-		{XMFLOAT3(2.0f,2.0f,0.0f),5.0f,XMFLOAT4(1.0f,1.0f,1.0f,1.0f)},
-		{XMFLOAT3(-2.0f,0.2f,0.0f),5.0f,XMFLOAT4(1.0f,1.0f,1.0f,1.0f)},
-		{XMFLOAT3(0.0f,0.2f,2.0f),5.0f,XMFLOAT4(1.0f,1.0f,1.0f,1.0f)},
-	},
-	4,
-	XMFLOAT3(0,0,0)
-	};
-
-	Light_SetSpecularWorld(cam_pos, 4.0f, { 0.3f,0.3f,0.3f,1.0f });
+	// Single upload point for all lighting cbuffers (see light.cpp).
+	Light_Flush();
 
 	SkyDome_Draw();
 

@@ -419,6 +419,9 @@ void SceneEditor_Draw()
     Light_SetDirectionalWorld(dir, { 1.0f, 1.0f, 1.0f, 1.0f });
     Light_SetSpecularWorld(EditorCamera_GetEye(), 4.0f, { 0.3f, 0.3f, 0.3f, 1.0f });
 
+    // Single upload point for all lighting cbuffers (see light.cpp).
+    Light_Flush();
+
     // Ground plane (same Y offset as the game scene).
     MeshField_Draw(XMMatrixTranslation(0.0f, -1.0f, 0.0f));
 
