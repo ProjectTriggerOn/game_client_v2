@@ -194,6 +194,7 @@ exit /b 0
     <ClCompile Include="Game\editor_pick.cpp" />
     <ClCompile Include="Game\editor_command.cpp" />
     <ClCompile Include="Game\editor_gizmo.cpp" />
+    <ClCompile Include="Game\editor_input.cpp" />
     <ClCompile Include="Graphics\mesh_field.cpp" />
     <ClCompile Include="Graphics\model.cpp" />
     <ClCompile Include="Graphics\model_catalog.cpp" />
@@ -268,6 +269,7 @@ exit /b 0
     <ClInclude Include="Game\editor_pick.h" />
     <ClInclude Include="Game\editor_command.h" />
     <ClInclude Include="Game\editor_gizmo.h" />
+    <ClInclude Include="Game\editor_input.h" />
     <ClInclude Include="Graphics\mesh_field.h" />
     <ClInclude Include="Graphics\model.h" />
     <ClInclude Include="Graphics\model_catalog.h" />
