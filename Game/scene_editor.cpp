@@ -646,6 +646,11 @@ void SceneEditor_SetTransform(const char* field, float x, float y, float z)
 {
     if (!field || g_Dragging) return;             // never accept a typed edit mid-drag
     if (!g_Sel.has || !SelectionIndexValid()) return;
+    // A non-numeric JS value (empty field, "-", "1.2.3") reaches here as NaN via
+    // JSValueToFloat's ToNumber(). A NaN written into g_Map survives into every
+    // later PublishSelection, whose %.4f formats it as "nan"/"-nan(ind)" —
+    // invalid JSON that breaks the page's JSON.parse forever, not just once.
+    if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(z)) return;
 
     const std::string f = field;
     const XMFLOAT3 v { x, y, z };
