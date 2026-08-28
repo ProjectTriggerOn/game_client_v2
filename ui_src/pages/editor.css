@@ -1,0 +1,96 @@
+/* editor.css — density layer for the level editor panels.
+   Palette/typography are inherited from shared.css tokens on purpose: one
+   colour system for the whole product. Only spacing/size is redefined here. */
+
+#page-editor { background: none; }   /* the gap between panels IS the viewport */
+
+/* ---- docked shells --------------------------------------------------------
+   --dock-top-h / --dock-right-w are pushed from C++ (onEditorLayout) in CSS px.
+   The fallbacks match editorinput::DockLayout defaults so the page is still
+   usable in the browser preview harness, where no bridge exists. */
+#ed-top {
+  position: absolute; left: 0; top: 0; right: 0;
+  height: var(--dock-top-h, 44px);
+  display: flex; align-items: center; gap: 10px;
+  padding: 0 10px; box-sizing: border-box;
+  background: var(--ui-panel-solid);
+  border-bottom: 1px solid var(--ui-divider);
+  font-size: 11px; letter-spacing: .08em;
+}
+
+#ed-right {
+  position: absolute; right: 0; bottom: 0;
+  top: var(--dock-top-h, 44px);
+  width: var(--dock-right-w, 300px);
+  box-sizing: border-box;
+  background: var(--ui-panel-solid);
+  border-left: 1px solid var(--ui-divider);
+  overflow-y: auto;
+}
+
+/* ---- toolbar --------------------------------------------------------------- */
+.ed-group   { display: flex; align-items: center; gap: 4px; }
+.ed-sep     { width: 1px; height: 22px; background: var(--ui-divider); }
+.ed-spacer  { flex: 1 1 auto; }
+
+.ed-btn {
+  height: 26px; padding: 0 9px;
+  display: inline-flex; align-items: center; gap: 6px;
+  background: transparent;
+  border: 1px solid var(--ui-divider);
+  color: var(--ui-text-2);
+  font-family: var(--ui-font); font-size: 11px; letter-spacing: .08em;
+  cursor: pointer;
+}
+.ed-btn:hover:not(:disabled) { color: var(--ui-text); border-color: var(--ui-text-dim); }
+.ed-btn.active {
+  color: var(--ui-cyan);
+  border-color: var(--ui-cyan);
+  background: var(--ui-cyan-dim);
+}
+.ed-btn:disabled { opacity: .35; cursor: default; }
+.ed-btn kbd {
+  font-family: var(--ui-mono); font-size: 10px;
+  color: var(--ui-text-dim); letter-spacing: 0;
+}
+
+.ed-toggle { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.ed-toggle span { font-size: 11px; letter-spacing: .08em; color: var(--ui-text-2); }
+
+.ed-counts {
+  font-family: var(--ui-mono); font-size: 10px;
+  color: var(--ui-text-dim); letter-spacing: .04em;
+}
+
+/* ---- inspector (Task 5 fills the markup) ----------------------------------- */
+.ed-sec { padding: 8px 10px; border-bottom: 1px solid var(--ui-divider); }
+.ed-sec h4 {
+  margin: 0 0 7px; font-size: 10px; letter-spacing: .14em;
+  color: var(--ui-text-dim); text-transform: uppercase; font-weight: 600;
+}
+.ed-empty { padding: 14px 10px; font-size: 11px; color: var(--ui-text-dim); }
+
+.ed-row {
+  display: grid; grid-template-columns: 34px 1fr 1fr 1fr; gap: 5px;
+  align-items: center; height: 24px; margin-bottom: 4px;
+}
+.ed-row > label {
+  font-size: 10px; letter-spacing: .1em; color: var(--ui-text-dim);
+}
+.ed-row input[type="text"] {
+  height: 22px; min-width: 0; box-sizing: border-box;
+  background: #0a0e12;
+  border: 1px solid var(--ui-divider);
+  color: var(--ui-text);
+  font-family: var(--ui-mono); font-size: 11px;
+  text-align: right; padding: 0 5px;
+}
+.ed-row input[type="text"]:focus { outline: none; border-color: var(--ui-cyan); }
+
+.ed-check { display: flex; align-items: center; gap: 7px; height: 24px; }
+.ed-check span { font-size: 11px; color: var(--ui-text-2); }
+
+.ed-id {
+  font-family: var(--ui-mono); font-size: 11px; color: var(--ui-cyan);
+  letter-spacing: .04em;
+}

@@ -1,3 +1,40 @@
-<!-- Editor viewport overlay. M2: intentionally empty (transparent) so the 3D
-     editor scene shows through. M4 fills this with the toolbar / palette /
-     inspector panels. -->
+<!-- Level editor overlay. Two docked panels; everything between them is left
+     unpainted so the 3D viewport shows through the transparent Ultralight View.
+     Panel SIZES come from C++ (window.onEditorLayout -> CSS variables) because
+     C++ hit-tests the same numbers to decide whether a click belongs to the UI
+     or the viewport. Never hard-code the sizes here. -->
+
+<div id="ed-top">
+  <div class="ed-group" id="ed-tools">
+    <button class="ed-btn" data-tool="select">SELECT<kbd>Q</kbd></button>
+    <button class="ed-btn" data-tool="move">MOVE<kbd>W</kbd></button>
+    <button class="ed-btn" data-tool="rotate">ROTATE<kbd>E</kbd></button>
+    <button class="ed-btn" data-tool="scale">SCALE<kbd>R</kbd></button>
+  </div>
+
+  <div class="ed-sep"></div>
+
+  <div class="ed-group">
+    <button class="ed-btn" id="ed-undo">UNDO<kbd>^Z</kbd></button>
+    <button class="ed-btn" id="ed-redo">REDO<kbd>^Y</kbd></button>
+    <button class="ed-btn" id="ed-delete">DELETE<kbd>DEL</kbd></button>
+  </div>
+
+  <div class="ed-sep"></div>
+
+  <label class="ed-toggle"><input type="checkbox" id="ed-snap" checked><span>SNAP</span></label>
+
+  <div class="ed-sep"></div>
+
+  <div class="ed-group">
+    <button class="ed-btn" id="ed-save">SAVE<kbd>F9</kbd></button>
+    <button class="ed-btn" id="ed-reload">RELOAD<kbd>F10</kbd></button>
+  </div>
+
+  <div class="ed-spacer"></div>
+  <div id="ed-counts" class="ed-counts">--</div>
+</div>
+
+<aside id="ed-right">
+  <!-- Inspector: filled in by Task 5. -->
+</aside>
