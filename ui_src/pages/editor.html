@@ -36,5 +36,43 @@
 </div>
 
 <aside id="ed-right">
-  <!-- Inspector: filled in by Task 5. -->
+  <div class="ed-sec">
+    <h4>Selection</h4>
+    <div class="ed-id" id="ed-sel-id">none</div>
+  </div>
+
+  <!-- Box / model transform. Hidden when a collider (or nothing) is selected. -->
+  <div class="ed-sec" id="ed-xform" hidden>
+    <h4>Transform</h4>
+    <div class="ed-row" data-field="pos">
+      <label>POS</label>
+      <input type="text" data-axis="0"><input type="text" data-axis="1"><input type="text" data-axis="2">
+    </div>
+    <div class="ed-row" data-field="rot">
+      <label>ROT</label>
+      <input type="text" data-axis="0"><input type="text" data-axis="1"><input type="text" data-axis="2">
+    </div>
+    <div class="ed-row" data-field="scale">
+      <label>SCL</label>
+      <input type="text" data-axis="0"><input type="text" data-axis="1"><input type="text" data-axis="2">
+    </div>
+  </div>
+
+  <!-- Collider bounds. Hidden unless a collider is selected. -->
+  <div class="ed-sec" id="ed-collider" hidden>
+    <h4>Collider</h4>
+    <div class="ed-row" data-field="cmin">
+      <label>MIN</label>
+      <input type="text" data-axis="0"><input type="text" data-axis="1"><input type="text" data-axis="2">
+    </div>
+    <div class="ed-row" data-field="cmax">
+      <label>MAX</label>
+      <input type="text" data-axis="0"><input type="text" data-axis="1"><input type="text" data-axis="2">
+    </div>
+    <label class="ed-check">
+      <input type="checkbox" id="ed-isground"><span>IS GROUND (walkable)</span>
+    </label>
+  </div>
+
+  <div class="ed-empty" id="ed-nosel">Nothing selected. Click an object in the viewport.</div>
 </aside>
