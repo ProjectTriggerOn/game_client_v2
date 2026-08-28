@@ -57,6 +57,14 @@ void PushMatchResult(const char* json);
 // secondsLeft > 0 shows/updates the "keep these settings?" dialog; 0 hides it.
 void PushDisplayRevertTick(int secondsLeft);
 
+// Editor pushes. Same store-now / flush-at-Render-top contract as the HUD ones.
+// PushEditorLayout takes CLIENT pixels; ui_manager converts to CSS px with the
+// live device scale (the page must never do that division itself) and re-pushes
+// automatically on Resize and after a hot reload.
+void PushEditorLayout(int topHClientPx, int rightWClientPx);
+void PushEditorSelection(const char* json);
+void PushEditorStatus(const char* json);
+
 // Page switch helper: calls Router.show('<name>'). UIPolicy_Apply drives this
 // for state-derived pages; the ui_test sandbox uses it directly for preview.
 void ShowPage(const char* name);

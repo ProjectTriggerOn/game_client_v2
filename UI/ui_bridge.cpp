@@ -21,6 +21,14 @@
 extern ENetClientNetwork* g_pFloodNet;
 #endif
 
+#ifdef EDITOR_ENABLED
+// Editor code is Debug-only (TriggerOn.vcxproj EDITOR_ENABLED); scene_editor.cpp
+// and editor_input.cpp do not exist in Release, so these calls must be guarded
+// or the Release link fails on unresolved externals.
+#include "scene_editor.h"
+#include "editor_input.h"
+#endif
+
 namespace {
 
 using namespace ultralight;
@@ -117,6 +125,16 @@ std::string JSValueToStdString(const JSValue& v) {
 // non-const); casting args[i] directly would trip C4238 (rvalue used as lvalue).
 int JSValueToInt(const JSValue& v) {
     return (int)((JSValue&)v).ToNumber();
+}
+
+// Same named-lvalue rule as JSValueToInt (the JSHelpers accessors are non-const;
+// casting args[i] directly trips C4238).
+bool JSValueToBool(const JSValue& v) {
+    return ((JSValue&)v).ToBoolean();
+}
+
+float JSValueToFloat(const JSValue& v) {
+    return (float)((JSValue&)v).ToNumber();
 }
 
 // JS number/bool/string → ConfigValue (Config::Set preserves integer-ness of
@@ -315,6 +333,56 @@ void Register(ultralight::View* view) {
     };
 #endif
 
+#ifdef EDITOR_ENABLED
+    // --- window.editor.* (level editor panels; spec 3.6) ---------------------
+    JSValue edVal = JSEval("window.editor = window.editor || {}; window.editor");
+    JSObject ed = edVal.ToObject();
+
+    // Input arbitration flags. setTextFocus gates EVERY editor hotkey — without
+    // it, typing 5 into a coordinate field also drops a box (B) and switches
+    // tools (Q/W/E/R), and Ctrl+Z undoes the map instead of the text.
+    ed["setTextFocus"] = (JSCallback)[](const JSObject&, const JSArgs& args) {
+        if (args.empty()) return;
+        EditorInput_SetTextFocus(JSValueToBool(args[0]));
+    };
+    ed["setPointerCapture"] = (JSCallback)[](const JSObject&, const JSArgs& args) {
+        if (args.empty()) return;
+        EditorInput_SetPointerCapture(JSValueToBool(args[0]));
+    };
+
+    // Toolbar verbs.
+    ed["setTool"] = (JSCallback)[](const JSObject&, const JSArgs& args) {
+        if (args.empty()) return;
+        const std::string t = JSValueToStdString(args[0]);
+        SceneEditor_SetTool(t == "move" ? 1 : t == "rotate" ? 2 : t == "scale" ? 3 : 0);
+    };
+    ed["setSnap"] = (JSCallback)[](const JSObject&, const JSArgs& args) {
+        if (args.empty()) return;
+        SceneEditor_SetSnap(JSValueToBool(args[0]));
+    };
+    ed["undo"]            = (JSCallback)[](const JSObject&, const JSArgs&) { SceneEditor_Undo(); };
+    ed["redo"]            = (JSCallback)[](const JSObject&, const JSArgs&) { SceneEditor_Redo(); };
+    ed["deleteSelection"] = (JSCallback)[](const JSObject&, const JSArgs&) { SceneEditor_DeleteSelection(); };
+    ed["save"]            = (JSCallback)[](const JSObject&, const JSArgs&) { SceneEditor_Save(); };
+    ed["reload"]          = (JSCallback)[](const JSObject&, const JSArgs&) { SceneEditor_Reload(); };
+
+    // Inspector commit. field: "pos" | "rot" (DEGREES) | "scale" | "cmin" | "cmax".
+    ed["setTransform"] = (JSCallback)[](const JSObject&, const JSArgs& args) {
+        if (args.size() < 4) return;
+        const std::string field = JSValueToStdString(args[0]);
+        SceneEditor_SetTransform(field.c_str(),
+                                 JSValueToFloat(args[1]),
+                                 JSValueToFloat(args[2]),
+                                 JSValueToFloat(args[3]));
+    };
+    ed["setColliderGround"] = (JSCallback)[](const JSObject&, const JSArgs& args) {
+        if (args.empty()) return;
+        SceneEditor_SetColliderGround(JSValueToBool(args[0]));
+    };
+
+    DebugLog("[UI:bridge] editor.* registered", "");
+#endif // EDITOR_ENABLED
+
     DebugLog("[UI:bridge] game.* registered", "");
 }
 
@@ -359,6 +427,18 @@ void PushMatchResult(const char* json) {
 
 void PushDisplayRevertTick(int secondsLeft) {
     CallJsFn1("onDisplayRevertTick", (double)secondsLeft);
+}
+
+void PushEditorLayout(const char* json) {
+    CallJsFnStr("onEditorLayout", json);
+}
+
+void PushEditorSelection(const char* json) {
+    CallJsFnStr("onEditorSelection", json);
+}
+
+void PushEditorStatus(const char* json) {
+    CallJsFnStr("onEditorStatus", json);
 }
 
 }  // namespace Bridge
