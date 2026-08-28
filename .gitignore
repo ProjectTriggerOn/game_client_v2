@@ -389,3 +389,6 @@ resource/maps/_editor_*.map
 # fresh clone builds and runs without manually copying the SDK's bin/ DLLs.
 !ThirdParty/ultralight/bin/
 !ThirdParty/ultralight/bin/*.dll
+
+# Worktrees
+.worktrees/
