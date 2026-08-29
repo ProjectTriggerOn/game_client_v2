@@ -9,6 +9,27 @@
 // to cap concurrency.  With 60Hz snapshots and packet-loss catch-up, a dozen
 // gunshots can land in one frame; without a cap they all play and the mix
 // clips.  The pool caps per sound and steals by priority.
+//
+// THREADING CONTRACT
+//
+// Every piece of state this file owns — g_Pools and the Voice objects inside
+// them, g_GroupInited, g_EngineInited, g_PlayCounter, g_Rng, g_Preloaded — is
+// touched from the game thread ONLY.  There is no lock and none is needed:
+// Audio_* is called from the frame loop, and this file installs no miniaudio
+// callback of its own, so no code here ever runs on the device thread.
+//
+// Everything that does cross to the device thread crosses inside miniaudio: a
+// started ma_sound is pulled by the device callback through the node graph,
+// and the setters used below (volume, pitch, position, looping, start/stop)
+// publish through miniaudio's own atomics, which is why calling them from the
+// game thread while the sound is audible is safe rather than a data race.
+//
+// The one non-obvious consequence is that releasing a voice mid-playback is
+// safe.  ma_sound_uninit detaches the node from the graph and blocks until any
+// in-flight processing of that node has finished before it frees anything, so
+// ReleaseVoice() cannot pull memory out from under a callback that is reading
+// it — which is what makes voice stealing (AcquireVoice/CheapestActive) a
+// legitimate strategy instead of a race with the mixer.
 //=============================================================================
 #include "audio_backend.h"
 #include "audio_catalog.h"
@@ -23,7 +44,7 @@
 namespace {
 
 // Handle layout: [31:24] SoundId | [23:16] index | [15:0] generation.
-// SoundId::Count is 15 and maxInstances is a uint8_t, so both fit with room
+// SoundId::Count is 14 and maxInstances is a uint8_t, so both fit with room
 // to spare; encoding the pool directly means resolution is a plain decode
 // (SoundId -> pool -> slot -> generation check) with no side table needed.
 constexpr uint32_t kGenBits    = 16;
@@ -34,6 +55,15 @@ constexpr uint32_t kIndexShift = kGenBits;
 constexpr uint32_t kIdShift    = kGenBits + kIndexBits;
 
 struct Voice {
+    // RELOCATION INVARIANT: ma_sound is stored BY VALUE and, once started, the
+    // engine's node graph holds a raw pointer to this very object.  A vector
+    // reallocation while any voice is live would leave the device thread
+    // dereferencing freed memory.  This is safe only because Pool::voices is
+    // sized exactly once, in Initialize(), from an empty vector, and is never
+    // resized, push_back'd or erased afterwards (Finalize() clears it only
+    // after every voice has been uninited).  Anything that would grow a pool
+    // at runtime must switch to stable storage (std::deque, or heap-allocated
+    // ma_sound) first — this is a precondition, not a preference.
     ma_sound sound{};
     bool     inited     = false;
     bool     looping    = false;
@@ -57,6 +87,10 @@ bool           g_EngineInited = false;
 uint64_t       g_PlayCounter  = 0;
 
 std::mt19937 g_Rng{ 0xA0D10 };
+
+// Every catalog file registered with the engine's resource manager at init, so
+// Finalize() can unregister exactly what it registered.  See PreloadCatalog().
+std::vector<std::string> g_Preloaded;
 
 ma_sound_group* GroupFor(AudioBus bus)
 {
@@ -112,6 +146,9 @@ void ReleaseVoice(Voice& v)
 // and therefore the same priority, so stealing there is purely oldest-first.
 constexpr int kMaxTotalVoices = 48;
 
+// Also what AudioBackend::ActiveVoiceCount() reports to the debug overlay: one
+// loop, so the budget the allocator enforces and the number on screen cannot
+// drift apart.
 int TotalActiveVoices()
 {
     int n = 0;
@@ -176,7 +213,11 @@ Voice* AcquireVoice(Pool& pool, const SoundDef& def, size_t& outIndex)
             oldest      = i;
         }
     }
-    outIndex = oldest;
+    // Advance the cursor here too, exactly as the free-slot path does: the
+    // round-robin scan should resume past the slot we just handed out whichever
+    // branch produced it.
+    pool.next = (oldest + 1) % pool.voices.size();
+    outIndex  = oldest;
     return &pool.voices[oldest];
 }
 
@@ -185,10 +226,24 @@ bool StartVoice(Voice& v, const SoundDef& def, SoundId id,
 {
     ReleaseVoice(v);
 
+    // Both callers check IsValid() first, but the distribution below would be
+    // (0, SIZE_MAX) on an empty files[] and index far out of bounds, so the
+    // guard lives here where the hazard is rather than in the callers where a
+    // future refactor could quietly drop it.
+    if (def.files.empty()) return false;
+
     const std::string& file =
         def.files[std::uniform_int_distribution<size_t>(0, def.files.size() - 1)(g_Rng)];
 
-    ma_uint32 flags = (ma_uint32)MA_SOUND_FLAG_DECODE;
+    // Streamed entries page off disk instead of holding decoded PCM; everything
+    // else is pre-decoded and pinned by Initialize()'s pre-pass, so DECODE here
+    // resolves against a warm resource-manager buffer with no file I/O on the
+    // game thread.  LOOPING has to be set at init for a streaming loop: the
+    // stream pre-fills its first page during init and would leave a gap at the
+    // wrap point if it did not already know it was going to loop.
+    ma_uint32 flags = def.stream ? (ma_uint32)MA_SOUND_FLAG_STREAM
+                                 : (ma_uint32)MA_SOUND_FLAG_DECODE;
+    if (def.stream && loop) flags |= (ma_uint32)MA_SOUND_FLAG_LOOPING;
     if (!world) flags |= (ma_uint32)MA_SOUND_FLAG_NO_SPATIALIZATION;
 
     if (ma_sound_init_from_file(&g_Engine, file.c_str(), flags,
@@ -224,6 +279,61 @@ bool StartVoice(Voice& v, const SoundDef& def, SoundId id,
     return ma_sound_start(&v.sound) == MA_SUCCESS;
 }
 
+// Pull every non-streaming catalog file into the resource manager once, at
+// init, and hold a reference for the process lifetime.
+//
+// Without this, every cold ma_sound_init_from_file below opens and decodes its
+// WAV synchronously on the game thread.  The resource manager does cache
+// decoded buffers by path, but it drops them at refcount zero, and
+// ReclaimVoices() releases every finished one-shot each frame — so the cache is
+// empty for any sound that is not currently audible.  The first shot of a
+// burst, and every footstep variant that happens not to be playing, paid a full
+// open + decode inside the frame.  The realistic worst case is several 250-360
+// KB fire variants decoded in one frame when a firefight resumes.
+//
+// Registering here makes the refcount never reach zero, so later inits resolve
+// against a warm buffer and do no I/O at all.  The whole catalog is ~2 MB of
+// short one-shots; the one genuinely large asset, the ambient bed, is marked
+// `stream` and deliberately skipped (it never wants a resident decode).
+//
+// A file that fails to register is simply left out: it will fall back to the
+// old cold-load path, which still works, just slowly.  Audio never fails hard.
+void PreloadCatalog()
+{
+    ma_resource_manager* rm = ma_engine_get_resource_manager(&g_Engine);
+    if (!rm) {
+        DebugLog_Printf("audio", "no resource manager - sounds will load on first play");
+        return;
+    }
+
+    int ok = 0;
+    for (size_t i = 0; i < (size_t)SoundId::Count; ++i) {
+        const SoundDef& def = AudioCatalog_Get((SoundId)i);
+        if (def.stream) continue;
+        for (const std::string& file : def.files) {
+            const ma_result r = ma_resource_manager_register_file(
+                rm, file.c_str(), (ma_uint32)MA_RESOURCE_MANAGER_DATA_SOURCE_FLAG_DECODE);
+            if (r != MA_SUCCESS) {
+                DebugLog_Printf("audio", "preload failed (%s) - will load on demand", file.c_str());
+                continue;
+            }
+            g_Preloaded.push_back(file);
+            ++ok;
+        }
+    }
+    DebugLog_Printf("audio", "preloaded %d catalog files", ok);
+}
+
+void UnloadCatalog()
+{
+    ma_resource_manager* rm = ma_engine_get_resource_manager(&g_Engine);
+    if (rm) {
+        for (const std::string& file : g_Preloaded)
+            ma_resource_manager_unregister_file(rm, file.c_str());
+    }
+    g_Preloaded.clear();
+}
+
 } // namespace
 
 namespace AudioBackend {
@@ -251,6 +361,8 @@ bool Initialize()
         g_Pools[i].voices.resize(def.IsValid() ? def.maxInstances : 0);
     }
 
+    PreloadCatalog();
+
     return true;
 }
 
@@ -260,6 +372,11 @@ void Finalize()
         for (Voice& v : pool.voices) ReleaseVoice(v);
         pool.voices.clear();
     }
+
+    // Drop the init-time references before the engine (and with it the resource
+    // manager that owns those buffers) goes away.  Voices first: a registered
+    // buffer must outlive every sound reading it.
+    UnloadCatalog();
 
     for (size_t i = 0; i < (size_t)AudioBus::Count; ++i) {
         if (!g_GroupInited[i]) continue;
@@ -281,11 +398,14 @@ void SetListener(const AudioListener& l)
     ma_engine_listener_set_world_up (&g_Engine, 0, l.up.x,       l.up.y,       l.up.z);
 }
 
-void Update(double)
+void ReclaimVoices()
 {
-    // Reclaim finished one-shots so their decoded buffers do not pile up.
-    // Loops are never reclaimed here; they only end via StopLoop or by being
-    // stolen for the global voice budget (see CheapestActive).
+    // Reclaim finished one-shots so their slots and their share of the global
+    // budget are free before this frame's plays ask for either.  Loops are
+    // never reclaimed here: they end via StopLoop, or when their own pool
+    // saturates and AcquireVoice reuses the oldest slot in it.  They are NOT
+    // stolen for the global budget — CheapestActive skips looping voices on
+    // purpose, so the ambient bed cannot be culled by a firefight.
     for (Pool& pool : g_Pools) {
         for (Voice& v : pool.voices) {
             if (v.inited && !v.looping && !ma_sound_is_playing(&v.sound)) ReleaseVoice(v);
@@ -322,10 +442,10 @@ uint32_t PlayLoop(SoundId id, const DirectX::XMFLOAT3* world)
     if (!StartVoice(*v, def, id, world, 1.0f, true)) {
         // StartVoice can fail after ma_sound_init_from_file already succeeded
         // (i.e. ma_sound_start itself failed), leaving the voice inited and
-        // marked looping. Update() only reclaims !looping voices, so without
-        // this the slot would leak forever, counting against the global
-        // voice budget with no handle able to reach it. Safe to call even
-        // when init itself failed: ReleaseVoice no-ops on an uninited voice.
+        // marked looping. ReclaimVoices() only reclaims !looping voices, so
+        // without this the slot would leak forever, counting against the
+        // global voice budget with no handle able to reach it. Safe to call
+        // even when init failed: ReleaseVoice no-ops on an uninited voice.
         ReleaseVoice(*v);
         return 0;
     }
@@ -356,11 +476,7 @@ void SetBusVolume(AudioBus bus, float linear01)
 
 int ActiveVoiceCount()
 {
-    int n = 0;
-    for (const Pool& pool : g_Pools)
-        for (const Voice& v : pool.voices)
-            if (v.inited) ++n;
-    return n;
+    return TotalActiveVoices();
 }
 
 } // namespace AudioBackend

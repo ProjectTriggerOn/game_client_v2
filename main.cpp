@@ -378,6 +378,13 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,[[maybe_unused
 			// (F1/F2 page-preview shortcuts live in SCENE_UI_TEST's UITest_Update)
 			UI::ProcessInput();
 
+			// Reclaim the voices whose one-shots finished LAST frame, before
+			// Scene_Update plays anything this frame. Reclaiming afterwards
+			// would leave the finished sounds counting against the global voice
+			// budget while this frame's plays are being allocated, which can
+			// drop a live sound under load.
+			Audio_BeginFrame();
+
 			Scene_Update(elapsed_time);
 
 			// Listener follows the camera.  Must run after Scene_Update so this
@@ -386,7 +393,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,[[maybe_unused
 				const DirectX::XMFLOAT3& camPos   = Camera_GetPosition();
 				const DirectX::XMFLOAT3& camFront = Camera_GetFront();
 				AudioListener listener{ camPos, camFront, DirectX::XMFLOAT3(0.0f, 1.0f, 0.0f) };
-				Audio_Update(elapsed_time, listener);
+				Audio_SetListener(listener);
 			}
 
 			// Derive cursor (mouse_policy) and UI input level + page (ui_policy)

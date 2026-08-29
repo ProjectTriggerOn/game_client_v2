@@ -23,6 +23,12 @@ int main()
 {
     CHECK(AudioCatalog_Load("config/audio_catalog.toml"), "catalog should load");
 
+    // Pinned so that dropping an id — as `hitmarker` was, for want of any hit
+    // feedback to trigger it — or adding one is a deliberate edit here and not
+    // a silently narrower sweep below.
+    static_assert((uint16_t)SoundId::Count == 14,
+                  "SoundId count changed: update config/audio_catalog.toml and this test");
+
     // Every SoundId must resolve to a table in the TOML.
     for (uint16_t i = 0; i < (uint16_t)SoundId::Count; ++i) {
         const SoundDef& d = AudioCatalog_Get((SoundId)i);
@@ -40,10 +46,22 @@ int main()
     CHECK(fire.maxInstances >= 8,      "WeaponFire needs headroom for concurrent shooters");
     CHECK(fire.pitchCents > 0.0f,      "WeaponFire should randomise pitch");
 
-    // Ambient loop is the one entry that loops and is not spatialised.
+    // Ambient loop is the one entry the backend streams rather than decoding
+    // (a ~9 MB bed), and the one entry on the Ambient bus.
     const SoundDef& amb = AudioCatalog_Get(SoundId::AmbientLoop);
-    CHECK(amb.loop,                        "AmbientLoop should loop");
+    CHECK(amb.stream,                      "AmbientLoop should stream, not pre-decode");
     CHECK(amb.bus == AudioBus::Ambient,    "AmbientLoop should sit on the Ambient bus");
+
+    // Nothing else streams: a one-shot must start from a resident buffer, and
+    // the init-time preload deliberately skips whatever is marked stream.
+    for (uint16_t i = 0; i < (uint16_t)SoundId::Count; ++i) {
+        if ((SoundId)i == SoundId::AmbientLoop) continue;
+        if (AudioCatalog_Get((SoundId)i).stream) {
+            std::printf("FAIL: SoundId %u (%s) streams; only the ambient bed should\n",
+                        i, AudioCatalog_KeyOf((SoundId)i));
+            ++g_fail;
+        }
+    }
 
     // A missing file must degrade that one entry only, never throw or abort.
     CHECK(!AudioCatalog_Load("config/does_not_exist.toml"), "missing catalog returns false");

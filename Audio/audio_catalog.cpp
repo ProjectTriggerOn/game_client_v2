@@ -21,7 +21,6 @@ const char* const kSoundKeys[] = {
     "footstep",
     "jump_start",
     "jump_land",
-    "hitmarker",
     "take_damage",
     "death",
     "kill_confirm",
@@ -36,12 +35,17 @@ static_assert(sizeof(kSoundKeys) / sizeof(kSoundKeys[0]) == (size_t)SoundId::Cou
 SoundDef g_Defs[(size_t)SoundId::Count];
 const SoundDef kInvalid{};
 
-AudioBus ParseBus(std::string_view s)
+AudioBus ParseBus(const std::string& s, const char* key)
 {
+    if (s == "sfx")     return AudioBus::Sfx;
     if (s == "ui")      return AudioBus::Ui;
     if (s == "music")   return AudioBus::Music;
     if (s == "ambient") return AudioBus::Ambient;
     if (s == "master")  return AudioBus::Master;
+    // Still degrade to Sfx — a typo'd bus must not silence the sound — but say
+    // so.  Every other degrade path in this file names what it dropped, and an
+    // unlogged fallback presents a misrouted bus as "the mix sounds wrong".
+    DebugLog_Printf("audio", "catalog: '%s' has unknown bus '%s' - using sfx", key, s.c_str());
     return AudioBus::Sfx;
 }
 
@@ -86,8 +90,8 @@ bool AudioCatalog_Load(const char* tomlPath)
             }
         }
 
-        d.bus          = ParseBus((*node)["bus"].value_or<std::string>("sfx"));
-        d.loop         = (*node)["loop"].value_or(false);
+        d.bus          = ParseBus((*node)["bus"].value_or<std::string>("sfx"), kSoundKeys[i]);
+        d.stream       = (*node)["stream"].value_or(false);
         d.gainDb       = (*node)["gain_db"].value_or(0.0f);
         d.pitchCents   = (*node)["pitch_cents"].value_or(0.0f);
         d.maxInstances = (uint8_t)(*node)["max_instances"].value_or(4);

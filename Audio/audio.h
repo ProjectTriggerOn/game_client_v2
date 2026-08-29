@@ -22,7 +22,6 @@ enum class SoundId : uint16_t {
     Footstep,
     JumpStart,
     JumpLand,
-    Hitmarker,
     TakeDamage,
     Death,
     KillConfirm,
@@ -51,8 +50,11 @@ struct AudioListener {
 //-----------------------------------------------------------------------------
 // AudioHandle — index + generation.  Only looping sounds get one; one-shots
 // need no handle because there is nothing to stop or move.  The generation bits
-// make a stale handle a no-op instead of a dangling write, which matters
-// because a remote player can disconnect while their footstep loop is live.
+// protect against a handle outliving the voice it names: the only loop today is
+// the ambient bed, whose handle is held across a scene change and whose slot can
+// be recycled by StopLoop or by a failed restart, so a stale Audio_StopLoop /
+// Audio_SetLoopPosition must be a no-op rather than a write into whatever now
+// occupies that slot.
 //-----------------------------------------------------------------------------
 struct AudioHandle {
     uint32_t bits = 0;
@@ -62,9 +64,15 @@ struct AudioHandle {
 void Audio_Initialize();
 void Audio_Finalize();
 
-// Call once per frame, before anything plays, so this frame's sounds are
-// positioned against this frame's listener.
-void Audio_Update(double elapsed_time, const AudioListener& listener);
+// Frame boundary.  Reclaims the voices whose one-shots finished, freeing their
+// slots and their share of the global voice budget.  Call FIRST in the frame,
+// before any Audio_Play* — reclaiming after the frame's plays would charge this
+// frame's budget for last frame's finished sounds and drop a live one.
+void Audio_BeginFrame();
+
+// Move the ears.  Call after the scene update, so this frame's spatialisation
+// uses this frame's camera rather than the previous frame's.
+void Audio_SetListener(const AudioListener& listener);
 
 void        Audio_PlayOneShot  (SoundId id, float gainScale = 1.0f);
 void        Audio_PlayOneShotAt(SoundId id, const DirectX::XMFLOAT3& world, float gainScale = 1.0f);

@@ -13,8 +13,8 @@ namespace AudioBackend {
 bool Initialize();     // false => the facade goes silent-degraded
 void Finalize();
 
-void SetListener(const AudioListener& listener);
-void Update(double elapsed_time);      // reclaim finished voices, age the pool
+void ReclaimVoices();                            // frame start: free finished one-shots
+void SetListener(const AudioListener& listener); // after the scene update: move the ears
 
 // world == nullptr means play 2D.
 void     PlayOneShot(SoundId id, const DirectX::XMFLOAT3* world, float gainScale);

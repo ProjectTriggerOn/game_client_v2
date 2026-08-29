@@ -13,6 +13,9 @@
     <Filter Include="Network">
       <UniqueIdentifier>{4D5E6F7A-8B9C-0D1E-2F3A-4B5C6D7E8F9A}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Audio">
+      <UniqueIdentifier>{7A8B9C0D-1E2F-3A4B-5C6D-7E8F9A0B1C2D}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Shaders">
       <UniqueIdentifier>{5E6F7A8B-9C0D-1E2F-3A4B-5C6D7E8F9A0B}</UniqueIdentifier>
     </Filter>
@@ -123,9 +126,6 @@
     <ClCompile Include="Graphics\WICTextureLoader11.cpp">
       <Filter>Graphics</Filter>
     </ClCompile>
-    <ClCompile Include="Graphics\effect.cpp">
-      <Filter>Graphics</Filter>
-    </ClCompile>
     <ClCompile Include="Graphics\fade.cpp">
       <Filter>Graphics</Filter>
     </ClCompile>
@@ -188,6 +188,21 @@
     </ClCompile>
     <ClCompile Include="Network\enet_client_network.cpp">
       <Filter>Network</Filter>
+    </ClCompile>
+    <ClCompile Include="Audio\audio.cpp">
+      <Filter>Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="Audio\audio_catalog.cpp">
+      <Filter>Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="Audio\audio_events.cpp">
+      <Filter>Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="Audio\audio_backend_miniaudio.cpp">
+      <Filter>Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="Audio\miniaudio_impl.cpp">
+      <Filter>Audio</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -287,9 +302,6 @@
     <ClInclude Include="Graphics\WICTextureLoader11.h">
       <Filter>Graphics</Filter>
     </ClInclude>
-    <ClInclude Include="Graphics\effect.h">
-      <Filter>Graphics</Filter>
-    </ClInclude>
     <ClInclude Include="Graphics\fade.h">
       <Filter>Graphics</Filter>
     </ClInclude>
@@ -362,6 +374,18 @@
     <ClInclude Include="Network\net_packet.h">
       <Filter>Network</Filter>
     </ClInclude>
+    <ClInclude Include="Audio\audio.h">
+      <Filter>Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="Audio\audio_backend.h">
+      <Filter>Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="Audio\audio_catalog.h">
+      <Filter>Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="Audio\audio_events.h">
+      <Filter>Audio</Filter>
+    </ClInclude>
     <ClInclude Include="ThirdParty\enet\include\enet\enet.h">
       <Filter>ThirdParty</Filter>
     </ClInclude>
@@ -424,14 +448,6 @@
     <Image Include="resource\texture\black.png">
       <Filter>Resource Files</Filter>
     </Image>
-  </ItemGroup>
-  <ItemGroup>
-    <Media Include="resource\audio\bgm.wav">
-      <Filter>Resource Files</Filter>
-    </Media>
-    <Media Include="resource\audio\se.wav">
-      <Filter>Resource Files</Filter>
-    </Media>
   </ItemGroup>
   <ItemGroup>
     <Library Include="ThirdParty\enet\lib\enet.lib">

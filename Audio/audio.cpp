@@ -7,6 +7,10 @@
 #include "audio_catalog.h"
 #include "debug_log.h"
 #include "config.h"
+#include "exe_path.h"
+
+#include <filesystem>
+#include <string>
 
 namespace {
 bool g_Available = false;
@@ -14,7 +18,14 @@ bool g_Available = false;
 
 void Audio_Initialize()
 {
-    if (!AudioCatalog_Load("config/audio_catalog.toml")) {
+    // Same resolution rule main.cpp uses for config\config.toml: exe-relative
+    // first so the shipped build finds it whatever the working directory is,
+    // CWD second for the Debug/dev workflow that runs from the project root.
+    // Two files in one directory must not need two rules to find them.
+    std::string catalogPath = ExeDirA() + "config\\audio_catalog.toml";
+    if (!std::filesystem::exists(catalogPath)) catalogPath = "config/audio_catalog.toml";
+
+    if (!AudioCatalog_Load(catalogPath.c_str())) {
         DebugLog_Printf("audio", "catalog unavailable - running silent");
         return;
     }
@@ -45,11 +56,16 @@ void Audio_Finalize()
     g_Available = false;
 }
 
-void Audio_Update(double elapsed_time, const AudioListener& listener)
+void Audio_BeginFrame()
+{
+    if (!g_Available) return;
+    AudioBackend::ReclaimVoices();
+}
+
+void Audio_SetListener(const AudioListener& listener)
 {
     if (!g_Available) return;
     AudioBackend::SetListener(listener);
-    AudioBackend::Update(elapsed_time);
 }
 
 void Audio_PlayOneShot(SoundId id, float gainScale)

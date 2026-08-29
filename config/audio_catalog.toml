@@ -7,11 +7,14 @@
 # Paths are relative to the working directory the exe runs from, matching how
 # resource/model and resource/texture are already loaded.
 #
-# There is no per-sound 2D/3D flag: the call site decides.  The local player's
-# own weapon and footsteps go through Audio_PlayOneShot (2D — a gun in your
-# hands has no distance falloff); remote players go through
-# Audio_PlayOneShotAt.  The min/max_distance and rolloff values below only
-# apply on the 3D path.
+# There is no per-sound 2D/3D flag and no per-sound loop flag: the call site
+# decides both.  The local player's own weapon and footsteps go through
+# Audio_PlayOneShot (2D — a gun in your hands has no distance falloff); remote
+# players go through Audio_PlayOneShotAt; looping is Audio_PlayLoop's parameter.
+# The min/max_distance and rolloff values below only apply on the 3D path.
+#
+# `stream = true` is the one playback flag the backend does read: it keeps the
+# entry out of the init-time decode pre-pass and starts it as a disk stream.
 # =============================================================================
 
 [weapon_fire]
@@ -94,13 +97,6 @@ priority = 90
 min_distance = 1.5
 max_distance = 30.0
 
-[hitmarker]
-files = ["resource/audio/ui/hitmarker.wav"]
-bus = "ui"
-gain_db = -2.0
-max_instances = 4
-priority = 220              # feedback the player must never miss
-
 [take_damage]
 files = [
     "resource/audio/character/take_damage_01.wav",
@@ -151,7 +147,7 @@ priority = 150
 [ambient_loop]
 files = ["resource/audio/ambient/warzone_loop.wav"]
 bus = "ambient"
-loop = true
+stream = true               # ~9 MB bed: paging it beats decoding it on scene entry
 gain_db = -18.0
 max_instances = 1
 priority = 10
