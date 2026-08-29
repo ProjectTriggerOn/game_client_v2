@@ -157,11 +157,31 @@ void PlayerFps::ConsumeRound()
 
 	if (m_Ammo == 0 && m_AmmoReserve > 0)
 		m_StateMachine->SetWeaponState(WeaponState::RELOADING_OUT_OF_AMMO);
+
+	// ---- Recoil prediction (COD model, spec §5.1) ------------------------
+	// Same pure table as the server: fireCounter was just incremented, so
+	// (fireCounter-1) is this shot's pattern index. dt=0 — the per-frame
+	// decay below owns recovery. AddPunch feeds the RENDERED offset only.
+	{
+		const WeaponState ws = m_StateMachine->GetWeaponState();
+		const bool ads = (ws == WeaponState::ADS || ws == WeaponState::ADS_FIRING ||
+		                  ws == WeaponState::ADS_IN || ws == WeaponState::ADS_OUT);
+		RecoilMath::RecoilAdvance(m_Recoil, m_TeamId,
+		                          static_cast<uint16_t>(m_FireCounter & 0xFFFFu),
+		                          ads, /*newlyFired=*/true, /*dt=*/0.0f);
+		float dp = 0.0f, dy = 0.0f;
+		RecoilMath::RecoilTotalOffsets(m_Recoil, dp, dy);
+		PlayerCamFps_AddPunch(dp, dy);   // full offset: view, crosshair, and
+		                                 // the server ray share punched angles
+	}
 }
 
 void PlayerFps::Update(double elapsed_time)
 {
 	const float frameDt = static_cast<float>(elapsed_time);
+
+	// Recoil punch decay at frame rate (fps-independent exponential).
+	PlayerCamFps_DecayPunch(frameDt);
 
 	// ========================================================================
 	// Render Offset Decay (for smooth server correction) — runs at FRAME RATE
@@ -569,6 +589,37 @@ void PlayerFps::ApplyServerCorrection(const NetPlayerState& serverState)
 	if (serverState.tickId <= m_LastServerTick && m_LastServerTick != 0)
 		return;
 
+	// ---- Recoil reconciliation (spec §5.2) -------------------------------
+	// Soft-correct small punch drift toward the server's integrated value;
+	// hard-snap on gross divergence (packet loss / prediction blowup).
+	// fireCounter regression (server behind us) resets the pool — those
+	// shots never happened server-side.
+	{
+		const uint16_t serverFire = serverState.fireCounter;
+		const uint16_t myFire = static_cast<uint16_t>(m_FireCounter & 0xFFFFu);
+		if (serverFire != myFire &&
+		    static_cast<uint16_t>(serverFire - myFire) > 0x8000u)
+		{
+			// Server is behind myFire (wrap-aware comparison): trust server.
+			m_FireCounter = serverFire;
+			m_Recoil = RecoilMath::RecoilState{};
+		}
+		constexpr float HARD_SNAP_RAD = 0.0524f;   // ~3°
+		const float errP = serverState.punchPitch - m_Recoil.punchPitch;
+		const float errY = serverState.punchYaw   - m_Recoil.punchYaw;
+		if (fabsf(errP) > HARD_SNAP_RAD || fabsf(errY) > HARD_SNAP_RAD)
+		{
+			m_Recoil.punchPitch = serverState.punchPitch;
+			m_Recoil.punchYaw   = serverState.punchYaw;
+		}
+		else
+		{
+			m_Recoil.punchPitch += errP * 0.3f;
+			m_Recoil.punchYaw   += errY * 0.3f;
+		}
+		m_Recoil.shotKickPitch = serverState.shotKickPitch;  // authoritative acc.
+	}
+
 	// Capture mode at entry — used for MODE_CHANGE log at the end of this function.
 	const char* prevMode = m_CorrectionMode ? m_CorrectionMode : "NONE";
 
@@ -890,6 +941,20 @@ DirectX::XMFLOAT3 PlayerFps::GetEyePosition() const
 	eyePos.y = m_PrevPhysicsPosition.y + (m_Position.y - m_PrevPhysicsPosition.y) * a + 1.5f;
 	eyePos.z = m_PrevPhysicsPosition.z + (m_Position.z - m_PrevPhysicsPosition.z) * a;
 	return eyePos;
+}
+
+void PlayerFps::GetRecoilPunch(float& dPitch, float& dYaw) const
+{
+	dPitch = m_Recoil.punchPitch + m_Recoil.shotKickPitch;
+	dYaw   = m_Recoil.punchYaw + m_Recoil.shotKickYaw;
+}
+
+float PlayerFps::GetSpreadRadians() const
+{
+	const WeaponState ws = m_StateMachine->GetWeaponState();
+	const bool ads = (ws == WeaponState::ADS || ws == WeaponState::ADS_FIRING ||
+	                  ws == WeaponState::ADS_IN || ws == WeaponState::ADS_OUT);
+	return RecoilMath::RecoilSpreadRadians(m_TeamId, ads, m_Recoil.bloomDeg, 0.0f);
 }
 
 std::string PlayerFps::GetPlayerState() const

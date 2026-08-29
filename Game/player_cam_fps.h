@@ -24,6 +24,12 @@ bool PlayerCamFps_GetInvertY();
 void PlayerCamFps_SetSensitivity(float s);
 float PlayerCamFps_GetSensitivity();
 
+// Recoil punch (COD model). AddPunch accumulates a per-shot visual kick
+// (pitch is positive up); DecayPunch advances exponential recovery at
+// frame rate (dt = frame delta). Both fire-rate safe.
+void PlayerCamFps_AddPunch(float dPitch, float dYaw);
+void PlayerCamFps_DecayPunch(float dt);
+
 
 const DirectX::XMFLOAT4X4& PlayerCamFps_GetViewMatrix();
 const DirectX::XMFLOAT4X4& PlayerCamFps_GetProjectMatrix();

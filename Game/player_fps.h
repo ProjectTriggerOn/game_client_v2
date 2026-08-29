@@ -17,6 +17,7 @@
 #include "mouse.h"
 #include "player_state_machine.h"
 #include "net_common.h"
+#include "../Network/recoil_math.h"
 
 //=============================================================================
 // InputHistoryEntry - Stores one tick of input + resulting physics state
@@ -88,6 +89,12 @@ public:
 	//-------------------------------------------------------------------------
 	uint32_t GetClientTick() const { return m_CurrentClientTick; }
 
+	// Recoil accessors: punch = current VISUAL+KICK camera offset (rad);
+	// spread = current aim-cone half-angle (rad). The native crosshair and
+	// debug overlay consume both.
+	void GetRecoilPunch(float& dPitch, float& dYaw) const;
+	float GetSpreadRadians() const;
+
 	//-------------------------------------------------------------------------
 	// Debug info
 	//-------------------------------------------------------------------------
@@ -141,6 +148,10 @@ private:
 	double m_WeaponRPM;
 	double m_FireTimer;
 	int m_FireCounter;
+	// Recoil (COD model): client-side prediction, advanced on ConsumeRound,
+	// decayed per frame via PlayerCamFps_DecayPunch, reconciled against the
+	// snapshot in ApplyServerCorrection. punch NEVER touches camera yaw/pitch.
+	RecoilMath::RecoilState m_Recoil{};
 	bool m_TransitionFiring;
 	uint8_t m_TeamId;
 	uint8_t m_Health;
