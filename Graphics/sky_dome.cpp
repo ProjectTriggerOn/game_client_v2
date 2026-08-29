@@ -3,24 +3,34 @@
 #include "direct3d.h"
 #include "model.h"
 #include "shader_3d_unlit.h"
+#include "debug_ostream.h"
 #include "DirectXMath.h"
 using namespace DirectX;
-namespace 
+namespace
 {
 	MODEL* g_pSkyDomeModel = nullptr;
 	XMFLOAT3 g_Position = { 0.0f, 0.0f, 0.0f };
+
+	// Historical default when the map does not author a sky asset. Matches
+	// ResourceFileLayout in the README: model lives under resource/model/.
+	const char* kDefaultSkyAsset = "resource/model/sky.fbx";
 }
 
-bool SkyDome_Initialize()
+bool SkyDome_Initialize(const char* assetPath)
 {
-	g_pSkyDomeModel = ModelLoad("resource/model/sky.fbx", 50.0f,true);
-
+	const char* path = (assetPath && assetPath[0] != '\0') ? assetPath : kDefaultSkyAsset;
+	g_pSkyDomeModel = ModelLoad(path, 50.0f, true);
+	if (!g_pSkyDomeModel) {
+		hal::dout << "SkyDome_Initialize() : failed to load sky asset " << path << std::endl;
+		return false;
+	}
 	return true;
 }
 
 void SkyDome_Finalize()
 {
 	ModelRelease(g_pSkyDomeModel);
+	g_pSkyDomeModel = nullptr;
 }
 
 void SkyDome_SetPosition(const DirectX::XMFLOAT3& position)
@@ -32,6 +42,8 @@ void SkyDome_SetPosition(const DirectX::XMFLOAT3& position)
 
 void SkyDome_Draw()
 {
+	if (!g_pSkyDomeModel) return;
+
 	Direct3D_SetDepthEnable(false);
 	Direct3D_SetCullMode(D3D11_CULL_NONE);
 
