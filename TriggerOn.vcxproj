@@ -177,7 +177,6 @@ exit /b 0
     <ClCompile Include="Core\debug_text.cpp" />
     <ClCompile Include="Core\direct3d.cpp" />
     <ClCompile Include="Core\display_manager.cpp" />
-    <ClCompile Include="Graphics\effect.cpp" />
     <ClCompile Include="Graphics\fade.cpp" />
     <ClCompile Include="Game\game.cpp" />
     <ClCompile Include="Core\game_window.cpp" />
@@ -252,7 +251,6 @@ exit /b 0
     <ClInclude Include="Core\direct3d.h" />
     <ClInclude Include="Core\display_manager.h" />
     <ClInclude Include="Core\exe_path.h" />
-    <ClInclude Include="Graphics\effect.h" />
     <ClInclude Include="Graphics\fade.h" />
     <ClInclude Include="Game\game.h" />
     <ClInclude Include="Core\game_window.h" />

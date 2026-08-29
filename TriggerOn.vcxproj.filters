@@ -126,9 +126,6 @@
     <ClCompile Include="Graphics\WICTextureLoader11.cpp">
       <Filter>Graphics</Filter>
     </ClCompile>
-    <ClCompile Include="Graphics\effect.cpp">
-      <Filter>Graphics</Filter>
-    </ClCompile>
     <ClCompile Include="Graphics\fade.cpp">
       <Filter>Graphics</Filter>
     </ClCompile>
@@ -291,9 +288,6 @@
       <Filter>Graphics</Filter>
     </ClInclude>
     <ClInclude Include="Graphics\WICTextureLoader11.h">
-      <Filter>Graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="Graphics\effect.h">
       <Filter>Graphics</Filter>
     </ClInclude>
     <ClInclude Include="Graphics\fade.h">
