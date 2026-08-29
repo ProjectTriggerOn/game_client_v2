@@ -326,6 +326,13 @@ void PlayerCamFps_Debug(const PlayerFps& pf)
 	ss << "AUDIO " << (Audio_IsAvailable() ? "on" : "SILENT")
 	   << " voices=" << Audio_ActiveVoiceCount()
 	   << " events=" << Game_LastAudioEventCount() << "\n";
+	// Listener pose actually feeding the spatialiser (see main.cpp's
+	// Audio_SetListener call): turn in place and these numbers should track
+	// the player's own position/facing frame to frame -- if they don't, the
+	// listener has come unhooked from the camera again.
+	ss << "AUDIO listener pos=(" << std::fixed << std::setprecision(2)
+	   << g_CameraPosition.x << "," << g_CameraPosition.y << "," << g_CameraPosition.z
+	   << ") front=(" << g_CameraFront.x << "," << g_CameraFront.y << "," << g_CameraFront.z << ")\n";
 
 	g_DebugText->SetText(ss.str().c_str());
 	g_DebugText->Draw();
