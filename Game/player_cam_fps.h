@@ -18,6 +18,11 @@ void PlayerCamFps_SetFront(const DirectX::XMFLOAT3& front);
 void PlayerCamFps_SetYaw(float yaw);
 void PlayerCamFps_SetPitch(float pitch);
 
+// Raw aim angles without recoil punch — for input reporting (the InputCmd
+// must carry pure player intent; punch is visual-only and added later).
+float PlayerCamFps_GetRawYaw();
+float PlayerCamFps_GetRawPitch();
+
 void PlayerCamFps_SetInvertY(bool invert = true);
 bool PlayerCamFps_GetInvertY();
 

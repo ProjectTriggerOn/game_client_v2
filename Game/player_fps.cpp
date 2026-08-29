@@ -166,13 +166,17 @@ void PlayerFps::ConsumeRound()
 		const WeaponState ws = m_StateMachine->GetWeaponState();
 		const bool ads = (ws == WeaponState::ADS || ws == WeaponState::ADS_FIRING ||
 		                  ws == WeaponState::ADS_IN || ws == WeaponState::ADS_OUT);
+		// Per-shot increment: RecoilAdvance returns the new integrated pool;
+		// the camera punch accumulator only receives THIS shot's delta, so the
+		// rendered offset converges like the server's (spec §5.1).
+		float preDp = 0.0f, preDy = 0.0f;
+		RecoilMath::RecoilTotalOffsets(m_Recoil, preDp, preDy);
 		RecoilMath::RecoilAdvance(m_Recoil, m_TeamId,
 		                          static_cast<uint16_t>(m_FireCounter & 0xFFFFu),
 		                          ads, /*newlyFired=*/true, /*dt=*/0.0f);
 		float dp = 0.0f, dy = 0.0f;
 		RecoilMath::RecoilTotalOffsets(m_Recoil, dp, dy);
-		PlayerCamFps_AddPunch(dp, dy);   // full offset: view, crosshair, and
-		                                 // the server ray share punched angles
+		PlayerCamFps_AddPunch(dp - preDp, dy - preDy);   // increment only
 	}
 }
 
@@ -595,6 +599,11 @@ void PlayerFps::ApplyServerCorrection(const NetPlayerState& serverState)
 	// fireCounter regression (server behind us) resets the pool — those
 	// shots never happened server-side.
 	{
+		// Snapshot the pool offsets BEFORE any correction so the visual punch
+		// accumulator can be synced by delta at the end (spec §5.2).
+		float preDp = 0.0f, preDy = 0.0f;
+		RecoilMath::RecoilTotalOffsets(m_Recoil, preDp, preDy);
+
 		const uint16_t serverFire = serverState.fireCounter;
 		const uint16_t myFire = static_cast<uint16_t>(m_FireCounter & 0xFFFFu);
 		if (serverFire != myFire &&
@@ -618,6 +627,13 @@ void PlayerFps::ApplyServerCorrection(const NetPlayerState& serverState)
 			m_Recoil.punchYaw   += errY * 0.3f;
 		}
 		m_Recoil.shotKickPitch = serverState.shotKickPitch;  // authoritative acc.
+
+		// Sync the visual punch accumulator with the reconciled pool: hard reset
+		// must be visible to the camera immediately, or a stale punch lingers
+		// until the next shot (spec §5.2).
+		float postDp = 0.0f, postDy = 0.0f;
+		RecoilMath::RecoilTotalOffsets(m_Recoil, postDp, postDy);
+		PlayerCamFps_AddPunch(postDp - preDp, postDy - preDy);
 	}
 
 	// Capture mode at entry — used for MODE_CHANGE log at the end of this function.

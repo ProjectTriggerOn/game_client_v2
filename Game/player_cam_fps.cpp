@@ -186,6 +186,16 @@ void PlayerCamFps_SetPitch(float pitch)
 	g_cameraPitch = pitch;
 }
 
+float PlayerCamFps_GetRawYaw()
+{
+	return g_cameraYaw;
+}
+
+float PlayerCamFps_GetRawPitch()
+{
+	return g_cameraPitch;
+}
+
 void PlayerCamFps_AddPunch(float dPitch, float dYaw)
 {
 	g_punchPitch += dPitch;

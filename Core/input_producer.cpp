@@ -149,9 +149,11 @@ void InputProducer::SampleInput()
     // Camera Angles (from PlayerCamFps) — always sampled so a paused player's
     // aim direction stays where they left it (camera doesn't move while paused).
     // ========================================================================
-    DirectX::XMFLOAT3 camFront = PlayerCamFps_GetFront();
-    m_Yaw   = atan2f(camFront.x, camFront.z);
-    m_Pitch = asinf(camFront.y);
+    // Raw aim angles, NOT the rendered front: the front carries the recoil
+    // punch (visual-only), and the server applies its own punch to the yaw/
+    // pitch we report — feeding it punched angles would double-apply (F1).
+    m_Yaw   = PlayerCamFps_GetRawYaw();
+    m_Pitch = PlayerCamFps_GetRawPitch();
 
     // ========================================================================
     // Zero movement/button intent when gameplay isn't active (paused, in a
