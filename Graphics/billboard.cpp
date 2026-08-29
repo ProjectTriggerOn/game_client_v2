@@ -81,3 +81,22 @@ void Billboard_Draw(int texID, const XMFLOAT3& position, const XMFLOAT2& scale,
 	Direct3D_GetDeviceContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 	Direct3D_GetDeviceContext()->Draw(NUM_VERTEX, 0);
 }
+
+void Billboard_DrawWorld(int texID, const XMMATRIX& world, const XMFLOAT4& color)
+{
+	Shader_Billboard_SetUVParameter({ { 1.0f, 1.0f }, { 0.0f, 0.0f } });
+	Shader_Billboard_Begin();
+	Shader_Billboard_SetColor(color);
+
+	Texture_Set(texID);
+
+	UINT stride = sizeof(Vertex3D);
+	UINT offset = 0;
+	Direct3D_GetDeviceContext()->IASetVertexBuffers(0, 1, &g_pVertexBuffer, &stride, &offset);
+	Direct3D_GetDeviceContext()->IASetIndexBuffer(nullptr, DXGI_FORMAT_R16_UINT, 0);
+
+	Shader_Billboard_SetWorldMatrix(world);
+
+	Direct3D_GetDeviceContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+	Direct3D_GetDeviceContext()->Draw(NUM_VERTEX, 0);
+}

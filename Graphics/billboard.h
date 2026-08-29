@@ -17,3 +17,8 @@ void Billboard_SetCamera(const DirectX::XMFLOAT4X4& view);
 void Billboard_Draw(int texID, const DirectX::XMFLOAT3& position,
 	const DirectX::XMFLOAT2& scale, const DirectX::XMFLOAT2& pivot,
 	const DirectX::XMFLOAT4& color);
+
+// Draw the shared unit quad with an explicit world matrix (no camera basis).
+// Used for surface-aligned decal drawing.
+void Billboard_DrawWorld(int texID, const DirectX::XMMATRIX& world,
+	const DirectX::XMFLOAT4& color);
