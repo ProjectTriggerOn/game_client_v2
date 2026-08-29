@@ -241,6 +241,7 @@ exit /b 0
     <ClCompile Include="Audio\audio_catalog.cpp" />
     <ClCompile Include="Audio\audio.cpp" />
     <ClCompile Include="Audio\audio_backend_miniaudio.cpp" />
+    <ClCompile Include="Audio\audio_events.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Core\font.h" />
@@ -320,6 +321,7 @@ exit /b 0
     <ClInclude Include="Audio\audio.h" />
     <ClInclude Include="Audio\audio_catalog.h" />
     <ClInclude Include="Audio\audio_backend.h" />
+    <ClInclude Include="Audio\audio_events.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\infinite_grid_pixel.hlsl">
