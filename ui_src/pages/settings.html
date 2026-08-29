@@ -12,6 +12,31 @@
             <span class="set-label">Invert Y</span>
             <input id="set-invert" type="checkbox">
         </div>
+        <div class="set-row">
+            <span class="set-label">Master volume</span>
+            <input id="set-vol-master" type="range" min="0" max="1" step="0.05">
+            <span id="set-vol-master-val" class="set-value">?</span>
+        </div>
+        <div class="set-row">
+            <span class="set-label">Effects volume</span>
+            <input id="set-vol-sfx" type="range" min="0" max="1" step="0.05">
+            <span id="set-vol-sfx-val" class="set-value">?</span>
+        </div>
+        <div class="set-row">
+            <span class="set-label">Interface volume</span>
+            <input id="set-vol-ui" type="range" min="0" max="1" step="0.05">
+            <span id="set-vol-ui-val" class="set-value">?</span>
+        </div>
+        <div class="set-row">
+            <span class="set-label">Music volume</span>
+            <input id="set-vol-music" type="range" min="0" max="1" step="0.05">
+            <span id="set-vol-music-val" class="set-value">?</span>
+        </div>
+        <div class="set-row">
+            <span class="set-label">Ambience volume</span>
+            <input id="set-vol-ambient" type="range" min="0" max="1" step="0.05">
+            <span id="set-vol-ambient-val" class="set-value">?</span>
+        </div>
 
         <!-- Display mode / resolution / monitor go through APPLY + a 15s revert
              confirm (a bad mode restores itself). VSync / FOV / Max FPS apply live. -->
@@ -66,7 +91,7 @@
         <button id="set-save" type="button">SAVE</button>
         <button id="set-back" type="button">BACK</button>
     </div>
-    <div class="settings-hint">Sensitivity / VSync / Max FPS apply live; APPLY changes the display mode; SAVE persists. Esc backs out.</div>
+    <div class="settings-hint">Sensitivity / volumes / VSync / Max FPS apply live; APPLY changes the display mode; SAVE persists. Esc backs out.</div>
 
     <!-- Display-settings revert countdown (C++-owned timer). Hidden by default;
          window.onDisplayRevertTick(sec) shows/updates it, sec=0 hides it. -->

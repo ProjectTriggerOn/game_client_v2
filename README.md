@@ -135,3 +135,14 @@ Shaders/        HLSL source files (3D + UI compositing)
 ui_src/         HTML/CSS/JS UI single-page app (see In-Game UI)
 ThirdParty/     ENet, ASSIMP, toml++, Ultralight
 ```
+
+## Credits
+
+Third-party assets and libraries used in this project:
+
+- **Low Poly Shooter Pack** (Unity Asset Store) — character/weapon models and the audio set under `resource/audio/`
+- **miniaudio** — audio playback backend (public domain / MIT-0)
+- **ENet** — reliable UDP networking
+- **Assimp** — model import
+- **toml++** — configuration parsing
+- **Ultralight** — HTML/CSS UI rendering

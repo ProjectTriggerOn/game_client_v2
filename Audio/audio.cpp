@@ -6,6 +6,7 @@
 #include "audio_backend.h"
 #include "audio_catalog.h"
 #include "debug_log.h"
+#include "config.h"
 
 namespace {
 bool g_Available = false;
@@ -22,6 +23,18 @@ void Audio_Initialize()
         return;
     }
     g_Available = true;
+
+    // Subscribe fires immediately with the persisted value, so this both wires
+    // up live updates and applies the saved volumes — no separate initial read.
+    // Same pattern as input.sensitivity (Game/player_cam_fps.cpp) and
+    // display.vsync (main.cpp).
+    Config& cfg = Config::GetInstance();
+    cfg.Subscribe("audio.master",  [](const ConfigValue& v) { Audio_SetBusVolume(AudioBus::Master,  (float)v.AsFloat()); });
+    cfg.Subscribe("audio.sfx",     [](const ConfigValue& v) { Audio_SetBusVolume(AudioBus::Sfx,     (float)v.AsFloat()); });
+    cfg.Subscribe("audio.ui",      [](const ConfigValue& v) { Audio_SetBusVolume(AudioBus::Ui,      (float)v.AsFloat()); });
+    cfg.Subscribe("audio.music",   [](const ConfigValue& v) { Audio_SetBusVolume(AudioBus::Music,   (float)v.AsFloat()); });
+    cfg.Subscribe("audio.ambient", [](const ConfigValue& v) { Audio_SetBusVolume(AudioBus::Ambient, (float)v.AsFloat()); });
+
     DebugLog_Printf("audio", "initialized");
 }
 

@@ -137,3 +137,14 @@ Shaders/        HLSL ソースファイル（3D + UI 合成）
 ui_src/         HTML/CSS/JS UI 単一ページアプリ（「ゲーム内 UI」を参照）
 ThirdParty/     ENet, ASSIMP, toml++, Ultralight
 ```
+
+## クレジット
+
+このプロジェクトで使用しているサードパーティ素材・ライブラリ:
+
+- **Low Poly Shooter Pack**（Unity Asset Store）— キャラクター/武器モデル、および `resource/audio/` 以下の音声素材
+- **miniaudio** — オーディオ再生バックエンド（パブリックドメイン / MIT-0）
+- **ENet** — 信頼性のある UDP ネットワーキング
+- **Assimp** — モデルインポート
+- **toml++** — 設定ファイルのパース
+- **Ultralight** — HTML/CSS による UI 描画

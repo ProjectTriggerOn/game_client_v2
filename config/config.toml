@@ -76,3 +76,14 @@ log_every_correction    = false  # log every server correction (noisy)
 log_jump_events         = true
 log_softmode_state      = true   # log SOFT_FALLBACK + periodic SOFT_PERSIST samples
 softmode_sample_ticks   = 16     # sample period during SOFT (32Hz tick → ~0.5s)
+
+# =============================================================================
+# Audio (Audio/audio.cpp).  All five apply live through Config subscribers,
+# like input.* — no APPLY button, no revert countdown.
+# =============================================================================
+[audio]
+master  = 0.8
+sfx     = 1.0
+ui      = 0.8
+music   = 0.6
+ambient = 0.5
