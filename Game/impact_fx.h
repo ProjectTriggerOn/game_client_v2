@@ -9,8 +9,10 @@
 void ImpactFx_Initialize();
 void ImpactFx_Finalize();
 
-// Call from Game_Update (every frame; internally no-ops unless playing).
-void ImpactFx_Update();
+// Call from Game_Update every frame with the frame's elapsed time; particles
+// advance every frame, while the fire-counter polling internally no-ops unless
+// playing.
+void ImpactFx_Update(double elapsed_time);
 
 // Inject the active camera's view (decided by isDebugCam in Game_Draw) and
 // draw decals + particles. Pair with Direct3D_SetDepthWriteEnable(false).

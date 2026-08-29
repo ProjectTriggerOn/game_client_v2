@@ -413,9 +413,11 @@ exit /b 0
   </ItemGroup>
   <ItemGroup>
     <Image Include="resource\texture\black.png" />
+    <Image Include="resource\texture\bullet_hole.png" />
     <Image Include="resource\texture\consolab_ascii_512.png" />
     <Image Include="resource\texture\knight.png" />
     <Image Include="resource\texture\runningman001.png" />
+    <Image Include="resource\texture\sparks.png" />
   </ItemGroup>
   <ItemGroup>
     <Media Include="resource\audio\bgm.wav" />

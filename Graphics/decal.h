@@ -18,3 +18,6 @@ void Decal_Create(const DirectX::XMFLOAT3& hitPos, const DirectX::XMFLOAT3& norm
 void Decal_Draw(); // depth-write-off state expected (see ImpactFx_Draw)
 
 int Decal_GetCount(); // number of currently held decals (for the debug panel)
+
+// Test/inspection accessor (index into the pool, not a handle).
+DirectX::XMFLOAT4X4 Decal_DebugGetWorldMatrix(int slotIndex);

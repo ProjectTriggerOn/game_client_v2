@@ -73,8 +73,12 @@ static void HitSparkBurst(const XMFLOAT3& hitPos, const XMFLOAT3& normal)
 	Particle_EmitDirectional(g_SparkConfigId, hitPos, SPARKS_PER_HIT, normal);
 }
 
-void ImpactFx_Update()
+void ImpactFx_Update(double elapsed_time)
 {
+	// Particles advance every frame regardless of the fire-counter state below,
+	// so in-flight sparks keep moving even while the shot-polling early-outs.
+	Particle_Update(elapsed_time);
+
 	// g_PlayerFps lives in game.cpp's anonymous namespace, so game.h exposes
 	// Game_GetLocalPlayer() for the player side and Game_GetCollisionWorld()
 	// for the world side. Poll the client-predicted fire counter: it increments

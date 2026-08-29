@@ -251,8 +251,8 @@ void Game_Update(double elapsed_time)
 
 		// Local impact FX: polls the fire counter and raycasts a shot per new
 		// round. Only while playing (paused -> ConsumeRound doesn't fire -> no
-		// diff -> safe no-op).
-		ImpactFx_Update();
+		// diff -> safe no-op). Particles advance every frame via elapsed_time.
+		ImpactFx_Update(elapsed_time);
 	}
 
 	// ========================================================================

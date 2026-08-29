@@ -18,7 +18,8 @@ namespace
 	{
 		XMFLOAT3 position{};
 		XMFLOAT3 velocity{};
-		XMFLOAT4 color{ 1.0f, 1.0f, 1.0f, 1.0f }; // base color (color.w = base alpha)
+		XMFLOAT4 color{ 1.0f, 1.0f, 1.0f, 1.0f }; // base color (color.w = live alpha)
+		float baseAlpha = 1.0f; // config alpha; color.w fades from this each frame
 		float age = 0.0f;
 		float lifeTime = 1.0f;
 		float size = 1.0f;
@@ -137,6 +138,7 @@ static void EmitInternal(int configId, const XMFLOAT3& pos, int count, const XMF
 		p.position = pos;
 		p.velocity = { dir.x * speed, dir.y * speed, dir.z * speed };
 		p.color = cfg.color;
+		p.baseAlpha = cfg.color.w;
 		p.age = 0.0f;
 		p.lifeTime = life;
 		p.size = size;
@@ -198,7 +200,7 @@ void Particle_Update(double elapsed_time)
 		if (p.alphaFadeout)
 		{
 			const float lifeRatio = p.age / p.lifeTime;
-			p.color.w = 1.0f - lifeRatio;
+			p.color.w = p.baseAlpha * (1.0f - lifeRatio);
 		}
 	}
 }

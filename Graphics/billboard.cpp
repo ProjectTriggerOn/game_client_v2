@@ -21,6 +21,10 @@ namespace
 
 void Billboard_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext*)
 {
+	// Game_Initialize re-enters on every round, so the vertex buffer would leak
+	// without releasing the previous one first.
+	SAFE_RELEASE(g_pVertexBuffer);
+
 	const Vertex3D vertices[]
 	{
 		{ { -0.5f,  0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f } },  // top-left
@@ -42,8 +46,10 @@ void Billboard_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext*)
 
 void Billboard_Finalize(void)
 {
+	// Shader_Billboard_Finalize is owned by main.cpp's process-wide sequence
+	// (like every other shader module); this per-scene teardown only owns the
+	// quad vertex buffer.
 	SAFE_RELEASE(g_pVertexBuffer);
-	Shader_Billboard_Finalize();
 }
 
 void Billboard_SetCamera(const XMFLOAT4X4& view)
