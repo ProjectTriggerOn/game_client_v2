@@ -2,11 +2,11 @@
 // audio_catalog.cpp
 //=============================================================================
 #include "audio_catalog.h"
+#include "debug_log.h"
 
 #define TOML_HEADER_ONLY 1
 #include "../ThirdParty/toml++/toml.hpp"
 
-#include <cstdio>
 #include <filesystem>
 
 namespace {
@@ -56,7 +56,7 @@ bool AudioCatalog_Load(const char* tomlPath)
     try {
         tbl = toml::parse_file(tomlPath);
     } catch (const toml::parse_error& e) {
-        std::printf("[audio] catalog parse failed (%s): %s\n", tomlPath, e.description().data());
+        DebugLog_Printf("audio", "catalog parse failed (%s): %s", tomlPath, e.description().data());
         return false;
     }
 
@@ -70,7 +70,7 @@ bool AudioCatalog_Load(const char* tomlPath)
     for (size_t i = 0; i < (size_t)SoundId::Count; ++i) {
         const auto* node = tbl[kSoundKeys[i]].as_table();
         if (!node) {
-            std::printf("[audio] catalog: no table for '%s'\n", kSoundKeys[i]);
+            DebugLog_Printf("audio", "catalog: no table for '%s'", kSoundKeys[i]);
             continue;
         }
 
@@ -81,7 +81,7 @@ bool AudioCatalog_Load(const char* tomlPath)
                     // Drop entries whose file is absent rather than failing the
                     // whole catalog: one missing wav silences one variant.
                     if (std::filesystem::exists(*s)) d.files.push_back(*s);
-                    else std::printf("[audio] catalog: '%s' file missing: %s\n", kSoundKeys[i], s->c_str());
+                    else DebugLog_Printf("audio", "catalog: '%s' file missing: %s", kSoundKeys[i], s->c_str());
                 }
             }
         }
@@ -104,8 +104,8 @@ bool AudioCatalog_Load(const char* tomlPath)
 
     for (size_t i = 0; i < (size_t)SoundId::Count; ++i) g_Defs[i] = std::move(staged[i]);
 
-    std::printf("[audio] catalog: %d/%d entries loaded from %s\n",
-                loaded, (int)SoundId::Count, tomlPath);
+    DebugLog_Printf("audio", "catalog: %d/%d entries loaded from %s",
+                     loaded, (int)SoundId::Count, tomlPath);
     return loaded > 0;
 }
 

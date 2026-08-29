@@ -12,24 +12,34 @@
 //=============================================================================
 #include "audio_backend.h"
 #include "audio_catalog.h"
+#include "debug_log.h"
 
 #include "miniaudio.h"
 
 #include <cmath>
-#include <cstdio>
 #include <random>
 #include <vector>
 
 namespace {
 
-constexpr uint32_t kIndexBits = 16;
-constexpr uint32_t kIndexMask = (1u << kIndexBits) - 1;
+// Handle layout: [31:24] SoundId | [23:16] index | [15:0] generation.
+// SoundId::Count is 15 and maxInstances is a uint8_t, so both fit with room
+// to spare; encoding the pool directly means resolution is a plain decode
+// (SoundId -> pool -> slot -> generation check) with no side table needed.
+constexpr uint32_t kGenBits    = 16;
+constexpr uint32_t kIndexBits  = 8;
+constexpr uint32_t kGenMask    = (1u << kGenBits) - 1;
+constexpr uint32_t kIndexMask  = (1u << kIndexBits) - 1;
+constexpr uint32_t kIndexShift = kGenBits;
+constexpr uint32_t kIdShift    = kGenBits + kIndexBits;
 
 struct Voice {
     ma_sound sound{};
     bool     inited     = false;
     bool     looping    = false;
-    uint32_t generation = 1;      // starts at 1 so handle bits are never 0
+    // Starts at 1 so handle bits are never 0; wraps within 16 bits to match
+    // the generation field's width in the handle (see ReleaseVoice).
+    uint32_t generation = 1;
     uint64_t startOrder = 0;      // for oldest-first stealing
     SoundId  id         = SoundId::Count;
 };
@@ -60,30 +70,25 @@ float DbToLinear(float db) { return std::pow(10.0f, db / 20.0f); }
 // cents -> playback rate multiplier.  1200 cents = one octave = 2x.
 float CentsToRatio(float cents) { return std::pow(2.0f, cents / 1200.0f); }
 
-uint32_t MakeHandle(uint32_t index, uint32_t generation)
+uint32_t MakeHandle(SoundId id, uint32_t index, uint32_t generation)
 {
-    return ((generation & 0xFFFFu) << kIndexBits) | (index & kIndexMask);
+    return ((uint32_t)id << kIdShift) | ((index & kIndexMask) << kIndexShift) | (generation & kGenMask);
 }
 
-// A handle also has to carry which pool it came from.  Rather than widen the
-// handle we keep a flat side table of every looping voice; loops are few
-// (ambience plus at most one footstep loop per player) so a linear scan is
-// cheaper than the bookkeeping alternative.
-struct LoopRef { SoundId id; size_t index; uint32_t generation; };
-std::vector<LoopRef> g_Loops;
-
+// Direct decode of the layout above — no side table, so a stale or corrupt
+// handle can only ever miss (nullptr), never hit the wrong pool's voice.
 Voice* ResolveLoop(uint32_t handleBits)
 {
-    const uint32_t index = handleBits & kIndexMask;
-    const uint32_t gen   = (handleBits >> kIndexBits) & 0xFFFFu;
-    for (const LoopRef& ref : g_Loops) {
-        if (ref.index != index || ref.generation != gen) continue;
-        Pool& pool = g_Pools[(size_t)ref.id];
-        if (index >= pool.voices.size()) return nullptr;
-        Voice& v = pool.voices[index];
-        return (v.generation == gen && v.inited) ? &v : nullptr;
-    }
-    return nullptr;
+    const uint32_t idValue = handleBits >> kIdShift;
+    const uint32_t index   = (handleBits >> kIndexShift) & kIndexMask;
+    const uint32_t gen     = handleBits & kGenMask;
+
+    if (idValue >= (uint32_t)SoundId::Count) return nullptr;
+    Pool& pool = g_Pools[idValue];
+    if (index >= pool.voices.size()) return nullptr;
+
+    Voice& v = pool.voices[index];
+    return (v.inited && v.generation == gen) ? &v : nullptr;
 }
 
 void ReleaseVoice(Voice& v)
@@ -93,7 +98,11 @@ void ReleaseVoice(Voice& v)
     ma_sound_uninit(&v.sound);
     v.inited  = false;
     v.looping = false;
-    if (++v.generation == 0) v.generation = 1;   // 0 is reserved for "no handle"
+    // Wrap within the handle's 16-bit generation field, not the full 32 bits
+    // of the counter itself, so ResolveLoop's masked comparison stays valid
+    // forever instead of going permanently stale after 65536 releases.
+    v.generation = (v.generation + 1) & kGenMask;
+    if (v.generation == 0) v.generation = 1;   // 0 is reserved for "no handle"
 }
 
 // Global voice budget.  Per-sound pools cap how many of ONE sound can overlap;
@@ -184,7 +193,7 @@ bool StartVoice(Voice& v, const SoundDef& def, SoundId id,
 
     if (ma_sound_init_from_file(&g_Engine, file.c_str(), flags,
                                 GroupFor(def.bus), nullptr, &v.sound) != MA_SUCCESS) {
-        std::printf("[audio] failed to load %s\n", file.c_str());
+        DebugLog_Printf("audio", "failed to load %s", file.c_str());
         return false;
     }
     v.inited = true;
@@ -222,7 +231,7 @@ namespace AudioBackend {
 bool Initialize()
 {
     if (ma_engine_init(nullptr, &g_Engine) != MA_SUCCESS) {
-        std::printf("[audio] ma_engine_init failed\n");
+        DebugLog_Printf("audio", "ma_engine_init failed");
         return false;
     }
     g_EngineInited = true;
@@ -230,7 +239,7 @@ bool Initialize()
     for (size_t i = 0; i < (size_t)AudioBus::Count; ++i) {
         if ((AudioBus)i == AudioBus::Master) continue;
         if (ma_sound_group_init(&g_Engine, 0, nullptr, &g_Groups[i]) != MA_SUCCESS) {
-            std::printf("[audio] sound group init failed\n");
+            DebugLog_Printf("audio", "sound group init failed");
             Finalize();
             return false;
         }
@@ -251,7 +260,6 @@ void Finalize()
         for (Voice& v : pool.voices) ReleaseVoice(v);
         pool.voices.clear();
     }
-    g_Loops.clear();
 
     for (size_t i = 0; i < (size_t)AudioBus::Count; ++i) {
         if (!g_GroupInited[i]) continue;
@@ -275,21 +283,13 @@ void SetListener(const AudioListener& l)
 
 void Update(double)
 {
-    // Reclaim finished one-shots so their decoded buffers do not pile up, and
-    // retire the loop refs whose voice has been stolen out from under them.
+    // Reclaim finished one-shots so their decoded buffers do not pile up.
+    // Loops are never reclaimed here; they only end via StopLoop or by being
+    // stolen for the global voice budget (see CheapestActive).
     for (Pool& pool : g_Pools) {
         for (Voice& v : pool.voices) {
             if (v.inited && !v.looping && !ma_sound_is_playing(&v.sound)) ReleaseVoice(v);
         }
-    }
-    for (size_t i = 0; i < g_Loops.size();) {
-        Pool& pool = g_Pools[(size_t)g_Loops[i].id];
-        const size_t idx = g_Loops[i].index;
-        const bool alive = idx < pool.voices.size()
-                        && pool.voices[idx].inited
-                        && pool.voices[idx].generation == g_Loops[i].generation;
-        if (alive) ++i;
-        else g_Loops.erase(g_Loops.begin() + (long)i);
     }
 }
 
@@ -318,10 +318,19 @@ uint32_t PlayLoop(SoundId id, const DirectX::XMFLOAT3* world)
 
     size_t index = 0;
     Voice* v = AcquireVoice(pool, def, index);
-    if (!v || !StartVoice(*v, def, id, world, 1.0f, true)) return 0;
+    if (!v) return 0;
+    if (!StartVoice(*v, def, id, world, 1.0f, true)) {
+        // StartVoice can fail after ma_sound_init_from_file already succeeded
+        // (i.e. ma_sound_start itself failed), leaving the voice inited and
+        // marked looping. Update() only reclaims !looping voices, so without
+        // this the slot would leak forever, counting against the global
+        // voice budget with no handle able to reach it. Safe to call even
+        // when init itself failed: ReleaseVoice no-ops on an uninited voice.
+        ReleaseVoice(*v);
+        return 0;
+    }
 
-    g_Loops.push_back(LoopRef{ id, index, v->generation });
-    return MakeHandle((uint32_t)index, v->generation);
+    return MakeHandle(id, (uint32_t)index, v->generation);
 }
 
 void StopLoop(uint32_t handleBits)

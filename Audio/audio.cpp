@@ -5,8 +5,7 @@
 #include "audio.h"
 #include "audio_backend.h"
 #include "audio_catalog.h"
-
-#include <cstdio>
+#include "debug_log.h"
 
 namespace {
 bool g_Available = false;
@@ -15,15 +14,15 @@ bool g_Available = false;
 void Audio_Initialize()
 {
     if (!AudioCatalog_Load("config/audio_catalog.toml")) {
-        std::printf("[audio] catalog unavailable - running silent\n");
+        DebugLog_Printf("audio", "catalog unavailable - running silent");
         return;
     }
     if (!AudioBackend::Initialize()) {
-        std::printf("[audio] backend init failed - running silent\n");
+        DebugLog_Printf("audio", "backend init failed - running silent");
         return;
     }
     g_Available = true;
-    std::printf("[audio] initialized\n");
+    DebugLog_Printf("audio", "initialized");
 }
 
 void Audio_Finalize()

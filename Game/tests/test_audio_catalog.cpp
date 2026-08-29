@@ -1,10 +1,14 @@
 //=============================================================================
 // test_audio_catalog.cpp — standalone unit test for audio_catalog.h.
 // NOT in the vcxproj.  Follows the Game/tests/ standalone convention:
-//   cl /nologo /std:c++17 /EHsc /W4 /I . /I Audio ^
-//      Game\tests\test_audio_catalog.cpp Audio\audio_catalog.cpp ^
+//   cl /nologo /std:c++17 /EHsc /W4 /I . /I Audio /I Core ^
+//      Game\tests\test_audio_catalog.cpp Audio\audio_catalog.cpp Core\debug_log.cpp ^
 //      /Fe:_test_audio_catalog.exe && _test_audio_catalog.exe
 // Run from the repo root inside a vcvars64 shell.
+// audio_catalog.cpp logs its diagnostics through DebugLog_Printf (Core/debug_log.h),
+// which is why Core\debug_log.cpp and /I Core are needed here now; debug_log.cpp
+// itself only pulls in header-only project code (config.h, exe_path.h), so this
+// is the one extra .cpp this test needs, not a wider cascade.
 //=============================================================================
 #include "../../Audio/audio_catalog.h"
 #include <cstdio>
