@@ -9,6 +9,8 @@
 #include "../../Audio/audio_catalog.h"
 #include <cstdio>
 #include <cstring>
+#include <filesystem>
+#include <fstream>
 
 static int g_fail = 0;
 #define CHECK(cond, msg) do { if (!(cond)) { std::printf("FAIL: %s\n", msg); ++g_fail; } } while (0)
@@ -41,6 +43,42 @@ int main()
 
     // A missing file must degrade that one entry only, never throw or abort.
     CHECK(!AudioCatalog_Load("config/does_not_exist.toml"), "missing catalog returns false");
+
+    // A failed reload must not destroy the previously-good catalog: the real
+    // catalog loaded above has to still be intact after that failed Load call.
+    CHECK(AudioCatalog_Get(SoundId::WeaponFire).files.size() == 5,
+          "a failed reload must not wipe the previously-loaded catalog");
+
+    // The headline degrade guarantee this task exists to add: a single missing
+    // WAV silences only that one catalog entry, never the whole load, and it
+    // must never assert/throw/abort. The real catalog has no missing files
+    // (that's the point of it), so exercise this with a throwaway fixture
+    // TOML instead of touching config/audio_catalog.toml.
+    {
+        const std::filesystem::path fixturePath =
+            std::filesystem::temp_directory_path() / "trigeron_audio_catalog_test_fixture.toml";
+        {
+            std::ofstream f(fixturePath);
+            f << "[weapon_fire]\n"
+                 "files = [\"resource/audio/__test_fixture_missing__.wav\"]\n"
+                 "\n"
+                 "[weapon_reload]\n"
+                 "files = [\"resource/audio/weapons/reload.wav\"]\n";
+        }
+
+        CHECK(AudioCatalog_Load(fixturePath.string().c_str()),
+              "a catalog with one bad entry and one good entry should still load overall");
+
+        const SoundDef& bad  = AudioCatalog_Get(SoundId::WeaponFire);
+        const SoundDef& good = AudioCatalog_Get(SoundId::WeaponReload);
+        CHECK(!bad.IsValid(), "an entry whose only file is missing must come back invalid, not throw/abort");
+        CHECK(good.IsValid(), "an entry with a real file must still load even when a sibling entry is broken");
+
+        std::filesystem::remove(fixturePath);
+
+        // Leave the real catalog loaded, in case anything below ever depends on it.
+        CHECK(AudioCatalog_Load("config/audio_catalog.toml"), "reloading the real catalog after the fixture test should succeed");
+    }
 
     std::printf(g_fail ? "\n%d FAILED\n" : "\nALL PASSED\n", g_fail);
     return g_fail ? 1 : 0;

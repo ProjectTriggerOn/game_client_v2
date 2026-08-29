@@ -49,8 +49,9 @@ AudioBus ParseBus(std::string_view s)
 
 bool AudioCatalog_Load(const char* tomlPath)
 {
-    for (auto& d : g_Defs) d = SoundDef{};
-
+    // Parse into a local table first.  Nothing below may touch g_Defs until
+    // the parse itself has succeeded: a malformed reload must return false
+    // without disturbing whatever catalog was already loaded and working.
     toml::table tbl;
     try {
         tbl = toml::parse_file(tomlPath);
@@ -58,6 +59,12 @@ bool AudioCatalog_Load(const char* tomlPath)
         std::printf("[audio] catalog parse failed (%s): %s\n", tomlPath, e.description().data());
         return false;
     }
+
+    // Likewise stage the per-entry results locally and only commit them to
+    // g_Defs once the whole pass is done, so a reload is all-or-nothing with
+    // respect to the previous good state (individual entries still degrade
+    // independently within the new load, same as before).
+    SoundDef staged[(size_t)SoundId::Count];
 
     int loaded = 0;
     for (size_t i = 0; i < (size_t)SoundId::Count; ++i) {
@@ -91,9 +98,11 @@ bool AudioCatalog_Load(const char* tomlPath)
 
         if (d.maxInstances == 0) d.maxInstances = 1;
 
-        g_Defs[i] = std::move(d);
-        if (g_Defs[i].IsValid()) ++loaded;
+        staged[i] = std::move(d);
+        if (staged[i].IsValid()) ++loaded;
     }
+
+    for (size_t i = 0; i < (size_t)SoundId::Count; ++i) g_Defs[i] = std::move(staged[i]);
 
     std::printf("[audio] catalog: %d/%d entries loaded from %s\n",
                 loaded, (int)SoundId::Count, tomlPath);
