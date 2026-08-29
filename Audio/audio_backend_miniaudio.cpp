@@ -346,6 +346,49 @@ bool Initialize()
     }
     g_EngineInited = true;
 
+    // This engine is left-handed (XMMatrixLookAtLH / XMMatrixPerspectiveFovLH
+    // throughout Graphics/camera.cpp, Game/editor_camera.cpp,
+    // Game/player_cam_fps.cpp), but every ma_spatializer_listener defaults to
+    // ma_handedness_right (miniaudio.h's ma_spatializer_listener_config_init,
+    // ~5177/51753). The listener's handedness feeds the panning math directly:
+    // ma_spatializer_get_relative_position_and_direction (~52960-52990)
+    // computes the listener's right vector as
+    // axisX = normalize(cross(direction, worldUp)), then negates it only
+    // "if (pListener->config.handedness == ma_handedness_left)". Left
+    // uninitialized (right-handed), our left-handed forward vector (SetListener
+    // below) is fed into a formula that assumes right-handed, so the derived
+    // right vector comes out negated -- left/right swap while distance and
+    // dead-ahead stay correct, exactly the reported symptom.
+    //
+    // ma_engine has no ma_engine_listener_set_handedness() accessor in this
+    // version; ma_engine's `listeners[MA_ENGINE_MAX_LISTENERS]` array is a
+    // plain (non-opaque) struct member, so this is a direct field write. Set
+    // it once, here, immediately after the engine exists and before
+    // PreloadCatalog()/any PlayOneShot/PlayLoop can start a voice, so the
+    // mixer (device thread) never observes config.handedness change after the
+    // fact -- see the threading contract at the top of this file. listeners[]
+    // is sized MA_ENGINE_MAX_LISTENERS but only listenerCount are live; we
+    // only ever address listener 0 (SetListener below), but looping over all
+    // live listeners costs nothing and stays correct if that ever changes.
+    //
+    // Only the LISTENER's handedness matters here. ma_spatializer (the
+    // per-SOUND spatializer) has its own `handedness` field, copied from
+    // ma_spatializer_config at ma_spatializer_init_preallocated (~52203) and
+    // used exactly once, right there (~52222), to flip that sound's own
+    // default facing direction ((0,0,-1) -> (0,0,+1)). That direction only
+    // matters for a sound's own directional cone attenuation
+    // (ma_calculate_angular_gain, ~52291, gated on
+    // "coneInnerAngleInRadians < 6.283185f" i.e. narrower than a full circle).
+    // Every SoundDef in this project (audio_catalog.h) omits cone parameters
+    // entirely -- grepping Audio/ for "cone" turns up nothing -- so every
+    // sound keeps miniaudio's full-360-degree default cone, that branch never
+    // triggers, and the per-sound handedness is inert for us. There is also
+    // no public per-sound setter for it. If directional cones are ever added
+    // to the catalog, revisit this.
+    for (ma_uint32 i = 0; i < g_Engine.listenerCount; ++i) {
+        g_Engine.listeners[i].config.handedness = ma_handedness_left;
+    }
+
     for (size_t i = 0; i < (size_t)AudioBus::Count; ++i) {
         if ((AudioBus)i == AudioBus::Master) continue;
         if (ma_sound_group_init(&g_Engine, 0, nullptr, &g_Groups[i]) != MA_SUCCESS) {
