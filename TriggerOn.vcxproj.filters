@@ -111,6 +111,9 @@
     <ClCompile Include="Graphics\polygon.cpp">
       <Filter>Graphics</Filter>
     </ClCompile>
+    <ClCompile Include="Graphics\particle.cpp">
+      <Filter>Graphics</Filter>
+    </ClCompile>
     <ClCompile Include="Graphics\shader.cpp">
       <Filter>Graphics</Filter>
     </ClCompile>
@@ -282,6 +285,9 @@
       <Filter>Graphics</Filter>
     </ClInclude>
     <ClInclude Include="Graphics\polygon.h">
+      <Filter>Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Graphics\particle.h">
       <Filter>Graphics</Filter>
     </ClInclude>
     <ClInclude Include="Graphics\sprite.h">

@@ -209,6 +209,7 @@ exit /b 0
     <ClCompile Include="Network\remote_player.cpp" />
     <ClCompile Include="Network\remote_player_state_machine.cpp" />
     <ClCompile Include="Graphics\polygon.cpp" />
+    <ClCompile Include="Graphics\particle.cpp" />
     <ClCompile Include="Graphics\sampler.cpp" />
     <ClCompile Include="Game\scene.cpp" />
     <ClCompile Include="Game\scene_ui_test.cpp" />
@@ -287,6 +288,7 @@ exit /b 0
     <ClInclude Include="Network\remote_player.h" />
     <ClInclude Include="Network\remote_player_state_machine.h" />
     <ClInclude Include="Graphics\polygon.h" />
+    <ClInclude Include="Graphics\particle.h" />
     <ClInclude Include="Graphics\sampler.h" />
     <ClInclude Include="Game\scene.h" />
     <ClInclude Include="Game\scene_ui_test.h" />
