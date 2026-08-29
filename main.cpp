@@ -27,6 +27,7 @@
 #include "game.h"
 
 #include "audio.h"
+#include "camera.h"
 #include "cube.h"
 #include "fade.h"
 #include "infinite_grid.h"
@@ -159,7 +160,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,[[maybe_unused
 
 	MSLogger_Initialize(hWnd);
 
-	InitAudio();
+	Audio_Initialize();
 
 	Shader_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
 
@@ -379,6 +380,15 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,[[maybe_unused
 
 			Scene_Update(elapsed_time);
 
+			// Listener follows the camera.  Must run after Scene_Update so this
+			// frame's sounds are positioned against this frame's view.
+			{
+				const DirectX::XMFLOAT3& camPos   = Camera_GetPosition();
+				const DirectX::XMFLOAT3& camFront = Camera_GetFront();
+				AudioListener listener{ camPos, camFront, DirectX::XMFLOAT3(0.0f, 1.0f, 0.0f) };
+				Audio_Update(elapsed_time, listener);
+			}
+
 			// Derive cursor (mouse_policy) and UI input level + page (ui_policy)
 			// from (scene, GameState). Both run after Scene_Update so this frame's
 			// state flips are reflected; both are the SOLE owners of their domains.
@@ -501,6 +511,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,[[maybe_unused
 	Cube_Finalize();
 
 	Scene_Finalize();
+
+	Audio_Finalize();
 
 	// Leave exclusive fullscreen + release DXGI enum before Direct3D_Finalize.
 	Display::Finalize();
