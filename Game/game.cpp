@@ -270,6 +270,7 @@ void Game_Update(double elapsed_time)
 		if (gameplayActive)
 		{
 			g_PlayerFps->ApplyServerCorrection(snap.localPlayer);
+			g_PlayerFps->ApplyLastShot(snap);
 			g_PlayerFps->SetTeam(snap.localPlayerTeam);
 
 			// Feed server state to InputProducer (for jump-pending logic)
@@ -571,6 +572,36 @@ void Game_Draw()
 		Sprite_Draw(g_OverlayTexId, cx - TH * 0.5f, cy + gap,       TH, arm, GREEN);
 		Sprite_Draw(g_OverlayTexId, cx - gap - arm, cy - TH * 0.5f, arm, TH, GREEN);
 		Sprite_Draw(g_OverlayTexId, cx + gap,       cy - TH * 0.5f, arm, TH, GREEN);
+	}
+
+	// Hitmarker — four short axis-aligned ticks just outside the arm tips;
+	// white = hit, red = kill. Sprite_Draw has no rotation, so the 45° ideal
+	// is drawn as L-steps (2 rects per corner) — reads identically at 2px.
+	// Alpha decays ~100ms; PlayerFps owns the fade.
+	if (g_GameState == PLAY && g_PlayerFps)
+	{
+		const float a = g_PlayerFps->GetHitmarkerAlpha();
+		if (a > 0.0f)
+		{
+			const float cx = sw * 0.5f, cy = sh * 0.5f;
+			constexpr float O = 14.0f, L = 7.0f, TH2 = 2.0f;
+			const XMFLOAT4 WHITE = { 1.0f, 1.0f, 1.0f, 0.9f * a };
+			const XMFLOAT4 RED   = { 1.0f, 0.25f, 0.25f, 0.9f * a };
+			const XMFLOAT4& col =
+				g_PlayerFps->GetHitmarkerKill() ? RED : WHITE;
+			// NE
+			Sprite_Draw(g_OverlayTexId, cx + O,     cy - O - L, TH2, L, col);
+			Sprite_Draw(g_OverlayTexId, cx + O,     cy - O - L, L,  TH2, col);
+			// NW
+			Sprite_Draw(g_OverlayTexId, cx - O - L, cy - O - L, TH2, L, col);
+			Sprite_Draw(g_OverlayTexId, cx - O - L, cy - O,     L,  TH2, col);
+			// SE
+			Sprite_Draw(g_OverlayTexId, cx + O,     cy + O,     TH2, L, col);
+			Sprite_Draw(g_OverlayTexId, cx + O,     cy + O,     L,  TH2, col);
+			// SW
+			Sprite_Draw(g_OverlayTexId, cx - O - L, cy + O,     TH2, L, col);
+			Sprite_Draw(g_OverlayTexId, cx - O - L, cy + O,     L,  TH2, col);
+		}
 	}
 
 	// NOTE: the legacy Widget_* HUD panels (HP/Ammo) and the immediate-mode

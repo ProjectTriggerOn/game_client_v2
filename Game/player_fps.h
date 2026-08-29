@@ -56,7 +56,10 @@ public:
 	// Server Reconciliation (Prediction + Correction)
 	//-------------------------------------------------------------------------
 	void ApplyServerCorrection(const NetPlayerState& serverState);
-	
+	// Hitmarker latch (spec §6.2): consumes the snapshot's lastShot* pair (see
+	// ApplyLastShot in the .cpp). Called by game.cpp right after the correction.
+	void ApplyLastShot(const Snapshot& snap);
+
 	AABB GetAABB() const;
 	Capsule GetCapsule() const;
 
@@ -95,6 +98,10 @@ public:
 	void GetRecoilPunch(float& dPitch, float& dYaw) const;
 	float GetSpreadRadians() const;
 	bool IsADS() const;
+
+	// Hitmarker state for the native 2D pass.
+	float GetHitmarkerAlpha() const { return m_HitmarkerAlpha; }
+	bool  GetHitmarkerKill()  const { return m_HitmarkerKill; }
 
 	//-------------------------------------------------------------------------
 	// Debug info
@@ -149,6 +156,11 @@ private:
 	double m_WeaponRPM;
 	double m_FireTimer;
 	int m_FireCounter;
+	// Hitmarker (spec §6.2): latched from the snapshot's lastShot* pair,
+	// matched against our fireCounter low byte so stale snapshots don't
+	// re-trigger. Alpha decays at frame rate; kill variant recolors.
+	float m_HitmarkerAlpha = 0.0f;   // 1..0 over HITMARKER_LIFE
+	bool  m_HitmarkerKill  = false;
 	// Recoil (COD model): client-side prediction, advanced on ConsumeRound,
 	// decayed per frame via PlayerCamFps_DecayPunch, reconciled against the
 	// snapshot in ApplyServerCorrection. punch NEVER touches camera yaw/pitch.

@@ -185,6 +185,11 @@ void PlayerFps::Update(double elapsed_time)
 	// Recoil punch decay at frame rate (fps-independent exponential).
 	PlayerCamFps_DecayPunch(frameDt);
 
+	// Hitmarker fade (~100ms linear, spec §6.2).
+	constexpr float HITMARKER_LIFE = 0.1f;
+	if (m_HitmarkerAlpha > 0.0f)
+		m_HitmarkerAlpha = std::fmax(0.0f, m_HitmarkerAlpha - frameDt / HITMARKER_LIFE);
+
 	// ========================================================================
 	// Render Offset Decay (for smooth server correction) — runs at FRAME RATE
 	// Decays visual offset toward zero over ~100ms
@@ -926,6 +931,31 @@ void PlayerFps::ApplyServerCorrection(const NetPlayerState& serverState)
 	{
 		m_Ammo = serverState.ammo;
 		m_AmmoReserve = serverState.ammoReserve;
+	}
+}
+
+//=============================================================================
+// ApplyLastShot — hitmarker latch (spec §6.2).
+//
+// The snapshot carries the result of this player's LATEST resolved shot with
+// its fireCounter low byte; require both so a backlog snapshot of older shots
+// can't fire the marker for a shot we already know missed.
+//=============================================================================
+void PlayerFps::ApplyLastShot(const Snapshot& snap)
+{
+	// ---- Hitmarker latch (spec §6.2) --------------------------------------
+	// The snapshot carries the result of this player's LATEST resolved shot
+	// with its fireCounter low byte; require both so a backlog snapshot of
+	// older shots can't fire the marker for a shot we already know missed.
+	{
+		const uint8_t seqMod = static_cast<uint8_t>(m_FireCounter & 0xFFu);
+		if (snap.lastShotResult != LastShotResult::MISS &&
+		    snap.lastShotSeqMod == seqMod)
+		{
+			m_HitmarkerKill  = (snap.lastShotResult ==
+			                    LastShotResult::HIT_KILL);
+			m_HitmarkerAlpha = 1.0f;
+		}
 	}
 }
 
