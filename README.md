@@ -133,7 +133,7 @@ Network/        INetwork interface, ENet client, mock server, remote players
 UI/             Ultralight integration: manager, D3D11 compositor, JS bridge, input queue, filesystem, hot reload
 Shaders/        HLSL source files (3D + UI compositing)
 ui_src/         HTML/CSS/JS UI single-page app (see In-Game UI)
-ThirdParty/     ENet, ASSIMP, toml++, Ultralight
+ThirdParty/     ENet, ASSIMP, miniaudio, toml++, Ultralight
 ```
 
 ## Credits
@@ -146,3 +146,4 @@ Third-party assets and libraries used in this project:
 - **Assimp** — model import
 - **toml++** — configuration parsing
 - **Ultralight** — HTML/CSS UI rendering
+- **DirectXTK `WICTextureLoader11`** (Microsoft, MIT) — WIC image loading into D3D11 textures (`Graphics/`)

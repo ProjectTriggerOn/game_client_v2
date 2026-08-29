@@ -135,7 +135,7 @@ Network/        INetwork インターフェース、ENet クライアント、�
 UI/             Ultralight 統合: マネージャ、D3D11 合成、JS ブリッジ、入力キュー、ファイルシステム、ホットリロード
 Shaders/        HLSL ソースファイル（3D + UI 合成）
 ui_src/         HTML/CSS/JS UI 単一ページアプリ（「ゲーム内 UI」を参照）
-ThirdParty/     ENet, ASSIMP, toml++, Ultralight
+ThirdParty/     ENet, ASSIMP, miniaudio, toml++, Ultralight
 ```
 
 ## クレジット
@@ -148,3 +148,4 @@ ThirdParty/     ENet, ASSIMP, toml++, Ultralight
 - **Assimp** — モデルインポート
 - **toml++** — 設定ファイルのパース
 - **Ultralight** — HTML/CSS による UI 描画
+- **DirectXTK `WICTextureLoader11`**（Microsoft, MIT）— WIC 画像を D3D11 テクスチャとして読み込み（`Graphics/`）
