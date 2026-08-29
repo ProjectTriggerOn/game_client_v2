@@ -201,15 +201,18 @@ void MockServer::Tick()
     if (playing && playerAlive)
         SimulatePhysics();
 
-    // 3b. Advance all bots BEFORE firing (mirrors GameServer's physics-before-
-    // combat order, so a shot at viewTick == m_CurrentTick tests each bot's
-    // post-move live position). Movement + intermittent fire + reload + respawn.
+    // 3b. Clear the local player's hit signal, then advance all bots BEFORE
+    // firing (mirrors GameServer's physics-before-combat order, so a shot at
+    // viewTick == m_CurrentTick tests each bot's post-move live position).
+    // Movement + intermittent fire + reload + respawn. A bot shot that lands
+    // this tick writes the attacker id into hitByPlayerId (see BotFireShot)
+    // and it survives to the broadcast below.
+    m_PlayerState.hitByPlayerId = 0xFF;
     if (playing)
         UpdateBots();
 
-    // 4. Clear the local hit marker, then resolve the local player's shots
-    // against every bot. Skip if a bot just killed the player this tick.
-    m_PlayerState.hitByPlayerId = 0xFF;
+    // 4. Resolve the local player's shots against every bot. Skip if a bot
+    // just killed the player this tick.
     if (playing && (m_PlayerState.stateFlags & NetStateFlags::IS_DEAD) == 0)
         ProcessFiring();
 
@@ -820,8 +823,6 @@ void MockServer::ProcessFiring()
             ? LastShotResult::HIT_PLAYER
             : LastShotResult::HIT_KILL;
         DamageBot(hitBot, RED_DAMAGE, /*killerId=*/0);  // local player = id 0
-        // Hit marker for local player (carries the bot id it struck)
-        m_PlayerState.hitByPlayerId = static_cast<uint8_t>(hitBot + 1);
     }
 
     // Record the shot result for the local player's snapshot (hitmarker,
@@ -1144,7 +1145,13 @@ void MockServer::BotFireShot(const Bot& shooter, int shooterIndex)
 
     const uint8_t shooterId = static_cast<uint8_t>(shooterIndex + 1);
     if (hitPlayer)
+    {
+        // Damage-flash semantics (net_common.h: 0xFF = no hit, else attacker
+        // id): mark the LOCAL PLAYER's snapshot with the bot that hit them.
+        // The player reads their own snapshot and flashes.
+        m_PlayerState.hitByPlayerId = shooterId;
         DamagePlayer(BOT_DAMAGE, shooterId);
+    }
     else if (hitBot >= 0)
         DamageBot(hitBot, BOT_DAMAGE, shooterId);
 }
