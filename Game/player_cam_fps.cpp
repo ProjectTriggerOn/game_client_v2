@@ -18,6 +18,7 @@
 #include "remote_player.h"
 #include "game.h"
 #include "config.h"
+#include "audio.h"
 
 using namespace DirectX;
 
@@ -318,6 +319,13 @@ void PlayerCamFps_Debug(const PlayerFps& pf)
 		ss << "LerpT: " << std::fixed << std::setprecision(3) << rp.GetLerpFactor() << "\n";
 		ss << "InterpDelay: " << std::fixed << std::setprecision(1) << (rp.GetInterpolationDelay() * 1000.0) << "ms\n";
 	}
+
+	// Audio readout: voice pressure is the first thing to go wrong once a
+	// firefight gets busy, and the per-frame event count shows the snapshot
+	// derivation working — or storming — at a glance.
+	ss << "AUDIO " << (Audio_IsAvailable() ? "on" : "SILENT")
+	   << " voices=" << Audio_ActiveVoiceCount()
+	   << " events=" << Game_LastAudioEventCount() << "\n";
 
 	g_DebugText->SetText(ss.str().c_str());
 	g_DebugText->Draw();

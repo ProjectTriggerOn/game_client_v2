@@ -77,3 +77,6 @@ void        Audio_SetBusVolume (AudioBus bus, float linear01);
 // Callers never need to check — every Audio_* call is a no-op then — but the
 // debug panel reports it.
 bool Audio_IsAvailable();
+
+// Debug readout: how many voices are currently allocated across all pools.
+int Audio_ActiveVoiceCount();

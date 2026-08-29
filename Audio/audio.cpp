@@ -91,3 +91,8 @@ void Audio_SetBusVolume(AudioBus bus, float linear01)
 }
 
 bool Audio_IsAvailable() { return g_Available; }
+
+int Audio_ActiveVoiceCount()
+{
+    return g_Available ? AudioBackend::ActiveVoiceCount() : 0;
+}

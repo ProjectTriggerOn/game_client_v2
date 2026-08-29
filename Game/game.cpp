@@ -106,6 +106,7 @@ namespace{
 	// it instead of declaring a second bool with the same name.
 	Snapshot        g_LatestSnapshot{};
 	AudioEventState g_AudioEventState{};
+	uint8_t         g_LastAudioEventCount = 0;  // debug readout: last derivation's event count
 
 	// Ambient bed loop handle. Started in Game_Initialize, stopped in
 	// Game_Finalize, so a scene exit never leaves it playing.
@@ -452,6 +453,7 @@ void Game_Update(double elapsed_time)
 		AudioEvent    events[32];
 		const uint8_t count = AudioEvents_Derive(g_AudioEventState, g_LatestSnapshot,
 		                                         elapsed_time, events, 32);
+		g_LastAudioEventCount = count;
 		for (uint8_t i = 0; i < count; ++i)
 		{
 			const AudioEvent& e = events[i];
@@ -747,4 +749,6 @@ void Game_GetViewTick(uint32_t& outTick, float& outFrac)
 	}
 	// renderTime < oldest (WAIT mode) → outTick stays 0 (no compensation)
 }
+
+int Game_LastAudioEventCount() { return (int)g_LastAudioEventCount; }
 
