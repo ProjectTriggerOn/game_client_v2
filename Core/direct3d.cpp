@@ -20,6 +20,7 @@ static bool g_AllowTearing   = false;  // true only when the OS/driver supports 
 static ID3D11BlendState* g_pBlendStateMultiply = nullptr;
 static ID3D11DepthStencilState* g_pDepthStencilStateDepthDisable = nullptr;
 static ID3D11DepthStencilState* g_pDepthStencilStateDepthEnable = nullptr;
+static ID3D11DepthStencilState* g_pDepthStencilStateDepthNoWrite = nullptr;
 static ID3D11RasterizerState* g_pRasterizerStateCullBack = nullptr;
 static ID3D11RasterizerState* g_pRasterizerStateCullNone = nullptr;
 
@@ -145,6 +146,12 @@ bool Direct3D_Initialize(HWND hWnd)
 	dsd.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
 	g_pDevice->CreateDepthStencilState(&dsd, &g_pDepthStencilStateDepthEnable);
 
+	// Depth test on, write off — decals/particles get occluded by the scene
+	// without disturbing the depth buffer.
+	dsd.DepthEnable = TRUE;
+	dsd.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+	g_pDevice->CreateDepthStencilState(&dsd, &g_pDepthStencilStateDepthNoWrite);
+
 	Direct3D_SetDepthEnable(true);
 
 	// Rasterizer states (back-face culling + no culling)
@@ -167,6 +174,7 @@ void Direct3D_Finalize()
 {
 	SAFE_RELEASE(g_pDepthStencilStateDepthDisable)
 	SAFE_RELEASE(g_pDepthStencilStateDepthEnable)
+	SAFE_RELEASE(g_pDepthStencilStateDepthNoWrite)
 	SAFE_RELEASE(g_pBlendStateMultiply)
 	SAFE_RELEASE(g_pRasterizerStateCullBack)
 	SAFE_RELEASE(g_pRasterizerStateCullNone)
@@ -282,6 +290,16 @@ void Direct3D_SetDepthEnable(bool enable)
 	{
 		g_pDeviceContext->OMSetDepthStencilState(g_pDepthStencilStateDepthDisable, NULL);
 	}
+}
+
+// Switch only the WRITE side of the depth test. Direct3D_SetDepthEnable keeps
+// its existing meaning; this pairs test-on/write-off with the normal state.
+void Direct3D_SetDepthWriteEnable(bool enable)
+{
+	if (enable)
+		g_pDeviceContext->OMSetDepthStencilState(g_pDepthStencilStateDepthEnable, NULL);
+	else
+		g_pDeviceContext->OMSetDepthStencilState(g_pDepthStencilStateDepthNoWrite, NULL);
 }
 
 void Direct3D_SetCullMode(D3D11_CULL_MODE mode)

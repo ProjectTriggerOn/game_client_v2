@@ -42,6 +42,7 @@ ID3D11Device* Direct3D_GetDevice();
 ID3D11DeviceContext* Direct3D_GetDeviceContext();
 
 void Direct3D_SetDepthEnable(bool enable);
+void Direct3D_SetDepthWriteEnable(bool enable);
 void Direct3D_SetCullMode(D3D11_CULL_MODE mode);
 
 #endif // DIRECT3D_H
