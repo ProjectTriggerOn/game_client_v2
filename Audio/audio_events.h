@@ -39,9 +39,26 @@ constexpr uint16_t MAX_CATCHUP_SHOTS = 2;
 constexpr uint16_t FIRE_COUNTER_RESET_THRESHOLD = 256;
 
 constexpr float  FOOTSTEP_SPEED_MIN     = 0.5f;   // m/s below this: standing still
-constexpr float  FOOTSTEP_SPEED_RUN     = 5.0f;   // m/s above this: use the run cadence
+
+// m/s at or above which the run cadence is used.  Midway between the server's
+// two ground speeds (Network/mock_server.cpp: MAX_WALK_SPEED 5.0,
+// MAX_RUN_SPEED 8.0).  It must not sit ON either of them: at 5.0 a plain
+// walking player was exactly at the threshold, so walking used the run cadence,
+// the walk cadence was unreachable, and velocity jitter around the boundary
+// flipped the interval frame to frame — an audibly unsteady gait.
+constexpr float  FOOTSTEP_SPEED_RUN     = 6.5f;
+
 constexpr double FOOTSTEP_INTERVAL_WALK = 0.45;   // seconds between steps
 constexpr double FOOTSTEP_INTERVAL_RUN  = 0.30;
+
+// How long the newest snapshot may go unchanged before derivation stops
+// advancing time.  Edge detection and the fire counter are self-limiting on a
+// frozen snapshot (no delta, no edge), but the footstep metronome integrates
+// real frame time against whatever velocity was frozen in, so a remote player
+// who was running when an ENet stream stalled would emit footsteps forever.
+// Comfortably above one snapshot interval at 60Hz (16.7ms) plus jitter, and
+// well under the point where a listener would notice the steps stop early.
+constexpr double SNAPSHOT_STALE_SECONDS = 0.5;
 } // namespace AudioEventConfig
 
 //-----------------------------------------------------------------------------
@@ -56,11 +73,21 @@ struct AudioEventState {
     uint32_t       lastShownKillSeq = 0;
     bool           killSeqPrimed    = false;
 
+    // Staleness tracking.  The caller hands us the newest snapshot every frame
+    // whether or not a new one arrived, so "is this snapshot still live?" has
+    // to be answered from the snapshot itself: tickId changes on every server
+    // tick, so an unchanged tickId means nothing new landed.
+    uint32_t       lastTickId       = 0;
+    bool           tickPrimed       = false;
+    double         staleSeconds     = 0.0;
+
     void Reset();
     void ResetPlayer(uint8_t playerId);
 };
 
-// Returns the number of events written to out[] (never more than maxEvents;
-// the overflow is dropped and logged by the caller).
+// Returns the number of events written to out[], never more than maxEvents.
+// Anything beyond that is dropped; when outDropped is non-null it receives the
+// number dropped so the caller can log it (Game/game.cpp does).
 uint8_t AudioEvents_Derive(AudioEventState& state, const Snapshot& snap,
-                           double elapsed_time, AudioEvent* out, uint8_t maxEvents);
+                           double elapsed_time, AudioEvent* out, uint8_t maxEvents,
+                           uint8_t* outDropped = nullptr);

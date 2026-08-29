@@ -46,9 +46,15 @@ int CountOf(const AudioEvent* ev, uint8_t n, SoundId id)
     return c;
 }
 
-// Feed one snapshot and return the events it produced.
-uint8_t Step(AudioEventState& st, const Snapshot& s, double dt, AudioEvent* out)
+// Feed one FRESH snapshot and return the events it produced.  The tick bump
+// matters: the derivation treats an unchanged tickId as "no new snapshot
+// arrived" and stops advancing time once the gap passes
+// SNAPSHOT_STALE_SECONDS, so a test that wants a live stream has to look like
+// one.  The stall test below calls AudioEvents_Derive directly to get the
+// frozen-snapshot behaviour on purpose.
+uint8_t Step(AudioEventState& st, Snapshot& s, double dt, AudioEvent* out)
 {
+    ++s.tickId;
     return AudioEvents_Derive(st, s, dt, out, 32);
 }
 
@@ -196,12 +202,26 @@ int main()
         Snapshot s = MakeSnapshot();
         Step(st, s, 0.016, ev);
 
-        Bot(s).velocity = DirectX::XMFLOAT3(6.0f, 0.0f, 0.0f);   // running
+        // 8.0 m/s is the server's MAX_RUN_SPEED (Network/mock_server.cpp).
+        Bot(s).velocity = DirectX::XMFLOAT3(8.0f, 0.0f, 0.0f);   // running
         int steps = 0;
         for (int i = 0; i < 100; ++i) steps += CountOf(ev, Step(st, s, 0.016, ev), SoundId::Footstep);
         // 100 * 16ms = 1.6s at the run interval
         const int expected = (int)(1.6 / AudioEventConfig::FOOTSTEP_INTERVAL_RUN);
         CHECK(steps >= expected - 1 && steps <= expected + 1, "run footsteps are paced by the run interval");
+
+        // 5.0 m/s is the server's MAX_WALK_SPEED.  The walk cadence has to be
+        // REACHABLE at exactly that speed: the run threshold used to sit on
+        // 5.0, so a plainly walking player got the run cadence and the walk
+        // interval could never be selected at all.
+        Bot(s).velocity = DirectX::XMFLOAT3(5.0f, 0.0f, 0.0f);   // walking
+        int walkSteps = 0;
+        for (int i = 0; i < 100; ++i) walkSteps += CountOf(ev, Step(st, s, 0.016, ev), SoundId::Footstep);
+        const int expectedWalk = (int)(1.6 / AudioEventConfig::FOOTSTEP_INTERVAL_WALK);
+        CHECK(walkSteps >= expectedWalk - 1 && walkSteps <= expectedWalk + 1,
+              "walking at the server's walk speed uses the walk cadence");
+        CHECK(AudioEventConfig::FOOTSTEP_SPEED_RUN > 5.0f && AudioEventConfig::FOOTSTEP_SPEED_RUN < 8.0f,
+              "the run threshold must sit strictly between the server's walk and run speeds");
 
         Bot(s).stateFlags &= ~NetStateFlags::IS_GROUNDED;
         int airborne = 0;
@@ -282,6 +302,56 @@ int main()
         n = Step(st, s, 0.016, ev);
         CHECK(CountOf(ev, n, SoundId::WeaponFire) == 1,
               "the next genuine shot after a reset still fires exactly once");
+    }
+
+    // --- a stalled snapshot stream must not keep the footstep metronome going.
+    //     Edge detection and the fire counter are inert on a frozen snapshot
+    //     (no delta, no edge), but footsteps integrate real frame time against
+    //     the frozen velocity, so a remote player who was running when the
+    //     connection stalled would keep running forever.
+    {
+        AudioEventState st{};
+        Snapshot s = MakeSnapshot();
+        Step(st, s, 0.016, ev);
+
+        Bot(s).velocity = DirectX::XMFLOAT3(8.0f, 0.0f, 0.0f);
+        for (int i = 0; i < 10; ++i) Step(st, s, 0.016, ev);   // 160ms of live stream
+
+        // The stream stalls: the caller keeps re-deriving from the SAME
+        // snapshot every frame.  Call Derive directly so the tickId stays put.
+        int early = 0;
+        for (int i = 0; i < 40; ++i)      // 0.64s - crosses SNAPSHOT_STALE_SECONDS
+            early += CountOf(ev, AudioEvents_Derive(st, s, 0.016, ev, 32), SoundId::Footstep);
+        CHECK(early > 0, "a brief gap between snapshots must not cut footsteps off");
+
+        int late = 0;
+        for (int i = 0; i < 200; ++i)     // 3.2s more, all past the threshold
+            late += CountOf(ev, AudioEvents_Derive(st, s, 0.016, ev, 32), SoundId::Footstep);
+        CHECK(late == 0, "a stalled snapshot must stop producing footsteps");
+
+        int resumed = 0;
+        for (int i = 0; i < 60; ++i)
+            resumed += CountOf(ev, Step(st, s, 0.016, ev), SoundId::Footstep);
+        CHECK(resumed > 0, "footsteps resume as soon as snapshots start arriving again");
+    }
+
+    // --- overflow is dropped AND counted, so the caller can log it instead of
+    //     the header promising a log line nothing ever writes
+    {
+        AudioEventState st{};
+        Snapshot s = MakeSnapshot();
+        Step(st, s, 0.016, ev);
+
+        // Three simultaneous bot events, one slot to write them into.
+        ++s.tickId;
+        Bot(s).stateFlags |= NetStateFlags::IS_JUMPING;
+        Bot(s).stateFlags |= NetStateFlags::IS_DEAD;
+        Bot(s).health = 50;
+
+        uint8_t dropped = 0xAA;
+        const uint8_t n = AudioEvents_Derive(st, s, 0.016, ev, 1, &dropped);
+        CHECK(n == 1,       "a full buffer stops at maxEvents");
+        CHECK(dropped == 2, "and reports exactly how many events it had to drop");
     }
 
     std::printf(g_fail ? "\n%d FAILED\n" : "\nALL PASSED\n", g_fail);

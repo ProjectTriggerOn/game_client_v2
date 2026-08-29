@@ -30,6 +30,9 @@ void AudioEventState::Reset()
     for (uint8_t i = 0; i < MAX_PLAYERS; ++i) ResetPlayer(i);
     lastShownKillSeq = 0;
     killSeqPrimed    = false;
+    lastTickId       = 0;
+    tickPrimed       = false;
+    staleSeconds     = 0.0;
 }
 
 void AudioEventState::ResetPlayer(uint8_t playerId)
@@ -41,12 +44,37 @@ void AudioEventState::ResetPlayer(uint8_t playerId)
 }
 
 uint8_t AudioEvents_Derive(AudioEventState& st, const Snapshot& snap,
-                           double elapsed_time, AudioEvent* out, uint8_t maxEvents)
+                           double elapsed_time, AudioEvent* out, uint8_t maxEvents,
+                           uint8_t* outDropped)
 {
-    uint8_t n = 0;
+    uint8_t n       = 0;
+    uint8_t dropped = 0;
     auto push = [&](SoundId id, uint8_t pid) {
         if (n < maxEvents) out[n++] = AudioEvent{ id, pid, 1.0f };
+        else if (dropped < 0xFF) ++dropped;
     };
+
+    // -------------------------------------------------------------------------
+    // Staleness.  The caller re-derives from the newest snapshot every frame,
+    // and "a snapshot arrived at some point this session" is not the same claim
+    // as "this snapshot is current".  On an ENet stall or drop the same
+    // snapshot is handed in frame after frame; the delta-based signals are
+    // inert then (nothing changed, so no edge and no counter delta), but the
+    // footstep metronome integrates real frame time against a frozen velocity
+    // and would keep a stalled runner's steps going forever.
+    //
+    // Freezing dt rather than returning early is deliberate: it neutralises the
+    // one time-integrating signal and leaves everything else untouched, so the
+    // instant the stream resumes the normal delta path picks up where it left
+    // off with no re-priming and no special case.
+    if (!st.tickPrimed || snap.tickId != st.lastTickId) {
+        st.lastTickId   = snap.tickId;
+        st.tickPrimed   = true;
+        st.staleSeconds = 0.0;
+    } else {
+        st.staleSeconds += elapsed_time;
+        if (st.staleSeconds > AudioEventConfig::SNAPSHOT_STALE_SECONDS) elapsed_time = 0.0;
+    }
 
     bool seen[MAX_PLAYERS] = {};
 
@@ -166,5 +194,6 @@ uint8_t AudioEvents_Derive(AudioEventState& st, const Snapshot& snap,
         }
     }
 
+    if (outDropped) *outDropped = dropped;
     return n;
 }

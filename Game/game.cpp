@@ -33,6 +33,7 @@
 #include "mouse.h"
 #include "audio.h"
 #include "audio_events.h"
+#include "debug_log.h"
 #include <cwchar>
 #include <vector>
 #include <cstdio>
@@ -458,9 +459,15 @@ void Game_Update(double elapsed_time)
 	if (g_HasSnapshot)
 	{
 		AudioEvent    events[32];
+		uint8_t       dropped = 0;
 		const uint8_t count = AudioEvents_Derive(g_AudioEventState, g_LatestSnapshot,
-		                                         elapsed_time, events, 32);
+		                                         elapsed_time, events, 32, &dropped);
 		g_LastAudioEventCount = count;
+		// The buffer is sized for a bad frame, not an impossible one (ten
+		// players all shooting, landing and taking damage at once can exceed
+		// it). Overflow is dropped by design; log it so a silent sound has a
+		// visible cause instead of looking like a backend fault.
+		if (dropped) DebugLog_Printf("audio", "event buffer full - dropped %u events", (unsigned)dropped);
 		for (uint8_t i = 0; i < count; ++i)
 		{
 			const AudioEvent& e = events[i];
