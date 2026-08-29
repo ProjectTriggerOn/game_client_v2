@@ -161,9 +161,14 @@ void PlayerFps::ConsumeRound()
 	Audio_PlayOneShot(SoundId::WeaponFire);
 
 	if (m_Ammo == 0 && m_AmmoReserve > 0)
+	{
 		m_StateMachine->SetWeaponState(WeaponState::RELOADING_OUT_OF_AMMO);
-	else if (m_Ammo == 0)
-		Audio_PlayOneShot(SoundId::WeaponFireEmpty);
+		// The mag just ran dry with rounds left in reserve: the auto-reload
+		// starts immediately (no separate trigger pull needed), so its
+		// "empty" cue plays right alongside the shot that emptied it —
+		// matches the sound the manual R-press path plays in this situation.
+		Audio_PlayOneShot(SoundId::WeaponReloadEmpty);
+	}
 }
 
 void PlayerFps::Update(double elapsed_time)
@@ -360,6 +365,13 @@ void PlayerFps::Update(double elapsed_time)
 			// Fallback: only reachable if the mag was zeroed from outside a shot
 			// (e.g. an ammo sync), since ConsumeRound auto-reloads on the last round.
 			m_StateMachine->SetWeaponState(WeaponState::RELOADING_OUT_OF_AMMO);
+		} else if (MSLogger_IsTrigger(MBT_LEFT)) {
+			// Completely dry: no round, no reserve to reload from. Unlike the
+			// two branches above, this one never changes weapon state (there is
+			// nothing to transition to), so it stays re-entrant while the
+			// trigger is held — gate on the press edge, not isPressingLeft's
+			// level state, so holding a dry trigger clicks once, not every frame.
+			Audio_PlayOneShot(SoundId::WeaponFireEmpty);
 		}
 	}
 
@@ -399,6 +411,13 @@ void PlayerFps::Update(double elapsed_time)
 			// Fallback: only reachable if the mag was zeroed from outside a shot
 			// (e.g. an ammo sync), since ConsumeRound auto-reloads on the last round.
 			m_StateMachine->SetWeaponState(WeaponState::RELOADING_OUT_OF_AMMO);
+		} else if (MSLogger_IsTrigger(MBT_LEFT)) {
+			// Completely dry: no round, no reserve to reload from. Unlike the
+			// two branches above, this one never changes weapon state (there is
+			// nothing to transition to), so it stays re-entrant while the
+			// trigger is held — gate on the press edge, not isPressingLeft's
+			// level state, so holding a dry trigger clicks once, not every frame.
+			Audio_PlayOneShot(SoundId::WeaponFireEmpty);
 		}
 	}
 
