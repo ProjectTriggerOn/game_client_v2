@@ -8,7 +8,6 @@
 #include "player_fps.h"
 #include "direct3d.h"
 #include "texture.h"
-#include "debug_log.h"
 
 using namespace DirectX;
 
@@ -135,12 +134,6 @@ void ImpactFx_Update(double elapsed_time)
 
 		Decal_Create(hitPos, bestNormal);
 		HitSparkBurst(hitPos, bestNormal);
-
-		// TEMP DIAGNOSTIC (remove after decal visibility investigation):
-		// one line per spawn — proves the create path runs and with what data.
-		DebugLog_Printf("impact", "spawn hitPos=(%.2f, %.2f, %.2f) n=(%.2f, %.2f, %.2f) t=%.2f",
-			hitPos.x, hitPos.y, hitPos.z,
-			bestNormal.x, bestNormal.y, bestNormal.z, bestT);
 	}
 }
 
@@ -151,14 +144,6 @@ void ImpactFx_SetCamera(const XMFLOAT4X4& view)
 
 void ImpactFx_Draw()
 {
-	static bool s_diagLogged = false;
-	if (!s_diagLogged)
-	{
-		s_diagLogged = true;
-		// TEMP DIAGNOSTIC (remove after decal visibility investigation): proves
-		// the draw path + texture id once per session.
-		DebugLog_Printf("impact", "ImpactFx_Draw entered; decal count=%d", Decal_GetCount());
-	}
 	Direct3D_SetDepthWriteEnable(false);
 	Decal_Draw();
 	Particle_Draw();
