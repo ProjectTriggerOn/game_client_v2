@@ -1,0 +1,157 @@
+# =============================================================================
+# TriggerOn Client — Sound catalog
+#
+# Developer data.  Player-facing volumes live in config.toml [audio].
+# Table names must match kSoundKeys[] in Audio/audio_catalog.cpp exactly.
+#
+# Paths are relative to the working directory the exe runs from, matching how
+# resource/model and resource/texture are already loaded.
+#
+# There is no per-sound 2D/3D flag: the call site decides.  The local player's
+# own weapon and footsteps go through Audio_PlayOneShot (2D — a gun in your
+# hands has no distance falloff); remote players go through
+# Audio_PlayOneShotAt.  The min/max_distance and rolloff values below only
+# apply on the 3D path.
+# =============================================================================
+
+[weapon_fire]
+files = [
+    "resource/audio/weapons/fire_001.wav",
+    "resource/audio/weapons/fire_002.wav",
+    "resource/audio/weapons/fire_003.wav",
+    "resource/audio/weapons/fire_004.wav",
+    "resource/audio/weapons/fire_005.wav",
+]
+bus = "sfx"
+gain_db = -3.0
+pitch_cents = 60.0
+max_instances = 12          # 10 players can all be firing; leave headroom
+priority = 200
+min_distance = 3.0
+max_distance = 90.0
+rolloff = 1.2
+
+[weapon_fire_empty]
+files = ["resource/audio/weapons/fire_empty.wav"]
+bus = "sfx"
+gain_db = -6.0
+pitch_cents = 20.0
+max_instances = 2
+priority = 120
+
+[weapon_reload]
+files = ["resource/audio/weapons/reload.wav"]
+bus = "sfx"
+pitch_cents = 15.0
+max_instances = 4
+priority = 160
+min_distance = 2.0
+max_distance = 40.0
+
+[weapon_reload_empty]
+files = ["resource/audio/weapons/reload_empty.wav"]
+bus = "sfx"
+pitch_cents = 15.0
+max_instances = 4
+priority = 160
+min_distance = 2.0
+max_distance = 40.0
+
+[footstep]
+files = [
+    "resource/audio/character/footstep_001.wav",
+    "resource/audio/character/footstep_002.wav",
+    "resource/audio/character/footstep_003.wav",
+    "resource/audio/character/footstep_004.wav",
+    "resource/audio/character/footstep_005.wav",
+]
+bus = "sfx"
+gain_db = -8.0
+pitch_cents = 120.0
+max_instances = 10
+priority = 60               # first to be stolen when the pool is under pressure
+min_distance = 1.5
+max_distance = 25.0
+rolloff = 1.5
+
+[jump_start]
+files = ["resource/audio/character/jump_start.wav"]
+bus = "sfx"
+gain_db = -6.0
+pitch_cents = 80.0
+max_instances = 4
+priority = 90
+min_distance = 1.5
+max_distance = 30.0
+
+[jump_land]
+files = ["resource/audio/character/jump_land.wav"]
+bus = "sfx"
+gain_db = -6.0
+pitch_cents = 80.0
+max_instances = 4
+priority = 90
+min_distance = 1.5
+max_distance = 30.0
+
+[hitmarker]
+files = ["resource/audio/ui/hitmarker.wav"]
+bus = "ui"
+gain_db = -2.0
+max_instances = 4
+priority = 220              # feedback the player must never miss
+
+[take_damage]
+files = [
+    "resource/audio/character/take_damage_01.wav",
+    "resource/audio/character/take_damage_02.wav",
+    "resource/audio/character/take_damage_03.wav",
+    "resource/audio/character/take_damage_04.wav",
+]
+bus = "sfx"
+pitch_cents = 50.0
+max_instances = 3
+priority = 210
+
+[death]
+files = ["resource/audio/character/death.wav"]
+bus = "sfx"
+max_instances = 4
+priority = 200
+min_distance = 2.0
+max_distance = 40.0
+
+[kill_confirm]
+files = ["resource/audio/ui/kill_confirm.wav"]
+bus = "ui"
+max_instances = 2
+priority = 230
+
+[ads_in]
+files = ["resource/audio/weapons/ads_in.wav"]
+bus = "sfx"
+gain_db = -10.0
+max_instances = 2
+priority = 80
+
+[ads_out]
+files = ["resource/audio/weapons/ads_out.wav"]
+bus = "sfx"
+gain_db = -10.0
+max_instances = 2
+priority = 80
+
+[ui_click]
+files = ["resource/audio/ui/click.wav"]
+bus = "ui"
+gain_db = -6.0
+max_instances = 3
+priority = 150
+
+[ambient_loop]
+files = ["resource/audio/ambient/warzone_loop.wav"]
+bus = "ambient"
+loop = true
+gain_db = -18.0
+max_instances = 1
+priority = 10

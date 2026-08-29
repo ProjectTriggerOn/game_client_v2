@@ -91,6 +91,7 @@ if "$(ConfigurationName)" == "Release" (
 robocopy "$(ProjectDir)resource" "$(TargetDir)resource" /MIR /NJH /NJS /NFL /NDL /NP
 if errorlevel 8 exit /b 1
 xcopy /Y /D /I "$(ProjectDir)config\config.toml" "$(TargetDir)config\"
+xcopy /Y /D /I "$(ProjectDir)config\audio_catalog.toml" "$(TargetDir)config\"
 if errorlevel 1 exit /b 1
 exit /b 0
 )</Command>
@@ -153,6 +154,7 @@ if "$(ConfigurationName)" == "Release" (
 robocopy "$(ProjectDir)resource" "$(TargetDir)resource" /MIR /NJH /NJS /NFL /NDL /NP
 if errorlevel 8 exit /b 1
 xcopy /Y /D /I "$(ProjectDir)config\config.toml" "$(TargetDir)config\"
+xcopy /Y /D /I "$(ProjectDir)config\audio_catalog.toml" "$(TargetDir)config\"
 if errorlevel 1 exit /b 1
 exit /b 0
 )</Command>
@@ -237,6 +239,7 @@ exit /b 0
     <ClCompile Include="UI\ui_bridge.cpp" />
     <ClCompile Include="UI\ui_hot_reload.cpp" />
     <ClCompile Include="Audio\miniaudio_impl.cpp" />
+    <ClCompile Include="Audio\audio_catalog.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Core\font.h" />
@@ -314,6 +317,8 @@ exit /b 0
     <ClInclude Include="UI\ui_input_queue.h" />
     <ClInclude Include="UI\ui_bridge.h" />
     <ClInclude Include="UI\ui_hot_reload.h" />
+    <ClInclude Include="Audio\audio.h" />
+    <ClInclude Include="Audio\audio_catalog.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\infinite_grid_pixel.hlsl">
@@ -385,6 +390,7 @@ exit /b 0
   </ItemGroup>
   <ItemGroup>
     <None Include="config\config.toml" />
+    <None Include="config\audio_catalog.toml" />
     <None Include="TriggerOn.sln" />
     <None Include="resource\model\sky.fbx" />
   </ItemGroup>
