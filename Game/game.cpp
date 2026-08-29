@@ -31,6 +31,8 @@
 #include "ui_widget.h"
 #include "ui_manager.h"
 #include "mouse.h"
+#include "audio.h"
+#include "audio_events.h"
 #include <cwchar>
 #include <vector>
 #include <cstdio>
@@ -89,6 +91,21 @@ namespace{
 	bool     g_HasSnapshot = false;
 	uint32_t g_LastShownKillSeq = 0;   // highest kill seq already pushed to the feed
 	bool     g_ScoreboardShown = false;
+
+	// ========================================================================
+	// Audio events: latest snapshot cache for once-per-frame derivation
+	// ========================================================================
+	// Latest snapshot of this frame, kept for the audio event derivation.
+	// Derivation runs once per frame rather than per snapshot: every signal it
+	// reads is either cumulative (fireCounter, latestKillSeq) or a level flag,
+	// so the newest snapshot carries the full delta and running it once keeps
+	// the footstep metronome on the frame clock.
+	//
+	// g_HasSnapshot (above) already tracks "at least one snapshot received
+	// this session" with exactly the semantics needed here, so audio reuses
+	// it instead of declaring a second bool with the same name.
+	Snapshot        g_LatestSnapshot{};
+	AudioEventState g_AudioEventState{};
 
 	// Append {"id":I,"k":K,"d":D,"me":bool} rows for one team into a bounded
 	// buffer; returns chars written. Iterates localPlayer (under localPlayerTeam)
@@ -360,6 +377,11 @@ void Game_Update(double elapsed_time)
 			UI::PushMatchResult(rjson);
 			g_GameState = RESULT;
 		}
+
+		// Cache for audio event derivation (see g_LatestSnapshot above) — this
+		// runs once per frame, after the loop, using the newest snapshot, not
+		// once per packet.
+		g_LatestSnapshot = snap;
 	}
 
 	// Tab scoreboard: an overlay WITHIN the hud page (Display level — no cursor
@@ -413,6 +435,29 @@ void Game_Update(double elapsed_time)
 	{
 		if (g_RemotePlayerActive[i])
 			g_RemotePlayers[i].Update(elapsed_time, g_ClientClock);
+	}
+
+	// Audio events derived from the newest snapshot.  Positions resolve to the
+	// remote player's RENDER position so the sound lines up with the model the
+	// player can see, not with the raw server state they cannot.
+	if (g_HasSnapshot)
+	{
+		AudioEvent    events[32];
+		const uint8_t count = AudioEvents_Derive(g_AudioEventState, g_LatestSnapshot,
+		                                         elapsed_time, events, 32);
+		for (uint8_t i = 0; i < count; ++i)
+		{
+			const AudioEvent& e = events[i];
+			if (e.playerId == AUDIO_EVENT_LOCAL)
+			{
+				Audio_PlayOneShot(e.id, e.gainScale);
+			}
+			else if (e.playerId < MAX_PLAYERS && g_RemotePlayerActive[e.playerId])
+			{
+				Audio_PlayOneShotAt(e.id, g_RemotePlayers[e.playerId].GetRenderPosition(),
+				                    e.gainScale);
+			}
+		}
 	}
 
 	Fade_Update(elapsed_time);

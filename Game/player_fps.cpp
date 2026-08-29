@@ -1,6 +1,7 @@
 #include "player_fps.h"
 #include "player_cam_fps.h"
 #include "animator.h"
+#include "audio.h"
 #include "key_logger.h"
 #include "cube.h"
 #include "debug_log.h"
@@ -155,8 +156,14 @@ void PlayerFps::ConsumeRound()
 	m_Ammo--;
 	m_FireCounter++;
 
+	// Predicted locally so the shot is heard the instant the trigger is pulled.
+	// Waiting for the snapshot would put the whole RTT between input and sound.
+	Audio_PlayOneShot(SoundId::WeaponFire);
+
 	if (m_Ammo == 0 && m_AmmoReserve > 0)
 		m_StateMachine->SetWeaponState(WeaponState::RELOADING_OUT_OF_AMMO);
+	else if (m_Ammo == 0)
+		Audio_PlayOneShot(SoundId::WeaponFireEmpty);
 }
 
 void PlayerFps::Update(double elapsed_time)
@@ -424,6 +431,8 @@ void PlayerFps::Update(double elapsed_time)
 			WeaponState nextReload = (m_Ammo == 0)
 				? WeaponState::RELOADING_OUT_OF_AMMO
 				: WeaponState::RELOADING;
+			Audio_PlayOneShot(m_Ammo == 0 ? SoundId::WeaponReloadEmpty
+			                              : SoundId::WeaponReload);
 			m_StateMachine->SetWeaponState(nextReload);
 		}
 	}
