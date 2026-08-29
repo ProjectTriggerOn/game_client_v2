@@ -5,10 +5,27 @@
 # because they are never spatialized.
 #
 # Usage (from the repo root):  bash tools/convert_audio.sh
+#   AUDIO_SRC=/path/to/"Low Poly Shooter Pack"/Audio bash tools/convert_audio.sh
+#
+# The default SRC is the author's local checkout of the pack, which is NOT in
+# this repository (it is a licensed Unity Asset Store download).  Override it
+# with AUDIO_SRC on any other machine.  The generated WAVs are committed, so
+# this script only needs to run when the sound set itself changes.
 set -euo pipefail
 
-SRC="/d/WORKPLACE/TriggerOn/Low Poly Shooter Pack/Audio"
+SRC="${AUDIO_SRC:-/d/WORKPLACE/TriggerOn/Low Poly Shooter Pack/Audio}"
 DST="resource/audio"
+
+# Fail once, with a sentence, instead of 26 times with ffmpeg's exit status.
+if ! command -v ffmpeg >/dev/null 2>&1; then
+    echo "error: ffmpeg is not on PATH. Install it (https://ffmpeg.org/) and retry." >&2
+    exit 1
+fi
+if [ ! -d "$SRC" ]; then
+    echo "error: source directory not found: $SRC" >&2
+    echo "       Set AUDIO_SRC to the Low Poly Shooter Pack's Audio/ folder." >&2
+    exit 1
+fi
 
 mono() {  # mono <src-relative> <dst-relative>
     mkdir -p "$(dirname "$DST/$2")"
@@ -43,7 +60,8 @@ for i in 01 02 03 04; do
 done
 
 echo "ui:"
-mono "SFX/Impacts/S_WEP_Impact_Bullet_01.wav"          "ui/hitmarker.wav"
+# No hitmarker: there is no hit-feedback feature to trigger one (see the design
+# doc's section 14), and a sound nothing can play is dead weight in the repo.
 mono "SFX/Target/S_TargetGoDown.wav"                   "ui/kill_confirm.wav"
 mono "SFX/Weapons/Attachments/S_WEP_Flashlight_Click.wav" "ui/click.wav"
 

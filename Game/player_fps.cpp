@@ -313,6 +313,12 @@ void PlayerFps::Update(double elapsed_time)
 	     ws != WeaponState::ADS && ws != WeaponState::ADS_FIRING) ||
 	    (isRightTrigger && isReloading))
 	{
+		// The condition above is still true while ADS_IN is playing out (the
+		// button is simply held), so gate the sound on the state actually
+		// changing — otherwise the sight-raise plays once per frame.
+		// 2D like every other local-player sound: it happens at the shoulder,
+		// not somewhere in the world.
+		if (ws != WeaponState::ADS_IN) Audio_PlayOneShot(SoundId::AdsIn);
 		m_StateMachine->SetWeaponState(WeaponState::ADS_IN);
 	}
 
@@ -321,7 +327,10 @@ void PlayerFps::Update(double elapsed_time)
 		 m_StateMachine->GetWeaponState() == WeaponState::ADS_IN ||
 		 m_StateMachine->GetWeaponState() == WeaponState::ADS_FIRING))
 	{
-		// Exit ADS — transition fire (additive) will keep firing if left is held
+		// Exit ADS — transition fire (additive) will keep firing if left is held.
+		// No edge guard needed here: the three states tested are all left behind
+		// by the transition, so this branch cannot re-enter from ADS_OUT.
+		Audio_PlayOneShot(SoundId::AdsOut);
 		m_StateMachine->SetWeaponState(WeaponState::ADS_OUT);
 	}
 
