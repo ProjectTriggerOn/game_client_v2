@@ -156,11 +156,14 @@ private:
 	double m_WeaponRPM;
 	double m_FireTimer;
 	int m_FireCounter;
-	// Hitmarker (spec §6.2): latched from the snapshot's lastShot* pair,
-	// matched against our fireCounter low byte so stale snapshots don't
-	// re-trigger. Alpha decays at frame rate; kill variant recolors.
+	// Hitmarker (spec §6.2): latched from the snapshot's lastShot* pair.
+	// Dedup by shot seq — the server's result is cross-tick persistent, so
+	// only the FIRST snapshot carrying a new seqMod fires the marker; later
+	// snapshots of the same result are ignored. Alpha decays at frame rate;
+	// kill variant recolors.
 	float m_HitmarkerAlpha = 0.0f;   // 1..0 over HITMARKER_LIFE
 	bool  m_HitmarkerKill  = false;
+	uint8_t m_LastLatchedShotSeq = 0xFF;   // dedup: seqMod of the last latched shot
 	// Recoil (COD model): client-side prediction, advanced on ConsumeRound,
 	// decayed per frame via PlayerCamFps_DecayPunch, reconciled against the
 	// snapshot in ApplyServerCorrection. punch NEVER touches camera yaw/pitch.

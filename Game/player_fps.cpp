@@ -937,25 +937,21 @@ void PlayerFps::ApplyServerCorrection(const NetPlayerState& serverState)
 //=============================================================================
 // ApplyLastShot — hitmarker latch (spec §6.2).
 //
-// The snapshot carries the result of this player's LATEST resolved shot with
-// its fireCounter low byte; require both so a backlog snapshot of older shots
-// can't fire the marker for a shot we already know missed.
+// The snapshot carries the result of this player's LATEST resolved shot tagged
+// with its fireCounter low byte. The server's result is cross-tick persistent
+// (rewritten only by the NEXT shot), so dedup by shot seq: the FIRST snapshot
+// carrying a new seqMod fires the marker; later snapshots of the same result
+// are ignored. This keeps the ~100ms fade from being re-refreshed at 32Hz.
 //=============================================================================
 void PlayerFps::ApplyLastShot(const Snapshot& snap)
 {
-	// ---- Hitmarker latch (spec §6.2) --------------------------------------
-	// The snapshot carries the result of this player's LATEST resolved shot
-	// with its fireCounter low byte; require both so a backlog snapshot of
-	// older shots can't fire the marker for a shot we already know missed.
+	if (snap.lastShotResult != LastShotResult::MISS &&
+	    snap.lastShotSeqMod != m_LastLatchedShotSeq)
 	{
-		const uint8_t seqMod = static_cast<uint8_t>(m_FireCounter & 0xFFu);
-		if (snap.lastShotResult != LastShotResult::MISS &&
-		    snap.lastShotSeqMod == seqMod)
-		{
-			m_HitmarkerKill  = (snap.lastShotResult ==
-			                    LastShotResult::HIT_KILL);
-			m_HitmarkerAlpha = 1.0f;
-		}
+		m_LastLatchedShotSeq = snap.lastShotSeqMod;
+		m_HitmarkerKill  = (snap.lastShotResult ==
+		                    LastShotResult::HIT_KILL);
+		m_HitmarkerAlpha = 1.0f;
 	}
 }
 

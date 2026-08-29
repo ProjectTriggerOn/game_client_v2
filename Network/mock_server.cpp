@@ -53,6 +53,8 @@ void MockServer::Initialize(INetwork* pNetwork, CollisionWorld* pCollisionWorld)
 
     m_FireTimer = 0.0;
     m_FireCounter = 0;
+    m_LastShotResult = LastShotResult::MISS;
+    m_LastShotSeqMod = 0;
 
     // Fresh match (ResetSession routes through Initialize, so this also re-arms
     // a new round on every game-scene re-entry).
@@ -811,10 +813,25 @@ void MockServer::ProcessFiring()
 
     if (hitBot >= 0)
     {
+        // Last-shot result (hitmarker): HIT_PLAYER / HIT_KILL decided the same
+        // way as GameServer::ProcessFiring — by whether the target survives
+        // RED_DAMAGE (DamageBot kills when health <= dmg).
+        m_LastShotResult = (m_Bots[hitBot].state.health > RED_DAMAGE)
+            ? LastShotResult::HIT_PLAYER
+            : LastShotResult::HIT_KILL;
         DamageBot(hitBot, RED_DAMAGE, /*killerId=*/0);  // local player = id 0
         // Hit marker for local player (carries the bot id it struck)
         m_PlayerState.hitByPlayerId = static_cast<uint8_t>(hitBot + 1);
     }
+
+    // Record the shot result for the local player's snapshot (hitmarker,
+    // spec §6.2) — mirrors GameServer::ProcessFiring's tail. HIT_PLAYER /
+    // HIT_KILL were already written in the hit branch above; here we only
+    // stamp MISS on a clean whiff, so the kill marker is never clobbered.
+    // seqMod dedups the cross-tick persistent result on the client.
+    if (hitBot < 0)
+        m_LastShotResult = LastShotResult::MISS;
+    m_LastShotSeqMod = static_cast<uint8_t>(m_FireCounter & 0xFFu);
 }
 
 //-----------------------------------------------------------------------------
@@ -1156,6 +1173,10 @@ void MockServer::UpdatePlayerRespawn()
     m_ReloadTimer = 0.0;
     m_FireTimer = 0.0;
     m_PrevButtons = 0;  // reset edge detection across respawn
+    // Clear the last-shot latch for the fresh life (mirrors GameServer's
+    // respawn branch) so no stale hit marker fires after revival.
+    m_LastShotResult = LastShotResult::MISS;
+    m_LastShotSeqMod = 0;
 }
 
 //-----------------------------------------------------------------------------
@@ -1237,6 +1258,11 @@ void MockServer::BroadcastSnapshot()
     snapshot.localPlayer = m_PlayerState;
     snapshot.localPlayerId = 0;
     snapshot.localPlayerTeam = LOCAL_PLAYER_TEAM;
+    // Recoil shot result (hitmarker, spec §6.2): the RECIPIENT's own latest
+    // shot. Mirrors GameServer::BroadcastSnapshots — only the local player's
+    // result is signaled, exactly what the hitmarker needs.
+    snapshot.lastShotResult = m_LastShotResult;
+    snapshot.lastShotSeqMod = m_LastShotSeqMod;
 
     // Global match / scoring state (mirrors GameServer::BroadcastSnapshots).
     snapshot.matchState         = m_MatchState;
