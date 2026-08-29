@@ -108,6 +108,9 @@
     <ClCompile Include="Game\collision_world.cpp">
       <Filter>Game</Filter>
     </ClCompile>
+    <ClCompile Include="Game\raycast.cpp">
+      <Filter>Game</Filter>
+    </ClCompile>
     <ClCompile Include="Graphics\polygon.cpp">
       <Filter>Graphics</Filter>
     </ClCompile>
@@ -282,6 +285,9 @@
       <Filter>Game</Filter>
     </ClInclude>
     <ClInclude Include="Game\collision_world.h">
+      <Filter>Game</Filter>
+    </ClInclude>
+    <ClInclude Include="Game\raycast.h">
       <Filter>Game</Filter>
     </ClInclude>
     <ClInclude Include="Graphics\shader.h">

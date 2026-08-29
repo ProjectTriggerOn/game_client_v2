@@ -207,6 +207,7 @@ exit /b 0
     <ClCompile Include="Game\player_cam_tps.cpp" />
     <ClCompile Include="Game\player_fps.cpp" />
     <ClCompile Include="Game\player_state_machine.cpp" />
+    <ClCompile Include="Game\raycast.cpp" />
     <ClCompile Include="Network\remote_player.cpp" />
     <ClCompile Include="Network\remote_player_state_machine.cpp" />
     <ClCompile Include="Graphics\polygon.cpp" />
@@ -287,6 +288,7 @@ exit /b 0
     <ClInclude Include="Game\player_cam_tps.h" />
     <ClInclude Include="Game\player_fps.h" />
     <ClInclude Include="Game\player_state_machine.h" />
+    <ClInclude Include="Game\raycast.h" />
     <ClInclude Include="Network\remote_player.h" />
     <ClInclude Include="Network\remote_player_state_machine.h" />
     <ClInclude Include="Graphics\polygon.h" />
