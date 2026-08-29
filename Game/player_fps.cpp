@@ -878,6 +878,16 @@ void PlayerFps::ApplyServerCorrection(const NetPlayerState& serverState)
 		// m_RespawnLockTimer > 0.0 block above) -- playing it there would
 		// retrigger the sound every frame for the whole lock duration.
 		m_StateMachine->SetWeaponState(WeaponState::TAKING_OUT);
+
+		// TEMPORARY DIAGNOSTIC (Defect 2, 2026-08-30 playtest report: respawn
+		// take-out is still silent). Confirms this call site is actually
+		// reached on the respawn rising edge. Read alongside the "play
+		// dropped: ..." logging in Audio/audio_backend_miniaudio.cpp: if this
+		// line appears with no matching drop log, the voice started and the
+		// remaining explanation is something making it inaudible (bus/master
+		// volume, gain, or the file itself) rather than a dropped play.
+		// Remove once the next run's log has answered the question.
+		DebugLog_Printf("audio", "respawn take-out: calling Audio_PlayOneShot(WeaponTakeOut)");
 		Audio_PlayOneShot(SoundId::WeaponTakeOut);
 
 		// Clear input history and sync tick on respawn

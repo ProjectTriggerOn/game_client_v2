@@ -460,29 +460,51 @@ void PlayOneShot(SoundId id, const DirectX::XMFLOAT3* world, float gainScale)
 {
     if (!g_EngineInited || (size_t)id >= (size_t)SoundId::Count) return;
     const SoundDef& def = AudioCatalog_Get(id);
-    if (!def.IsValid()) return;
+    if (!def.IsValid()) {
+        DebugLog_Printf("audio", "play dropped: '%s' - no valid catalog entry", AudioCatalog_KeyOf(id));
+        return;
+    }
 
     Pool& pool = g_Pools[(size_t)id];
-    if (pool.voices.empty()) return;
+    if (pool.voices.empty()) {
+        DebugLog_Printf("audio", "play dropped: '%s' - pool has zero voices", AudioCatalog_KeyOf(id));
+        return;
+    }
 
     size_t index = 0;
     Voice* v = AcquireVoice(pool, def, index);
-    if (v) StartVoice(*v, def, id, world, gainScale, false);
+    if (!v) {
+        DebugLog_Printf("audio", "play dropped: '%s' - AcquireVoice refused (global budget/priority)", AudioCatalog_KeyOf(id));
+        return;
+    }
+    if (!StartVoice(*v, def, id, world, gainScale, false)) {
+        DebugLog_Printf("audio", "play dropped: '%s' - StartVoice failed", AudioCatalog_KeyOf(id));
+    }
 }
 
 uint32_t PlayLoop(SoundId id, const DirectX::XMFLOAT3* world)
 {
     if (!g_EngineInited || (size_t)id >= (size_t)SoundId::Count) return 0;
     const SoundDef& def = AudioCatalog_Get(id);
-    if (!def.IsValid()) return 0;
+    if (!def.IsValid()) {
+        DebugLog_Printf("audio", "play dropped: '%s' - no valid catalog entry", AudioCatalog_KeyOf(id));
+        return 0;
+    }
 
     Pool& pool = g_Pools[(size_t)id];
-    if (pool.voices.empty()) return 0;
+    if (pool.voices.empty()) {
+        DebugLog_Printf("audio", "play dropped: '%s' - pool has zero voices", AudioCatalog_KeyOf(id));
+        return 0;
+    }
 
     size_t index = 0;
     Voice* v = AcquireVoice(pool, def, index);
-    if (!v) return 0;
+    if (!v) {
+        DebugLog_Printf("audio", "play dropped: '%s' - AcquireVoice refused (global budget/priority)", AudioCatalog_KeyOf(id));
+        return 0;
+    }
     if (!StartVoice(*v, def, id, world, 1.0f, true)) {
+        DebugLog_Printf("audio", "play dropped: '%s' - StartVoice failed", AudioCatalog_KeyOf(id));
         // StartVoice can fail after ma_sound_init_from_file already succeeded
         // (i.e. ma_sound_start itself failed), leaving the voice inited and
         // marked looping. ReclaimVoices() only reclaims !looping voices, so
