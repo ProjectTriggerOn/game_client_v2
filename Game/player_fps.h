@@ -92,10 +92,9 @@ public:
 	//-------------------------------------------------------------------------
 	uint32_t GetClientTick() const { return m_CurrentClientTick; }
 
-	// Recoil accessors: punch = current VISUAL+KICK camera offset (rad);
-	// spread = current aim-cone half-angle (rad). The native crosshair and
-	// debug overlay consume both.
-	void GetRecoilPunch(float& dPitch, float& dYaw) const;
+	// Recoil accessors: spread = current aim-cone half-angle (rad), consumed by
+	// the native crosshair. The camera punch lives in the player_cam_fps
+	// accumulator (PlayerCamFps_GetPunch) — the crosshair reads it from there.
 	float GetSpreadRadians() const;
 	bool IsADS() const;
 
@@ -163,14 +162,21 @@ private:
 	// kill variant recolors.
 	float m_HitmarkerAlpha = 0.0f;   // 1..0 over HITMARKER_LIFE
 	bool  m_HitmarkerKill  = false;
-	uint8_t m_LastLatchedShotSeq = 0xFF;   // dedup: seqMod of the last latched shot
+	// Latch state. seqMod is an 8-bit wire value, so 0xFF is a REAL sequence,
+	// not a usable "no latch" sentinel — a separate hasLatched bool removes
+	// the ambiguity (a fresh player with seqMod==0xFF would otherwise never
+	// re-fire a hit until the seq wrapped).
+	bool    m_HasLatchedShot    = false;
+	uint8_t m_LastLatchedShotSeq = 0;   // dedup: seqMod of the last latched shot
 	// Damage-vignette rising-edge latch (spec §6.3): remembers the previous
 	// snapshot's hitByPlayerId so only the 0xFF -> attacker-id transition fires
 	// the HUD flash; the falling edge just clears the latch (no animation).
 	bool m_WasHit = false;
 	// Recoil (COD model): client-side prediction, advanced on ConsumeRound,
-	// decayed per frame via PlayerCamFps_DecayPunch, reconciled against the
-	// snapshot in ApplyServerCorrection. punch NEVER touches camera yaw/pitch.
+	// decayed per frame HERE (RecoilAdvance, same exp(-5dt) the server ticks
+	// with) and mirrored into the camera punch accumulator (PlayerCamFps_*
+	// follows the pool's deltas + its own same-rate decay), reconciled against
+	// the snapshot in ApplyServerCorrection. punch NEVER touches camera yaw/pitch.
 	RecoilMath::RecoilState m_Recoil{};
 	bool m_TransitionFiring;
 	uint8_t m_TeamId;

@@ -183,8 +183,24 @@ void PlayerFps::Update(double elapsed_time)
 {
 	const float frameDt = static_cast<float>(elapsed_time);
 
-	// Recoil punch decay at frame rate (fps-independent exponential).
+	// Recoil punch decay at frame rate (fps-independent exponential). The
+	// camera punch accumulator keeps its OWN recovery — it is a pure delta-sync
+	// follower of the pool below (AddPunch is called only on fire/reconcile, so
+	// the pool's per-frame negative delta is never fed to it). Same exp(-5dt)
+	// rate on both sides, so the rendered view tracks the pool exactly.
 	PlayerCamFps_DecayPunch(frameDt);
+
+	// Recoil pool decay at frame rate — SAME exponential formula the server
+	// ticks with (spec §5.1/§5.2: one truth source). Previously m_Recoil was
+	// only advanced with dt=0 in ConsumeRound, so the pool never shrank between
+	// shots: bloomDeg racheted up while the 32Hz snapshot correction fought it
+	// (injection ≈ extraction at steady state ⇒ rendered punch ≈ 0, bloom only
+	// grew). Decaying the pool here makes it converge to the server's steady
+	// state; the camera punch follows via its own decay + the reconcile delta.
+	RecoilMath::RecoilAdvance(m_Recoil, m_TeamId,
+	                          static_cast<uint16_t>(m_FireCounter & 0xFFFFu),
+	                          /*ads=*/false, /*newlyFired=*/false,
+	                          frameDt);
 
 	// Hitmarker fade (~100ms linear, spec §6.2).
 	constexpr float HITMARKER_LIFE = 0.1f;
@@ -954,16 +970,26 @@ void PlayerFps::ApplyServerCorrection(const NetPlayerState& serverState)
 // (rewritten only by the NEXT shot), so dedup by shot seq: the FIRST snapshot
 // carrying a new seqMod fires the marker; later snapshots of the same result
 // are ignored. This keeps the ~100ms fade from being re-refreshed at 32Hz.
+// A MISS also advances the latch — the server overwrites the result on every
+// shot, so an 0xFF-ish old hit must not re-latch after a newer miss re-broadcast.
 //=============================================================================
 void PlayerFps::ApplyLastShot(const Snapshot& snap)
 {
-	if (snap.lastShotResult != LastShotResult::MISS &&
-	    snap.lastShotSeqMod != m_LastLatchedShotSeq)
+	const bool hit = (snap.lastShotResult != LastShotResult::MISS);
+	if (hit && (!m_HasLatchedShot || snap.lastShotSeqMod != m_LastLatchedShotSeq))
 	{
+		// New shot resolved as a hit — fire the marker (or first-ever hit).
 		m_LastLatchedShotSeq = snap.lastShotSeqMod;
-		m_HitmarkerKill  = (snap.lastShotResult ==
-		                    LastShotResult::HIT_KILL);
-		m_HitmarkerAlpha = 1.0f;
+		m_HasLatchedShot     = true;
+		m_HitmarkerKill      = (snap.lastShotResult == LastShotResult::HIT_KILL);
+		m_HitmarkerAlpha     = 1.0f;
+	}
+	else if (!hit)
+	{
+		// MISS refreshes the latch record (a hit with the same seq can never
+		// be re-broadcast after a miss that superseded it).
+		m_LastLatchedShotSeq = snap.lastShotSeqMod;
+		m_HasLatchedShot     = true;
 	}
 }
 
@@ -993,12 +1019,6 @@ DirectX::XMFLOAT3 PlayerFps::GetEyePosition() const
 	eyePos.y = m_PrevPhysicsPosition.y + (m_Position.y - m_PrevPhysicsPosition.y) * a + 1.5f;
 	eyePos.z = m_PrevPhysicsPosition.z + (m_Position.z - m_PrevPhysicsPosition.z) * a;
 	return eyePos;
-}
-
-void PlayerFps::GetRecoilPunch(float& dPitch, float& dYaw) const
-{
-	dPitch = m_Recoil.punchPitch + m_Recoil.shotKickPitch;
-	dYaw   = m_Recoil.punchYaw + m_Recoil.shotKickYaw;
 }
 
 float PlayerFps::GetSpreadRadians() const

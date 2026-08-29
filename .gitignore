@@ -77,6 +77,9 @@ StyleCopReport.xml
 *.ilk
 *.meta
 *.obj
+# Standalone test binaries (e.g. _test_recoil_math.exe from the g++ single-file
+# test build documented at the top of Game/tests/test_recoil_math.cpp)
+_*.exe
 *.iobj
 *.pch
 *.pdb

@@ -564,8 +564,28 @@ void Game_Draw()
 		const float spreadPx = g_PlayerFps->GetSpreadRadians() * PX_PER_RAD;
 		const float punchPx  = fabsf(dP) * (PX_PER_RAD * 2.5f);  // punch opens wider
 		const bool  ads      = g_PlayerFps->IsADS();
-		const float arm      = ads ? 6.0f : 10.0f;   // arm half-length (px)
-		const float gap      = 4.0f + spreadPx + punchPx;
+
+		// ADS blend (spec §6.1: no arm-length pop on the ADS transition).
+		// Game_Draw has no frame dt (its signature takes no time), so the
+		// blend converges with a fixed exponential factor — ~90% in 10 frames
+		// (≈80ms at 75Hz), frame-rate dependent but imperceptibly so. IsADS()
+		// already covers ADS_IN/ADS_OUT, so this eases across the whole
+		// weapon-state-machine transition, matching the arm-length intent.
+		static float s_adsBlend = 0.0f;
+		const float adsTarget = ads ? 1.0f : 0.0f;
+		s_adsBlend += (adsTarget - s_adsBlend) * 0.2f;
+		const float arm = 10.0f + (6.0f - 10.0f) * s_adsBlend;   // 10 → 6 px
+
+		// Inner gap eases toward its target (base + spread + punch). The
+		// spread's ADS/HIP difference is a HARD switch inside
+		// GetSpreadRadians (1.2° → 0.2° base cone); smoothing the gap absorbs
+		// that pop instead of the crosshair snapping open/closed. The gap is
+		// draw-layer state, so this also dampens spread jitter between frames.
+		static float s_gap = 4.0f;
+		const float gapTarget = 4.0f + spreadPx + punchPx;
+		s_gap += (gapTarget - s_gap) * 0.2f;
+		const float gap = s_gap;
+
 		const XMFLOAT4 GREEN = { 0.1f, 1.0f, 0.1f, 0.9f };
 		// four arms: N/S/E/W bars from the inner gap outward
 		Sprite_Draw(g_OverlayTexId, cx - TH * 0.5f, cy - gap - arm, TH, arm, GREEN);

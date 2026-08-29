@@ -14,6 +14,7 @@
 
 #include "net_common.h"
 #include "collision_world.h"
+#include "recoil_math.h"   // RecoilMath::RecoilState (mock mirrors GameServer)
 
 class INetwork;
 
@@ -193,6 +194,11 @@ private:
     double   m_FireTimer = 0.0;
     uint16_t m_FireCounter = 0;
     double   m_PlayerRespawnTimer = 0.0;  // counts down while the player IS_DEAD
+
+    // Recoil (COD model, spec §4.3): server-authoritative pool, mirroring
+    // GameServer::PlayerData.recoil. Advanced on shot in ProcessFiring,
+    // decayed once per tick, broadcast into m_PlayerState.* for the snapshot.
+    RecoilMath::RecoilState m_PlayerRecoil{};
 
     // Last shot result for Snapshot.lastShot* (hitmarker, spec §6.2). Mirrors
     // GameServer::PlayerData::lastShot* — cross-tick persistent until the next

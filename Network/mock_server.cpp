@@ -56,6 +56,10 @@ void MockServer::Initialize(INetwork* pNetwork, CollisionWorld* pCollisionWorld)
     m_LastShotResult = LastShotResult::MISS;
     m_LastShotSeqMod = 0;
 
+    // Recoil pool reset (spec §7): shotKick never decays, so a fresh round
+    // must start from a clean pool — mirrors GameServer's respawn reset.
+    m_PlayerRecoil = RecoilMath::RecoilState{};
+
     // Fresh match (ResetSession routes through Initialize, so this also re-arms
     // a new round on every game-scene re-entry).
     m_MatchState = MatchState::PLAYING;
@@ -215,6 +219,18 @@ void MockServer::Tick()
     // just killed the player this tick.
     if (playing && (m_PlayerState.stateFlags & NetStateFlags::IS_DEAD) == 0)
         ProcessFiring();
+
+    // 4b. Recoil decay + broadcast (spec §4.3) — mirror of GameServer's
+    // per-tick decay: one tick's worth of punch/bloom recovery with the same
+    // exponential factor the client uses per frame. Runs AFTER ProcessFiring,
+    // so a shot fired this tick gets its punch applied and then one tick of
+    // decay — matching the client's accumulate-then-decay order.
+    RecoilMath::RecoilAdvance(m_PlayerRecoil, LOCAL_PLAYER_TEAM, m_FireCounter,
+                              /*ads=*/false, /*newlyFired=*/false,
+                              static_cast<float>(TICK_DURATION));
+    m_PlayerState.punchPitch    = m_PlayerRecoil.punchPitch;
+    m_PlayerState.punchYaw      = m_PlayerRecoil.punchYaw;
+    m_PlayerState.shotKickPitch = m_PlayerRecoil.shotKickPitch;
 
     // 5. Update tick ID in local state (and ack of last processed input — see GameServer)
     m_PlayerState.tickId = m_CurrentTick;
@@ -730,6 +746,14 @@ void MockServer::ProcessFiring()
         m_PlayerState.stateFlags |= NetStateFlags::IS_RELOAD_EMPTY;
     }
 
+    // Advance recoil for THIS shot (spec §4.3) — mirror of
+    // GameServer::ProcessFiring 3a/3b. fireCounter was already incremented,
+    // so (fireCounter-1) indexes the shot just taken. dt=0: per-tick decay
+    // is Tick()'s job (runs right after, before the broadcast).
+    const bool adsShot = (m_PlayerState.stateFlags & NetStateFlags::IS_ADS) != 0;
+    RecoilMath::RecoilAdvance(m_PlayerRecoil, LOCAL_PLAYER_TEAM, m_FireCounter,
+                              adsShot, /*newlyFired=*/true, /*dt=*/0.0f);
+
     // Eye position
     DirectX::XMFLOAT3 eyePos = {
         m_PlayerState.position.x,
@@ -737,12 +761,23 @@ void MockServer::ProcessFiring()
         m_PlayerState.position.z
     };
 
-    // Ray direction from yaw/pitch
-    float cosPitch = cosf(m_PlayerState.pitch);
+    // Ray direction from yaw/pitch — WYSIWYG (spec §2): bullets follow the
+    // punched view the client renders, plus this shot's deterministic
+    // bloom-cone offset (fireCounter is the seed; no RNG on either side).
+    // Same formula as GameServer::ProcessFiring (DirectionFromYawPitch).
+    float dPitch = 0.0f, dYaw = 0.0f;
+    RecoilMath::RecoilTotalOffsets(m_PlayerRecoil, dPitch, dYaw);
+    const float spread = RecoilMath::RecoilSpreadRadians(
+        LOCAL_PLAYER_TEAM, adsShot, m_PlayerRecoil.bloomDeg, 0.0f);
+    float coneDP = 0.0f, coneDY = 0.0f;
+    RecoilMath::RecoilConeOffset(spread, m_FireCounter, coneDP, coneDY);
+    const float aimYaw   = m_PlayerState.yaw + dYaw + coneDY;
+    const float aimPitch = m_PlayerState.pitch + dPitch + coneDP;
+    float cosPitch = cosf(aimPitch);
     DirectX::XMFLOAT3 rayDir = {
-        sinf(m_PlayerState.yaw) * cosPitch,
-        sinf(m_PlayerState.pitch),
-        cosf(m_PlayerState.yaw) * cosPitch
+        sinf(aimYaw) * cosPitch,
+        sinf(aimPitch),
+        cosf(aimYaw) * cosPitch
     };
 
     // Lag compensation: clamp the client-reported view tick (same rules as
@@ -1184,6 +1219,10 @@ void MockServer::UpdatePlayerRespawn()
     // respawn branch) so no stale hit marker fires after revival.
     m_LastShotResult = LastShotResult::MISS;
     m_LastShotSeqMod = 0;
+    // Recoil pool reset (spec §7): shotKick never decays, so a pre-death
+    // accumulation must not permanently skew the WYSIWYG ray direction after
+    // revival — mirrors GameServer's respawn reset.
+    m_PlayerRecoil = RecoilMath::RecoilState{};
 }
 
 //-----------------------------------------------------------------------------
