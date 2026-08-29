@@ -44,7 +44,7 @@
 namespace {
 
 // Handle layout: [31:24] SoundId | [23:16] index | [15:0] generation.
-// SoundId::Count is 14 and maxInstances is a uint8_t, so both fit with room
+// SoundId::Count is 15 and maxInstances is a uint8_t, so both fit with room
 // to spare; encoding the pool directly means resolution is a plain decode
 // (SoundId -> pool -> slot -> generation check) with no side table needed.
 constexpr uint32_t kGenBits    = 16;

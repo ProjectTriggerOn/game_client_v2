@@ -47,6 +47,7 @@ mono "SFX/Weapons/Reloads/S_WEP_AR_01_Reload.wav"       "weapons/reload.wav"
 mono "SFX/Weapons/Reloads/S_WEP_AR_01_Reload_Empty.wav" "weapons/reload_empty.wav"
 mono "SFX/Weapons/Aiming/S_WEP_Aim_In.wav"          "weapons/ads_in.wav"
 mono "SFX/Weapons/Swishes/S_WEP_Swish_02.wav"       "weapons/ads_out.wav"
+mono "SFX/Weapons/Holstering/S_WEP_Unholster.wav"   "weapons/take_out.wav"
 
 echo "character:"
 for i in 001 002 003 004 005; do

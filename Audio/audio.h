@@ -19,6 +19,7 @@ enum class SoundId : uint16_t {
     WeaponFireEmpty,
     WeaponReload,
     WeaponReloadEmpty,
+    WeaponTakeOut,
     Footstep,
     JumpStart,
     JumpLand,

@@ -60,6 +60,14 @@ priority = 160
 min_distance = 2.0
 max_distance = 40.0
 
+[weapon_take_out]
+files = ["resource/audio/weapons/take_out.wav"]
+bus = "sfx"
+gain_db = -6.0
+pitch_cents = 30.0
+max_instances = 1           # only the local player, only one at a time
+priority = 100
+
 [footstep]
 files = [
     "resource/audio/character/footstep_001.wav",

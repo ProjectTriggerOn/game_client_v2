@@ -874,7 +874,11 @@ void PlayerFps::ApplyServerCorrection(const NetPlayerState& serverState)
 
 		// Play the "taking out" draw on respawn (auto-transitions to HIP),
 		// matching match-start instead of snapping straight to hip-idle.
+		// This is the respawn rising edge (runs once, not the per-frame
+		// m_RespawnLockTimer > 0.0 block above) -- playing it there would
+		// retrigger the sound every frame for the whole lock duration.
 		m_StateMachine->SetWeaponState(WeaponState::TAKING_OUT);
+		Audio_PlayOneShot(SoundId::WeaponTakeOut);
 
 		// Clear input history and sync tick on respawn
 		ClearInputHistory();

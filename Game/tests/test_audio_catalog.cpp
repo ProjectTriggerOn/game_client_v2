@@ -24,9 +24,10 @@ int main()
     CHECK(AudioCatalog_Load("config/audio_catalog.toml"), "catalog should load");
 
     // Pinned so that dropping an id — as `hitmarker` was, for want of any hit
-    // feedback to trigger it — or adding one is a deliberate edit here and not
-    // a silently narrower sweep below.
-    static_assert((uint16_t)SoundId::Count == 14,
+    // feedback to trigger it — or adding one (as `weapon_take_out` was, for
+    // the respawn weapon-draw that had an animation but no sound) is a
+    // deliberate edit here and not a silently narrower sweep below.
+    static_assert((uint16_t)SoundId::Count == 15,
                   "SoundId count changed: update config/audio_catalog.toml and this test");
 
     // Every SoundId must resolve to a table in the TOML.
