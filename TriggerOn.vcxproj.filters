@@ -171,6 +171,9 @@
     <ClCompile Include="Graphics\shader_3d_unlit.cpp">
       <Filter>Graphics</Filter>
     </ClCompile>
+    <ClCompile Include="Graphics\shader_billboard.cpp">
+      <Filter>Graphics</Filter>
+    </ClCompile>
     <ClCompile Include="Graphics\ui_widget.cpp">
       <Filter>Graphics</Filter>
     </ClCompile>
@@ -335,6 +338,9 @@
     <ClInclude Include="Graphics\shader_3d_unlit.h">
       <Filter>Graphics</Filter>
     </ClInclude>
+    <ClInclude Include="Graphics\shader_billboard.h">
+      <Filter>Graphics</Filter>
+    </ClInclude>
     <ClInclude Include="Graphics\ui_widget.h">
       <Filter>Graphics</Filter>
     </ClInclude>
@@ -401,6 +407,12 @@
       <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\shader_vertex_3dunlit.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\shader_pixel_billboard.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\shader_vertex_billboard.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
   </ItemGroup>

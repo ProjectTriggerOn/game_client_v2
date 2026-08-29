@@ -220,6 +220,7 @@ exit /b 0
     <ClCompile Include="Graphics\shader_3d.cpp" />
     <ClCompile Include="Graphics\shader_3d_ani.cpp" />
     <ClCompile Include="Graphics\shader_3d_unlit.cpp" />
+    <ClCompile Include="Graphics\shader_billboard.cpp" />
     <ClCompile Include="Graphics\shader_field.cpp" />
     <ClCompile Include="Graphics\shader_infinite.cpp" />
     <ClCompile Include="Graphics\sky_dome.cpp" />
@@ -296,6 +297,7 @@ exit /b 0
     <ClInclude Include="Graphics\shader_3d.h" />
     <ClInclude Include="Graphics\shader_3d_ani.h" />
     <ClInclude Include="Graphics\shader_3d_unlit.h" />
+    <ClInclude Include="Graphics\shader_billboard.h" />
     <ClInclude Include="Graphics\shader_field.h" />
     <ClInclude Include="Graphics\shader_infinite.h" />
     <ClInclude Include="Graphics\sky_dome.h" />
@@ -380,6 +382,18 @@ exit /b 0
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)ui\%(Filename).cso</ObjectFileOutput>
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)ui\%(Filename).cso</ObjectFileOutput>
+    </FxCompile>
+    <FxCompile Include="Shaders\shader_pixel_billboard.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
+    </FxCompile>
+    <FxCompile Include="Shaders\shader_vertex_billboard.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
