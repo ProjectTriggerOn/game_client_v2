@@ -24,7 +24,8 @@
         try {
             var s = JSON.parse(game.getFloodStats());
             el('flood-readout').textContent =
-                'send ' + s.sendRate + '/s   snap ' + s.snapMs + 'ms';
+                'send ' + s.sendRate + '/s   snap ' + s.snapMs + 'ms' +
+                '   fx ' + (s.fxDecals || 0) + 'D ' + (s.fxParticles || 0) + 'P';
         } catch (e) {}
     }
 
