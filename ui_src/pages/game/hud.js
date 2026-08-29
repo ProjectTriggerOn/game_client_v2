@@ -80,6 +80,18 @@
         if (sb) sb.classList.toggle('hidden', !v);
     };
 
+    // Damage vignette: C++ pulses GameHUD.onDamage; the CSS transition owns
+    // the decay (instant-on via .flash, 0.45s fade after removal).
+    const vignette = document.getElementById('damage-vignette');
+    let vignetteTimer = 0;
+    window.GameHUD = window.GameHUD || {};
+    GameHUD.onDamage = () => {
+      if (!vignette) return;
+      vignette.classList.add('flash');
+      clearTimeout(vignetteTimer);
+      vignetteTimer = setTimeout(() => vignette.classList.remove('flash'), 40);
+    };
+
     function onEnter() { console.log('[PageHud] enter'); }
     function onExit()  { console.log('[PageHud] exit'); }
 

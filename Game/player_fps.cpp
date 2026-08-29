@@ -11,6 +11,7 @@
 #include "mouse.h"
 #include "ms_logger.h"
 #include "shader_3d_ani.h"
+#include "../UI/ui_manager.h"   // UI::PushDamageFlash (spec §6.3)
 
 using namespace DirectX;
 
@@ -931,6 +932,17 @@ void PlayerFps::ApplyServerCorrection(const NetPlayerState& serverState)
 	{
 		m_Ammo = serverState.ammo;
 		m_AmmoReserve = serverState.ammoReserve;
+	}
+
+	// ---- Damage vignette pulse (spec §6.3) --------------------------------
+	// hitByPlayerId rising edge (0xFF -> attacker id) fires the HUD flash.
+	// Push is fire-and-forget; the DOM owns the decay. Falling edge just
+	// clears the latch — no animation.
+	{
+		const bool hit = (serverState.hitByPlayerId != 0xFF);
+		if (hit && !m_WasHit)
+			UI::PushDamageFlash();
+		m_WasHit = hit;
 	}
 }
 

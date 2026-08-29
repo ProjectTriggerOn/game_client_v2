@@ -18,6 +18,9 @@ void Unbind();
 // no-op if the handler isn't defined (e.g. HUD page not loaded).
 void PushHealth(int current, int maxHp);
 void PushAmmo(int current, int reserve);
+// Damage vignette pulse → window.GameHUD.onDamage() (fire-and-forget; the CSS
+// transition owns the fade-out). No-op until the HUD defines the handler.
+void PushDamageFlash();
 
 // Scoring pushes (same fresh-lookup contract as above).
 void PushScores(int red, int blue);

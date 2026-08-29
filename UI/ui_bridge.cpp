@@ -332,6 +332,14 @@ void PushAmmo(int current, int reserve) {
     CallJsFn2("onAmmoChanged", (double)current, (double)reserve);
 }
 
+void PushDamageFlash() {
+    if (!g_bridgeView) return;
+    // Same no-op-until-defined contract as the on*Changed pushes; the JS side
+    // guards on window.GameHUD && GameHUD.onDamage. Flushed from UI::Render
+    // (the safe main-loop JS-call point), so EvaluateScript is safe here.
+    g_bridgeView->EvaluateScript("window.GameHUD && GameHUD.onDamage && GameHUD.onDamage();");
+}
+
 void PushScores(int red, int blue) {
     CallJsFn2("onScoresChanged", (double)red, (double)blue);
 }

@@ -164,6 +164,10 @@ private:
 	float m_HitmarkerAlpha = 0.0f;   // 1..0 over HITMARKER_LIFE
 	bool  m_HitmarkerKill  = false;
 	uint8_t m_LastLatchedShotSeq = 0xFF;   // dedup: seqMod of the last latched shot
+	// Damage-vignette rising-edge latch (spec §6.3): remembers the previous
+	// snapshot's hitByPlayerId so only the 0xFF -> attacker-id transition fires
+	// the HUD flash; the falling edge just clears the latch (no animation).
+	bool m_WasHit = false;
 	// Recoil (COD model): client-side prediction, advanced on ConsumeRound,
 	// decayed per frame via PlayerCamFps_DecayPunch, reconciled against the
 	// snapshot in ApplyServerCorrection. punch NEVER touches camera yaw/pitch.
