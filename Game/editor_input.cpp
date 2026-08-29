@@ -30,9 +30,12 @@ void EditorInput_BeginFrame()
 
     g_OverUI = editorinput::HitDock(g_Layout, x, y, w, h) || g_PtrCapture;
 
-    // "Down" must include the press edge: a click that begins and ends between
-    // two polls would otherwise never latch, and the pick path keys off
-    // MSLogger_IsTriggerUI.
+    // "Down" is true while any button is held. The IsTriggerUI terms ORed in here
+    // are redundant, not load-bearing: MSLogger_Update computes
+    // trigger = (prev ^ current) & current, so trigger already implies pressed.
+    // (A click that begins and ends between two polls is invisible to MSLogger
+    // entirely — both pressed and trigger read false for it — so this OR does not
+    // rescue that case; the pick path misses it too, via the same MSLogger read.)
     const bool down =
         MSLogger_IsPressedUI(MBT_LEFT)   || MSLogger_IsTriggerUI(MBT_LEFT)   ||
         MSLogger_IsPressedUI(MBT_MIDDLE) || MSLogger_IsTriggerUI(MBT_MIDDLE) ||
@@ -52,8 +55,11 @@ void EditorInput_Reset()
 
 bool EditorInput_ViewportOwnsMouse()
 {
-    // Nothing latched yet (hover, or no button seen): fall back to the raw hit so
-    // hover-only work (gizmo axis highlight) still gates correctly.
+    // Nothing latched yet (hover, or no button seen): fall back to the raw hit.
+    // (Not for a hover-only gizmo highlight — there isn't one: scene_editor.cpp
+    // only passes a hot axis to the gizmo draw while g_Dragging is true, so the
+    // manipulator only lights up mid-drag. This fallback just keeps the pre-press
+    // hit test consistent with the latched value once a drag does start.)
     if (g_Owner == editorinput::Owner::None) return !g_OverUI;
     return g_Owner == editorinput::Owner::Viewport;
 }

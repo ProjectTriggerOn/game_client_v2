@@ -42,7 +42,11 @@
   font-family: var(--ui-font); font-size: 11px; letter-spacing: .08em;
   cursor: pointer;
 }
-.ed-btn:hover:not(:disabled) { color: var(--ui-text); border-color: var(--ui-text-dim); }
+/* :not(.active) keeps this from outranking .ed-btn.active (0,2,0): without it,
+   hovering the already-selected tool drops its cyan text/border back to these
+   muted values (only the background survives, from the higher-specificity rule
+   below), degrading the panel's primary affordance. */
+.ed-btn:not(.active):hover:not(:disabled) { color: var(--ui-text); border-color: var(--ui-text-dim); }
 .ed-btn.active {
   color: var(--ui-cyan);
   border-color: var(--ui-cyan);
