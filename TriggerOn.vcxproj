@@ -221,6 +221,7 @@ exit /b 0
     <ClCompile Include="Graphics\shader_3d_ani.cpp" />
     <ClCompile Include="Graphics\shader_3d_unlit.cpp" />
     <ClCompile Include="Graphics\shader_billboard.cpp" />
+    <ClCompile Include="Graphics\billboard.cpp" />
     <ClCompile Include="Graphics\shader_field.cpp" />
     <ClCompile Include="Graphics\shader_infinite.cpp" />
     <ClCompile Include="Graphics\sky_dome.cpp" />
@@ -298,6 +299,7 @@ exit /b 0
     <ClInclude Include="Graphics\shader_3d_ani.h" />
     <ClInclude Include="Graphics\shader_3d_unlit.h" />
     <ClInclude Include="Graphics\shader_billboard.h" />
+    <ClInclude Include="Graphics\billboard.h" />
     <ClInclude Include="Graphics\shader_field.h" />
     <ClInclude Include="Graphics\shader_infinite.h" />
     <ClInclude Include="Graphics\sky_dome.h" />
