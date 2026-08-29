@@ -44,12 +44,16 @@ namespace
 			XMVectorGetZ(t1), XMVectorGetZ(t2), XMVectorGetZ(n), 0.0f,
 			0.0f, 0.0f, 0.0f, 1.0f);
 
+		// Fold the decal size into the basis so the unit quad spans DECAL_SIZE
+		// world units (rows are right/up/normal, so uniform scaling works).
+		const XMMATRIX scaled = w * XMMatrixScaling(DECAL_SIZE, DECAL_SIZE, DECAL_SIZE);
+
 		const XMMATRIX lift = XMMatrixTranslation(
 			hitPos.x + normal.x * DECAL_LIFT,
 			hitPos.y + normal.y * DECAL_LIFT,
 			hitPos.z + normal.z * DECAL_LIFT);
 
-		XMStoreFloat4x4(&outWorld, w * lift);
+		XMStoreFloat4x4(&outWorld, scaled * lift);
 	}
 }
 

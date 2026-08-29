@@ -41,6 +41,13 @@ void Particle_Draw(); // renderer side only
 int Particle_RegisterConfig(const ParticleConfig& config); // -1 when full
 void Particle_Emit(int configId, const DirectX::XMFLOAT3& pos, int count);
 
+// Overrides only the cone axis for this call; the registered config keeps
+// everything else (spread, speed, life, size, color...). Used for sparks that
+// must spray along a per-burst direction (e.g. the hit surface normal) that
+// wasn't known at config-registration time.
+void Particle_EmitDirectional(int configId, const DirectX::XMFLOAT3& pos,
+	int count, const DirectX::XMFLOAT3& direction);
+
 int Particle_GetActiveCount();
 
 // Test/inspection accessors (index into the pool, not a handle).

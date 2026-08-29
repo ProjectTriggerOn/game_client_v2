@@ -5,6 +5,8 @@
 #include "mouse.h"
 #include "collision_world.h"
 
+class PlayerFps; // local player lives in game.cpp's anonymous namespace
+
 
 enum GameState
 {
@@ -44,6 +46,10 @@ float Game_GetCorrectionError();
 
 // Collision world accessor (for MockServer initialization)
 CollisionWorld* Game_GetCollisionWorld();
+
+// Local-player accessor. g_PlayerFps itself lives in game.cpp's anonymous
+// namespace (internal linkage), so cross-TU consumers go through this.
+PlayerFps* Game_GetLocalPlayer();
 
 // Local-player client-tick accessor (used by InputProducer to stamp cmd.tickId
 // in the same domain as PlayerFps::m_InputHistory, so server's

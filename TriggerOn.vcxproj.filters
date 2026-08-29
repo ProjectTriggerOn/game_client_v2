@@ -84,6 +84,9 @@
     <ClCompile Include="Game\grid.cpp">
       <Filter>Game</Filter>
     </ClCompile>
+    <ClCompile Include="Game\impact_fx.cpp">
+      <Filter>Game</Filter>
+    </ClCompile>
     <ClCompile Include="Game\player_cam_tps.cpp">
       <Filter>Game</Filter>
     </ClCompile>
@@ -261,6 +264,9 @@
       <Filter>Game</Filter>
     </ClInclude>
     <ClInclude Include="Game\grid.h">
+      <Filter>Game</Filter>
+    </ClInclude>
+    <ClInclude Include="Game\impact_fx.h">
       <Filter>Game</Filter>
     </ClInclude>
     <ClInclude Include="Game\player_cam_tps.h">

@@ -20,6 +20,7 @@
 #include "player_cam_fps.h"
 #include "player_fps.h"
 #include "i_network.h"
+#include "impact_fx.h"
 #include "mock_server.h"
 #include "remote_player.h"
 #include "input_producer.h"
@@ -156,6 +157,8 @@ void Game_Initialize()
 	g_PlayerFps = new PlayerFps();
 	g_PlayerFps->Initialize({ -7.0f, 0.0f, -7.0f }, { 0.0f, 0.0f, 1.0f }, &g_CollisionWorld);
 
+	ImpactFx_Initialize();
+
 	Camera_Initialize();
 	PlayerCamTps_Initialize();
 	PlayerCamFps_Initialize();
@@ -245,6 +248,11 @@ void Game_Update(double elapsed_time)
 		// Push live HUD data to the UI (C++ → JS).
 		UI::PushHealth(g_PlayerFps->GetHealth(), 200);
 		UI::PushAmmo(g_PlayerFps->GetAmmo(), g_PlayerFps->GetAmmoReserve());
+
+		// Local impact FX: polls the fire counter and raycasts a shot per new
+		// round. Only while playing (paused -> ConsumeRound doesn't fire -> no
+		// diff -> safe no-op).
+		ImpactFx_Update();
 	}
 
 	// ========================================================================
@@ -484,6 +492,10 @@ void Game_Draw()
 	Cube_SetUVMode(CUBE_UV_PER_FACE);
 	Map_Draw();
 
+	// Bullet holes + impact particles: occluded by the map, write no depth.
+	ImpactFx_SetCamera(mtxView);
+	ImpactFx_Draw();
+
 	// Debug draw: collision shapes (F3 toggle)
 	if (isDebugCollision)
 	{
@@ -590,6 +602,8 @@ void Game_Finalize()
 	// here so the now-reachable game->title->game cycle doesn't leak one per round.
 	// (Only Game_IsPlayerInputLocked derefs it outside the game scene, and that is
 	// null-guarded.)
+	// Impact FX teardown first: it shares the D3D device that's still alive here.
+	ImpactFx_Finalize();
 	g_PlayerFps->Finalize();
 	delete g_PlayerFps;
 	g_PlayerFps = nullptr;
@@ -627,6 +641,11 @@ float Game_GetCorrectionError()
 CollisionWorld* Game_GetCollisionWorld()
 {
 	return &g_CollisionWorld;
+}
+
+PlayerFps* Game_GetLocalPlayer()
+{
+	return g_PlayerFps;
 }
 
 uint32_t Game_GetClientTick()

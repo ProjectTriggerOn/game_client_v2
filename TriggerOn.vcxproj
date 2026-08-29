@@ -182,6 +182,7 @@ exit /b 0
     <ClCompile Include="Game\game.cpp" />
     <ClCompile Include="Core\game_window.cpp" />
     <ClCompile Include="Game\grid.cpp" />
+    <ClCompile Include="Game\impact_fx.cpp" />
     <ClCompile Include="Game\infinite_grid.cpp" />
     <ClCompile Include="Core\input_producer.cpp" />
     <ClCompile Include="Core\keyboard.cpp" />
@@ -261,6 +262,7 @@ exit /b 0
     <ClInclude Include="Game\game.h" />
     <ClInclude Include="Core\game_window.h" />
     <ClInclude Include="Game\grid.h" />
+    <ClInclude Include="Game\impact_fx.h" />
     <ClInclude Include="Game\infinite_grid.h" />
     <ClInclude Include="Core\input_producer.h" />
     <ClInclude Include="Core\keyboard.h" />

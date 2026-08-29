@@ -86,17 +86,19 @@ int Particle_RegisterConfig(const ParticleConfig& config)
 	return -1;
 }
 
-// Uniformly tilt `direction` by a disc sample within `spreadDeg` half-angle.
-static XMFLOAT3 ConeDirection(const ParticleConfig& cfg)
+// Uniformly tilt `axis` by a disc sample within `spreadDeg` half-angle.
+// `axis` is the cone axis for this call — either the config's registered
+// direction or a per-call override (Particle_EmitDirectional).
+static XMFLOAT3 ConeDirection(const XMFLOAT3& axisVec, float spreadDeg)
 {
-	if (cfg.spreadDeg <= 0.0f) return cfg.direction;
+	if (spreadDeg <= 0.0f) return axisVec;
 
 	const float angle = RandomFloat(0.0f, XM_2PI);           // disc azimuth
 	const float radius = std::sqrt(RandomFloat(0.0f, 1.0f)); // uniform disc
-	const float tilt = XMConvertToRadians(cfg.spreadDeg) * radius;
+	const float tilt = XMConvertToRadians(spreadDeg) * radius;
 
 	// Build a tangent frame around the axis.
-	const XMVECTOR axis = XMLoadFloat3(&cfg.direction);
+	const XMVECTOR axis = XMLoadFloat3(&axisVec);
 	XMVECTOR helper = (std::fabs(XMVectorGetY(axis)) < 0.999f)
 		? XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f) : XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
 	const XMVECTOR t1 = XMVector3Normalize(XMVector3Cross(axis, helper));
@@ -112,7 +114,10 @@ static XMFLOAT3 ConeDirection(const ParticleConfig& cfg)
 	return out;
 }
 
-void Particle_Emit(int configId, const XMFLOAT3& pos, int count)
+// Shared emission body. dirOverride != nullptr replaces the config's cone axis
+// for this call (used by Particle_EmitDirectional); otherwise the registered
+// direction is used.
+static void EmitInternal(int configId, const XMFLOAT3& pos, int count, const XMFLOAT3* dirOverride)
 {
 	if (configId < 0 || configId >= PARTICLE_CONFIG_MAX || !g_ConfigUsed[configId]) return;
 	const ParticleConfig& cfg = g_Configs[configId];
@@ -123,7 +128,8 @@ void Particle_Emit(int configId, const XMFLOAT3& pos, int count)
 		if (emitted >= count) break;
 		if (p.active) continue;
 
-		const XMFLOAT3 dir = ConeDirection(cfg);
+		const XMFLOAT3 axis = dirOverride ? *dirOverride : cfg.direction;
+		const XMFLOAT3 dir = ConeDirection(axis, cfg.spreadDeg);
 		const float speed = RandomFloat(cfg.speedMin, cfg.speedMax);
 		const float life = RandomFloat(cfg.lifeMin, cfg.lifeMax);
 		const float size = RandomFloat(cfg.sizeMin, cfg.sizeMax);
@@ -142,6 +148,17 @@ void Particle_Emit(int configId, const XMFLOAT3& pos, int count)
 		p.configId = configId;
 		++emitted;
 	}
+}
+
+void Particle_Emit(int configId, const XMFLOAT3& pos, int count)
+{
+	EmitInternal(configId, pos, count, nullptr);
+}
+
+void Particle_EmitDirectional(int configId, const XMFLOAT3& pos, int count,
+	const XMFLOAT3& direction)
+{
+	EmitInternal(configId, pos, count, &direction);
 }
 
 void Particle_Update(double elapsed_time)
