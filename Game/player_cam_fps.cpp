@@ -209,6 +209,12 @@ void PlayerCamFps_DecayPunch(float dt)
 	g_punchYaw *= k;
 }
 
+void PlayerCamFps_GetPunch(float& punchPitch, float& punchYaw)
+{
+	punchPitch = g_punchPitch;
+	punchYaw   = g_punchYaw;
+}
+
 void PlayerCamFps_SetInvertY(bool invert)
 {
 	g_invertY = invert;

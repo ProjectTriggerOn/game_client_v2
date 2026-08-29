@@ -35,6 +35,10 @@ float PlayerCamFps_GetSensitivity();
 void PlayerCamFps_AddPunch(float dPitch, float dYaw);
 void PlayerCamFps_DecayPunch(float dt);
 
+// Read back the live rendered punch (pitch positive up, rad). The crosshair
+// reads these so it tracks the rendered view 1:1 instead of the recoil pool.
+void PlayerCamFps_GetPunch(float& punchPitch, float& punchYaw);
+
 
 const DirectX::XMFLOAT4X4& PlayerCamFps_GetViewMatrix();
 const DirectX::XMFLOAT4X4& PlayerCamFps_GetProjectMatrix();

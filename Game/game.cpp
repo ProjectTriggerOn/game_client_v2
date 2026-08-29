@@ -35,6 +35,7 @@
 #include <vector>
 #include <cstdio>
 #include <cstring>
+#include <cmath>
 using namespace DirectX;
 
 namespace{
@@ -546,21 +547,30 @@ void Game_Draw()
 
 	Direct3D_SetDepthEnable(false);
 
-	// Crosshair — native green cross, centered. Drawn natively (not in
-	// Ultralight) because the crosshair is frame-locked and pixel-exact; see
-	// docs §12.1. Placeholder static cross for now; a spread-driven dynamic
-	// crosshair + hitmarker will replace this in the same 2D pass.
-	if (g_GameState == PLAY)
+	// Crosshair — native four-arm dynamic crosshair, centered. Inner gap
+	// follows the predicted spread cone plus the recoil punch; arms shorten
+	// in ADS. Drawn natively (not Ultralight) — frame-locked and pixel-exact
+	// (docs §12.1). Replaces the static placeholder cross.
+	if (g_GameState == PLAY && g_PlayerFps)
 	{
 		const float cx = sw * 0.5f;
 		const float cy = sh * 0.5f;
-		constexpr float ARM = 10.0f;   // arm half-length (px)
-		constexpr float TH  = 2.0f;    // line thickness (px)
+		constexpr float TH = 2.0f;                  // line thickness (px)
+		float dP = 0.0f, dY = 0.0f;
+		PlayerCamFps_GetPunch(dP, dY);
+		// rad -> px: tuned so bloomMax (1.5° ≈ 0.026 rad) lands ~24px at 1080p.
+		constexpr float PX_PER_RAD = 900.0f;
+		const float spreadPx = g_PlayerFps->GetSpreadRadians() * PX_PER_RAD;
+		const float punchPx  = fabsf(dP) * (PX_PER_RAD * 2.5f);  // punch opens wider
+		const bool  ads      = g_PlayerFps->IsADS();
+		const float arm      = ads ? 6.0f : 10.0f;   // arm half-length (px)
+		const float gap      = 4.0f + spreadPx + punchPx;
 		const XMFLOAT4 GREEN = { 0.1f, 1.0f, 0.1f, 0.9f };
-		// horizontal bar
-		Sprite_Draw(g_OverlayTexId, cx - ARM, cy - TH * 0.5f, ARM * 2.0f, TH, GREEN);
-		// vertical bar
-		Sprite_Draw(g_OverlayTexId, cx - TH * 0.5f, cy - ARM, TH, ARM * 2.0f, GREEN);
+		// four arms: N/S/E/W bars from the inner gap outward
+		Sprite_Draw(g_OverlayTexId, cx - TH * 0.5f, cy - gap - arm, TH, arm, GREEN);
+		Sprite_Draw(g_OverlayTexId, cx - TH * 0.5f, cy + gap,       TH, arm, GREEN);
+		Sprite_Draw(g_OverlayTexId, cx - gap - arm, cy - TH * 0.5f, arm, TH, GREEN);
+		Sprite_Draw(g_OverlayTexId, cx + gap,       cy - TH * 0.5f, arm, TH, GREEN);
 	}
 
 	// NOTE: the legacy Widget_* HUD panels (HP/Ammo) and the immediate-mode

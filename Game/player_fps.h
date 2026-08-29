@@ -94,6 +94,7 @@ public:
 	// debug overlay consume both.
 	void GetRecoilPunch(float& dPitch, float& dYaw) const;
 	float GetSpreadRadians() const;
+	bool IsADS() const;
 
 	//-------------------------------------------------------------------------
 	// Debug info

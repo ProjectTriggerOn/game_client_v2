@@ -163,9 +163,7 @@ void PlayerFps::ConsumeRound()
 	// (fireCounter-1) is this shot's pattern index. dt=0 — the per-frame
 	// decay below owns recovery. AddPunch feeds the RENDERED offset only.
 	{
-		const WeaponState ws = m_StateMachine->GetWeaponState();
-		const bool ads = (ws == WeaponState::ADS || ws == WeaponState::ADS_FIRING ||
-		                  ws == WeaponState::ADS_IN || ws == WeaponState::ADS_OUT);
+		const bool ads = IsADS();
 		// Per-shot increment: RecoilAdvance returns the new integrated pool;
 		// the camera punch accumulator only receives THIS shot's delta, so the
 		// rendered offset converges like the server's (spec §5.1).
@@ -967,10 +965,15 @@ void PlayerFps::GetRecoilPunch(float& dPitch, float& dYaw) const
 
 float PlayerFps::GetSpreadRadians() const
 {
-	const WeaponState ws = m_StateMachine->GetWeaponState();
-	const bool ads = (ws == WeaponState::ADS || ws == WeaponState::ADS_FIRING ||
-	                  ws == WeaponState::ADS_IN || ws == WeaponState::ADS_OUT);
+	const bool ads = IsADS();
 	return RecoilMath::RecoilSpreadRadians(m_TeamId, ads, m_Recoil.bloomDeg, 0.0f);
+}
+
+bool PlayerFps::IsADS() const
+{
+	const WeaponState ws = m_StateMachine->GetWeaponState();
+	return ws == WeaponState::ADS || ws == WeaponState::ADS_FIRING ||
+	       ws == WeaponState::ADS_IN || ws == WeaponState::ADS_OUT;
 }
 
 std::string PlayerFps::GetPlayerState() const
