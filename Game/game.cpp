@@ -107,6 +107,10 @@ namespace{
 	Snapshot        g_LatestSnapshot{};
 	AudioEventState g_AudioEventState{};
 
+	// Ambient bed loop handle. Started in Game_Initialize, stopped in
+	// Game_Finalize, so a scene exit never leaves it playing.
+	AudioHandle g_AmbientLoop{};
+
 	// Append {"id":I,"k":K,"d":D,"me":bool} rows for one team into a bounded
 	// buffer; returns chars written. Iterates localPlayer (under localPlayerTeam)
 	// then the clamped remotePlayers[], splitting by teamId.
@@ -195,6 +199,9 @@ void Game_Initialize()
 	g_LastShownKillSeq = 0;
 	g_ScoreboardShown = false;
 	UI::PushScoreboardVisible(false);
+
+	// Ambient bed.  Not spatialised: it is the room, not a point in it.
+	g_AmbientLoop = Audio_PlayLoop(SoundId::AmbientLoop);
 }
 
 bool Game_WantsUICursor()
@@ -635,6 +642,9 @@ void Game_Draw()
 
 void Game_Finalize()
 {
+	Audio_StopLoop(g_AmbientLoop);
+	g_AmbientLoop = AudioHandle{};
+
 	Camera_Finalize();
 	PlayerCamTps_Finalize();
 	PlayerCamFps_Finalize();
