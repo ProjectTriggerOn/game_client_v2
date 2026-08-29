@@ -697,4 +697,13 @@ void SceneEditor_SetColliderGround(bool isGround)
     g_Map.colliders[g_Sel.index].isGround = isGround;
 }
 
+void SceneEditor_RequestRepublish()
+{
+    // Clearing the last-published strings makes the next PublishSelection/
+    // PublishStatus call in SceneEditor_Update push unconditionally, even if the
+    // freshly-computed JSON is byte-identical to what was (silently) dropped.
+    g_LastSelJson.clear();
+    g_LastStatusJson.clear();
+}
+
 #endif // EDITOR_ENABLED

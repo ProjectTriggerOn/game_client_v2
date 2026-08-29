@@ -30,6 +30,13 @@
 #include <system_error>
 #include <cstdio>
 
+#ifdef EDITOR_ENABLED
+// Editor code is Debug-only (TriggerOn.vcxproj EDITOR_ENABLED); editor_input.cpp
+// does not exist in Release, so this call must be guarded or the Release link
+// fails on an unresolved external.
+#include "editor_input.h"
+#endif
+
 namespace {
 
 ultralight::RefPtr<ultralight::Renderer> g_renderer;
@@ -96,6 +103,16 @@ public:
                     bool is_main_frame, const ultralight::String& /*url*/) override {
         if (!is_main_frame) return;
         UI::Bridge::Register(caller);
+
+#ifdef EDITOR_ENABLED
+        // The JSContext was just rebuilt, which drops the page's in-memory
+        // textFocus state along with it. Without this, a stale textFocus==true
+        // left over from before the reload survives in C++ until the router's
+        // async boot re-reaches PageEditor.onEnter — and forever if that boot
+        // fails, silently killing every editor hotkey. This reset does not
+        // depend on any JS running successfully.
+        EditorInput_Reset();
+#endif
 
         // The JSContext was just rebuilt (navigation or hot-reload Reload()), so
         // every C++-owned value the page renders has to be sent again.

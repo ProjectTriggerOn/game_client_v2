@@ -26,6 +26,14 @@ void SceneEditor_DeleteSelection();
 void SceneEditor_Save();
 void SceneEditor_Reload();
 
+// Forces PublishSelection/PublishStatus to re-push next Update even if their
+// content hasn't changed since last frame. Needed because OnDOMReady's dirty-flag
+// re-arm (UI/ui_manager.cpp) can fire before router.js has finished injecting
+// #ed-tools/#ed-counts/#ed-xform into the (still empty) page — that flush is lost
+// and, since both publishers dedupe on content, nothing re-sends it on its own.
+// Call once the panel markup actually exists (editor.js PageEditor.onEnter).
+void SceneEditor_RequestRepublish();
+
 // field: "pos" | "rot" (DEGREES) | "scale" | "cmin" | "cmax".
 // Commits ONE undoable command through the same stack the gizmo uses.
 void SceneEditor_SetTransform(const char* field, float x, float y, float z);

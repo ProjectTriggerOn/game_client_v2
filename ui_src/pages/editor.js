@@ -91,28 +91,36 @@
         let s;
         try { s = JSON.parse(json); } catch (e) { console.error('[PageEditor] bad selection', e); return; }
 
+        // Null-checked (unlike a naive dereference): before router.js has
+        // injected this page's markup these all resolve to null, and this
+        // handler must degrade to a no-op instead of throwing inside a
+        // C++->JS push.
         const xform  = el('ed-xform');
         const colSec = el('ed-collider');
         const nosel  = el('ed-nosel');
         const id     = el('ed-sel-id');
 
         if (!s.has) {
-            xform.hidden = true; colSec.hidden = true; nosel.hidden = false;
-            id.textContent = 'none';
+            if (xform)  xform.hidden = true;
+            if (colSec) colSec.hidden = true;
+            if (nosel)  nosel.hidden = false;
+            if (id)     id.textContent = 'none';
             return;
         }
 
-        nosel.hidden = true;
-        id.textContent = s.kind.toUpperCase() + ' #' + s.index;
+        if (nosel) nosel.hidden = true;
+        if (id)    id.textContent = s.kind.toUpperCase() + ' #' + s.index;
 
         if (s.kind === 'collider') {
-            xform.hidden = true; colSec.hidden = false;
+            if (xform)  xform.hidden = true;
+            if (colSec) colSec.hidden = false;
             fillRow('cmin', s.collider.min);
             fillRow('cmax', s.collider.max);
             const g = el('ed-isground');
-            if (document.activeElement !== g) g.checked = !!s.collider.isGround;
+            if (g && document.activeElement !== g) g.checked = !!s.collider.isGround;
         } else {
-            colSec.hidden = true; xform.hidden = false;
+            if (colSec) colSec.hidden = true;
+            if (xform)  xform.hidden = false;
             fillRow('pos',   s.pos);
             fillRow('rot',   s.rot);
             fillRow('scale', s.scale);
@@ -140,26 +148,47 @@
     });
 
     // Enter commits immediately (blur fires `change`), Escape abandons the edit.
+    // Restore the value cached on focusin rather than blanking it: blanking wins
+    // against the commit handler's isFinite guard (so no bad command is created)
+    // but leaves the field empty forever afterward — PublishSelection dedupes on
+    // content, so nothing ever pushes a refill, and the commit handler reads all
+    // three axes of the row, so a sibling-axis edit is then silently rejected too.
     root.addEventListener('keydown', (e) => {
         if (e.target.tagName !== 'INPUT') return;
         if (e.key === 'Enter')  { e.target.blur(); }
-        if (e.key === 'Escape') { e.target.value = ''; e.target.blur(); }
+        if (e.key === 'Escape') { e.target.value = e.target.dataset.prev || ''; e.target.blur(); }
     });
 
-    // Focus gating: while any field has focus, C++ must ignore EVERY editor
+    // Focus gating: while a TEXT field has focus, C++ must ignore EVERY editor
     // hotkey — otherwise typing 5 also drops a box (B) and Ctrl+Z undoes the map
     // instead of the text. focusin/focusout bubble, unlike focus/blur.
+    //
+    // Gated on type === 'text', not tagName === 'INPUT': #ed-snap/#ed-isground are
+    // <input type="checkbox">, and WebKit focuses a checkbox on click, so gating on
+    // tagName alone latches textFocus=true on every checkbox click and never clears
+    // it (a checkbox only ever consumes Space, never fires the char input this gate
+    // exists for) — killing every editor hotkey until the user clicks elsewhere.
     root.addEventListener('focusin',  (e) => {
-        if (e.target.tagName === 'INPUT') ed()?.setTextFocus?.(true);
+        if (e.target.type === 'text') {
+            e.target.dataset.prev = e.target.value;   // Escape restore target
+            ed()?.setTextFocus?.(true);
+        }
     });
     root.addEventListener('focusout', (e) => {
-        if (e.target.tagName === 'INPUT') ed()?.setTextFocus?.(false);
+        if (e.target.type === 'text') ed()?.setTextFocus?.(false);
     });
 
     function onEnter() {
         // Clear any focus flag stranded by a previous visit or a hot reload — a
         // stale `true` disables every editor hotkey in C++.
         ed()?.setTextFocus?.(false);
+        // Router.show() guarantees onEnter runs after this page's markup has been
+        // injected (router.js fetches it asynchronously, which resolves after
+        // OnDOMReady already re-armed C++'s dirty flags and flushed into the then-
+        // empty page). Force a fresh push now that #ed-tools/#ed-counts/#ed-xform
+        // actually exist, or the panels sit stale (no .active highlight, counts
+        // stuck at "--", UNDO/REDO not greyed out) until something changes.
+        ed()?.refresh?.();
     }
 
     function onExit() {

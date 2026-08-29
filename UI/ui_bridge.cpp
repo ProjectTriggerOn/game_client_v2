@@ -127,8 +127,11 @@ int JSValueToInt(const JSValue& v) {
     return (int)((JSValue&)v).ToNumber();
 }
 
+#ifdef EDITOR_ENABLED
 // Same named-lvalue rule as JSValueToInt (the JSHelpers accessors are non-const;
-// casting args[i] directly trips C4238).
+// casting args[i] directly trips C4238). Only the editor["*"] bindings below call
+// these, so they're guarded the same way — Release has no other call site and
+// warns C4505 (unreferenced local function) if they're left ungated.
 bool JSValueToBool(const JSValue& v) {
     return ((JSValue&)v).ToBoolean();
 }
@@ -136,6 +139,7 @@ bool JSValueToBool(const JSValue& v) {
 float JSValueToFloat(const JSValue& v) {
     return (float)((JSValue&)v).ToNumber();
 }
+#endif // EDITOR_ENABLED
 
 // JS number/bool/string → ConfigValue (Config::Set preserves integer-ness of
 // existing TOML values, so passing whole floats for ints is fine)
@@ -349,6 +353,13 @@ void Register(ultralight::View* view) {
         if (args.empty()) return;
         EditorInput_SetPointerCapture(JSValueToBool(args[0]));
     };
+
+    // Panel lifecycle. router.js injects #page-editor's markup asynchronously,
+    // after OnDOMReady has already re-armed the C++->JS dirty flags (which then
+    // flush into a still-empty page and are dropped for good, since both
+    // publishers dedupe on content). Called from PageEditor.onEnter once the
+    // panel markup actually exists, so C++ re-pushes the current state into it.
+    ed["refresh"] = (JSCallback)[](const JSObject&, const JSArgs&) { SceneEditor_RequestRepublish(); };
 
     // Toolbar verbs.
     ed["setTool"] = (JSCallback)[](const JSObject&, const JSArgs& args) {
