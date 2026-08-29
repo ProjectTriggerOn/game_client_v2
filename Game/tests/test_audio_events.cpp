@@ -235,6 +235,55 @@ int main()
         CHECK(CountOf(ev, n, SoundId::KillConfirm) == 0, "only the local player's kills sting");
     }
 
+    // --- a match/server reset drops latestKillSeq backward; kill-confirm must
+    //     re-arm for the new match instead of staying silent until the seq
+    //     climbs back past the previous match's final count
+    {
+        AudioEventState st{};
+        Snapshot s = MakeSnapshot();
+        Step(st, s, 0.016, ev);
+
+        // Previous match: local player gets a kill near the end.
+        s.latestKillSeq = 5;
+        s.recentKills[4] = KillFeedEntry{ LOCAL_ID, BOT_ID, 0, 1 };
+        uint8_t n = Step(st, s, 0.016, ev);
+        CHECK(CountOf(ev, n, SoundId::KillConfirm) == 1, "a kill just before the reset still stings once");
+
+        // Match restart: server re-arms and latestKillSeq drops back to 0
+        // while the players themselves stay in the snapshot.
+        s.latestKillSeq = 0;
+        n = Step(st, s, 0.016, ev);
+        CHECK(CountOf(ev, n, SoundId::KillConfirm) == 0, "the reset itself must not emit a stale sting");
+
+        // New match: a fresh kill at a seq lower than the old lastShownKillSeq
+        // must still sting, proving the layer re-armed instead of waiting to
+        // climb back past the previous match's final count.
+        s.latestKillSeq = 1;
+        s.recentKills[0] = KillFeedEntry{ LOCAL_ID, BOT_ID, 0, 1 };
+        n = Step(st, s, 0.016, ev);
+        CHECK(CountOf(ev, n, SoundId::KillConfirm) == 1, "kill-confirm re-arms for kills in the new match");
+    }
+
+    // --- a match/server reset also drops a present player's fireCounter back
+    //     to 0; that must not be replayed as a burst of catch-up shots, and
+    //     the player's next genuine shot after the reset must still register
+    {
+        AudioEventState st{};
+        Snapshot s = MakeSnapshot();
+        Bot(s).fireCounter = 50;
+        Step(st, s, 0.016, ev);   // primes the bot at fireCounter == 50
+
+        Bot(s).fireCounter = 0;   // reset: the player stays present in the snapshot
+        uint8_t n = Step(st, s, 0.016, ev);
+        CHECK(CountOf(ev, n, SoundId::WeaponFire) == 0,
+              "a fireCounter reset must not be replayed as catch-up shots");
+
+        Bot(s).fireCounter = 1;   // first genuine shot of the new match
+        n = Step(st, s, 0.016, ev);
+        CHECK(CountOf(ev, n, SoundId::WeaponFire) == 1,
+              "the next genuine shot after a reset still fires exactly once");
+    }
+
     std::printf(g_fail ? "\n%d FAILED\n" : "\nALL PASSED\n", g_fail);
     return g_fail ? 1 : 0;
 }

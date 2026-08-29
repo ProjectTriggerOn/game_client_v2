@@ -30,6 +30,14 @@ namespace AudioEventConfig {
 // someone was shooting without the mix collapsing.
 constexpr uint16_t MAX_CATCHUP_SHOTS = 2;
 
+// A match/session reset zeroes every player's fireCounter while the player
+// stays present in the snapshot (see mock_server.cpp's re-arm path), so the
+// wrap-safe delta reads as a huge forward jump — the same shape as heavy
+// packet loss.  A delta above this ceiling is implausible as a real shot
+// count between two snapshots, so treat it as a reset: re-prime silently
+// instead of clamping it into a burst of catch-up shots.
+constexpr uint16_t FIRE_COUNTER_RESET_THRESHOLD = 256;
+
 constexpr float  FOOTSTEP_SPEED_MIN     = 0.5f;   // m/s below this: standing still
 constexpr float  FOOTSTEP_SPEED_RUN     = 5.0f;   // m/s above this: use the run cadence
 constexpr double FOOTSTEP_INTERVAL_WALK = 0.45;   // seconds between steps

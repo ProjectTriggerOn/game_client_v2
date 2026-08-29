@@ -73,7 +73,13 @@ uint8_t AudioEvents_Derive(AudioEventState& st, const Snapshot& snap,
 
         if (!isLocal) {
             const uint16_t shots = CounterDelta(pv.fireCounter, cur.fireCounter);
-            if (shots > 0) {
+            // A reset and heavy packet loss both look like a large forward
+            // delta under wrap arithmetic; only plausibility tells them apart.
+            // Above the threshold, the counter was reset (player stayed in
+            // the snapshot, e.g. a match restart) — re-prime by falling
+            // through to st.prev[pid] = cur below and emit nothing, rather
+            // than clamping it into a phantom burst of catch-up shots.
+            if (shots > 0 && shots <= AudioEventConfig::FIRE_COUNTER_RESET_THRESHOLD) {
                 const uint16_t play = (shots > AudioEventConfig::MAX_CATCHUP_SHOTS)
                                     ? AudioEventConfig::MAX_CATCHUP_SHOTS : shots;
                 for (uint16_t i = 0; i < play; ++i) push(SoundId::WeaponFire, emitId);
@@ -139,17 +145,25 @@ uint8_t AudioEvents_Derive(AudioEventState& st, const Snapshot& snap,
     if (!st.killSeqPrimed) {
         st.lastShownKillSeq = snap.latestKillSeq;
         st.killSeqPrimed    = true;
-    } else if (snap.latestKillSeq > st.lastShownKillSeq) {
-        uint32_t from = snap.latestKillSeq > KILL_FEED_SIZE
-                      ? snap.latestKillSeq - KILL_FEED_SIZE : 0;
-        if (from < st.lastShownKillSeq) from = st.lastShownKillSeq;
+    } else {
+        // A match/server reset zeroes latestKillSeq while this layer still
+        // holds the previous match's final count; without this, the forward
+        // check below never re-arms and kill-confirm stays silent for the
+        // rest of the next match.  Mirrors Game/game.cpp's HUD kill-feed fix.
+        if (snap.latestKillSeq < st.lastShownKillSeq) st.lastShownKillSeq = snap.latestKillSeq;
 
-        for (uint32_t seq = from; seq < snap.latestKillSeq; ++seq) {
-            const KillFeedEntry& e = snap.recentKills[seq % KILL_FEED_SIZE];
-            if (e.killerId == snap.localPlayerId && e.victimId != snap.localPlayerId)
-                push(SoundId::KillConfirm, AUDIO_EVENT_LOCAL);
+        if (snap.latestKillSeq > st.lastShownKillSeq) {
+            uint32_t from = snap.latestKillSeq > KILL_FEED_SIZE
+                          ? snap.latestKillSeq - KILL_FEED_SIZE : 0;
+            if (from < st.lastShownKillSeq) from = st.lastShownKillSeq;
+
+            for (uint32_t seq = from; seq < snap.latestKillSeq; ++seq) {
+                const KillFeedEntry& e = snap.recentKills[seq % KILL_FEED_SIZE];
+                if (e.killerId == snap.localPlayerId && e.victimId != snap.localPlayerId)
+                    push(SoundId::KillConfirm, AUDIO_EVENT_LOCAL);
+            }
+            st.lastShownKillSeq = snap.latestKillSeq;
         }
-        st.lastShownKillSeq = snap.latestKillSeq;
     }
 
     return n;
