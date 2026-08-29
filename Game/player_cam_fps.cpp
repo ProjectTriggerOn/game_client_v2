@@ -321,8 +321,8 @@ void PlayerCamFps_Debug(const PlayerFps& pf)
 	}
 
 	// Audio readout: voice pressure is the first thing to go wrong once a
-	// firefight gets busy, and the per-frame event count shows the snapshot
-	// derivation working — or storming — at a glance.
+	// firefight gets busy, and the last-derivation event count shows the
+	// snapshot derivation working — or storming — at a glance.
 	ss << "AUDIO " << (Audio_IsAvailable() ? "on" : "SILENT")
 	   << " voices=" << Audio_ActiveVoiceCount()
 	   << " events=" << Game_LastAudioEventCount() << "\n";

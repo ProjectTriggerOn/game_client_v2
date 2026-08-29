@@ -195,10 +195,17 @@ void Game_Initialize()
 	if (g_pMockServer) g_pMockServer->ResetSession();
 
 	// Reset client-side scoring trackers so a fresh match starts clean (the
-	// scoreboard overlay hidden, kill-feed dedup re-zeroed).
+	// scoreboard overlay hidden, kill-feed dedup re-zeroed). Audio event
+	// derivation resets alongside them: g_LastAudioEventCount so the debug
+	// readout can't show a stale count across the gap before the next
+	// snapshot, and g_AudioEventState so footstep phase and edge-detection
+	// start clean rather than relying on the derivation layer's fire-counter
+	// and kill-sequence guards to absorb a carried-over match.
 	g_HasSnapshot = false;
 	g_LastShownKillSeq = 0;
 	g_ScoreboardShown = false;
+	g_LastAudioEventCount = 0;
+	g_AudioEventState.Reset();
 	UI::PushScoreboardVisible(false);
 
 	// Ambient bed.  Not spatialised: it is the room, not a point in it.
