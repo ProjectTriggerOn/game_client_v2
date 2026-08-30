@@ -47,13 +47,15 @@ namespace
 		const XMVECTOR t1 = XMVector3Normalize(XMVector3Cross(helper, n));
 		const XMVECTOR t2 = XMVector3Cross(n, t1);
 
-		// Billboard shader multiplies posL (x,y in quad plane, z unused) by world:
-		// rows are the quad's right (t1), up (t2) and normal (n). Pack row-major so
-		// row0=t1, row1=t2, row2=n land directly in the matrix rows.
+		// Axes go into the matrix COLUMNS (live-game A/B verified): the pipeline's
+		// effective transform reads basis axes from columns, exactly like the
+		// working camera path (transpose(view) = axes in columns). Row packing
+		// effectively transposes the rotation, which flips the quad's front face
+		// into the wall — CULL_BACK then discarded every decal.
 		const XMMATRIX w = XMMatrixSet(
-			XMVectorGetX(t1), XMVectorGetY(t1), XMVectorGetZ(t1), 0.0f,
-			XMVectorGetX(t2), XMVectorGetY(t2), XMVectorGetZ(t2), 0.0f,
-			XMVectorGetX(n), XMVectorGetY(n), XMVectorGetZ(n), 0.0f,
+			XMVectorGetX(t1), XMVectorGetX(t2), XMVectorGetX(n), 0.0f,
+			XMVectorGetY(t1), XMVectorGetY(t2), XMVectorGetY(n), 0.0f,
+			XMVectorGetZ(t1), XMVectorGetZ(t2), XMVectorGetZ(n), 0.0f,
 			0.0f, 0.0f, 0.0f, 1.0f);
 
 		// Fold the decal size into the basis so the unit quad spans DECAL_SIZE

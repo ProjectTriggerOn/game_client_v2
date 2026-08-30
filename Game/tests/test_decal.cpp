@@ -39,19 +39,22 @@ int main()
 	Decal_Finalize();
 
 	//-------------------------------------------------------------------------
-	// 3. Basis orientation (floor decal, normal +Y): rows are (t1, t2, n).
-	//    For n=(0,1,0): t1=(0,0,1), t2=(1,0,0). After the DECAL_SIZE scaling the
-	//    normal row is (0, DECAL_SIZE, 0) — still exactly +Y, and neither basis
-	//    row has a world-space y component. A transposed (column-packed) basis
-	//    would push t2.x into row0's y and move the +Y out of row2 entirely.
+	// 3. Basis orientation (floor decal, normal +Y): axes packed as COLUMNS
+	//    (matches the working camera path; row packing flips the quad's front
+	//    face into the surface and CULL_BACK discards it).
+	//    For n=(0,1,0): t1=cross(up,n)=(0,0,1), t2=cross(n,t1)=(1,0,0).
+	//    Column packing, scaled by DECAL_SIZE: column0=t1*S=(0,0,0.15),
+	//    column1=t2*S=(0.15,0,0), column2=n*S=(0,0.15,0) — i.e. in XMFLOAT4X4
+	//    storage: _11=0,_12=0.15,_13=0 / _21=0,_22=0,_23=0.15 /
+	//    _31=0.15,_32=0,_33=0. The +Y normal appears at _23=0.15.
 	//-------------------------------------------------------------------------
 	Decal_Initialize();
 	Decal_Create({ 5.0f, 0.0f, 5.0f }, { 0.0f, 1.0f, 0.0f });
 	const XMFLOAT4X4 floorWorld = Decal_DebugGetWorldMatrix(0);
-	CHECK(Near(floorWorld._12, 0.0f), "row0 (t1) has no y component");
-	CHECK(Near(floorWorld._22, 0.0f), "row1 (t2) has no y component");
-	CHECK(Near(floorWorld._32, 0.15f), "row2 (n) is +Y scaled by DECAL_SIZE");
-	CHECK(Near(floorWorld._31, 0.0f) && Near(floorWorld._33, 0.0f), "row2 x/z zero (normal pure +Y)");
+	CHECK(Near(floorWorld._23, 0.15f), "normal +Y*S lands at _23 (column-packed)");
+	CHECK(Near(floorWorld._12, 0.15f), "t2.x*S at _12 (t2=+X in column1)");
+	CHECK(Near(floorWorld._31, 0.15f), "t1.z*S at _31 (t1=+Z in column0)");
+	CHECK(Near(floorWorld._13, 0.0f) && Near(floorWorld._33, 0.0f), "normal z components zero");
 
 	//-------------------------------------------------------------------------
 	// 4. Lift: world._42 = hitPos.y + normal.y * DECAL_LIFT = 0 + 0.01

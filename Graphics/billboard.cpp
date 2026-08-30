@@ -2,7 +2,6 @@
 #include "shader_billboard.h"
 #include "texture.h"
 #include "direct3d.h"
-#include "debug_log.h"
 
 using namespace DirectX;
 
@@ -87,21 +86,6 @@ void Billboard_Draw(int texID, const XMFLOAT3& position, const XMFLOAT2& scale,
 
 	Direct3D_GetDeviceContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 	Direct3D_GetDeviceContext()->Draw(NUM_VERTEX, 0);
-
-	// TEMP DIAGNOSTIC (matrix-path investigation): log the working path's
-	// world matrix once.
-	static bool s_loggedCamera = false;
-	if (!s_loggedCamera)
-	{
-		s_loggedCamera = true;
-		const XMMATRIX m = pivotOffset * mtxs * cameraBasis * mtxt;
-		DebugLog_Printf("impact",
-			"CAM world rows: [%.3f %.3f %.3f %.3f][%.3f %.3f %.3f %.3f][%.3f %.3f %.3f %.3f][%.3f %.3f %.3f %.3f]",
-			m.r[0].m128_f32[0], m.r[0].m128_f32[1], m.r[0].m128_f32[2], m.r[0].m128_f32[3],
-			m.r[1].m128_f32[0], m.r[1].m128_f32[1], m.r[1].m128_f32[2], m.r[1].m128_f32[3],
-			m.r[2].m128_f32[0], m.r[2].m128_f32[1], m.r[2].m128_f32[2], m.r[2].m128_f32[3],
-			m.r[3].m128_f32[0], m.r[3].m128_f32[1], m.r[3].m128_f32[2], m.r[3].m128_f32[3]);
-	}
 }
 
 void Billboard_DrawWorld(int texID, const XMMATRIX& world, const XMFLOAT4& color)
@@ -121,18 +105,4 @@ void Billboard_DrawWorld(int texID, const XMMATRIX& world, const XMFLOAT4& color
 
 	Direct3D_GetDeviceContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 	Direct3D_GetDeviceContext()->Draw(NUM_VERTEX, 0);
-
-	// TEMP DIAGNOSTIC (matrix-path investigation): log the decal path's
-	// world matrix once.
-	static bool s_loggedWorld = false;
-	if (!s_loggedWorld)
-	{
-		s_loggedWorld = true;
-		DebugLog_Printf("impact",
-			"DECAL world rows: [%.3f %.3f %.3f %.3f][%.3f %.3f %.3f %.3f][%.3f %.3f %.3f %.3f][%.3f %.3f %.3f %.3f]",
-			world.r[0].m128_f32[0], world.r[0].m128_f32[1], world.r[0].m128_f32[2], world.r[0].m128_f32[3],
-			world.r[1].m128_f32[0], world.r[1].m128_f32[1], world.r[1].m128_f32[2], world.r[1].m128_f32[3],
-			world.r[2].m128_f32[0], world.r[2].m128_f32[1], world.r[2].m128_f32[2], world.r[2].m128_f32[3],
-			world.r[3].m128_f32[0], world.r[3].m128_f32[1], world.r[3].m128_f32[2], world.r[3].m128_f32[3]);
-	}
 }
