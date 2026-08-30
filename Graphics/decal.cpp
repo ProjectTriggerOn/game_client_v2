@@ -110,16 +110,11 @@ void Decal_Draw()
 #else
 	if (g_BulletHoleTexId < 0) return;
 	const XMFLOAT4 white = { 1.0f, 1.0f, 1.0f, 1.0f };
-
-	// TEMP DIAGNOSTIC (matrix-path isolation): draw every decal through the
-	// WORKING camera-facing path (Billboard_Draw) instead of its own world
-	// matrix. If these appear, Billboard_DrawWorld/matrices are the bug; if
-	// not, the decal data is. Revert to Billboard_DrawWorld after diagnosis.
 	for (const Decal& d : g_Decals)
 	{
 		if (!d.active) continue;
-		const XMFLOAT3 pos = { d.world._41, d.world._42, d.world._43 };
-		Billboard_Draw(g_BulletHoleTexId, pos, { 0.25f, 0.25f }, { 0.0f, 0.0f }, white);
+		const XMMATRIX w = XMLoadFloat4x4(&d.world);
+		Billboard_DrawWorld(g_BulletHoleTexId, w, white);
 	}
 #endif
 }
