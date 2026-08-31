@@ -45,7 +45,10 @@ int main() {
 
     // Environment.
     std::strncpy(d.env.skyAsset, "resource/model/sky.fbx", sizeof(d.env.skyAsset) - 1);
-    d.env.ambient[0] = d.env.ambient[1] = d.env.ambient[2] = 0.2f;
+    // 0.5 matches the pre-rework hardcoded ambient in Game_Draw; 0.2 (the
+    // earlier placeholder) made the whole scene visibly darker once the
+    // runtime started honoring map-authored ambient.
+    d.env.ambient[0] = d.env.ambient[1] = d.env.ambient[2] = 0.5f;
 
     if (!Write("resource/maps/default.map", d)) {
         std::fprintf(stderr, "ERROR: could not write resource/maps/default.map\n");
