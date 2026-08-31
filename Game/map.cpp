@@ -165,11 +165,12 @@ bool Map_GetDirectionalLight(DirectX::XMFLOAT3* outDir, DirectX::XMFLOAT3* outCo
 
 bool Map_HasEnvironment() {
 	EnsureLoaded();
-	// A legacy default.map ships with visualSize == 0, which means its
-	// MapEnv block is all zeros. Rather than silently returning pure-black
-	// ambient and no sky — a visible regression vs the historical hardcoded
-	// look — treat "all zeros" as "no env authored". Once every shipped map
-	// carries an env block this can become a plain header-flags read.
+	// A map with no authored env carries an all-zero MapEnv block. Rather
+	// than silently returning pure-black ambient and no sky — a visible
+	// regression vs the historical hardcoded look — treat "all zeros" as
+	// "no env authored". Once every shipped map carries an env block this
+	// can become a plain header-flags read. (default.map does author an
+	// env: sky + 0.5 ambient, written by tools/map_convert.cpp.)
 	const auto& e = g_LoadedMap.env;
 	const bool skyEmpty  = e.skyAsset[0] == '\0';
 	const bool ambZero   = (e.ambient[0] == 0.0f && e.ambient[1] == 0.0f && e.ambient[2] == 0.0f);
