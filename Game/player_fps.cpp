@@ -10,6 +10,7 @@
 #include "input_producer.h"
 #include "mouse.h"
 #include "ms_logger.h"
+#include "reticle.h"
 #include "shader_3d_ani.h"
 
 using namespace DirectX;
@@ -38,6 +39,7 @@ PlayerFps::PlayerFps()
 	, m_Model(nullptr)
 	, m_Animator(nullptr)
 	, m_ReticleModel(nullptr)
+	, m_ReticleCenter({ 0.0f, 0.0f, 0.0f })
 	, m_StateMachine(nullptr)
 	, m_Ammo(WeaponConfig::MAG_SIZE)
 	, m_AmmoReserve(WeaponConfig::MAX_RESERVE)
@@ -94,6 +96,8 @@ void PlayerFps::Initialize(const DirectX::XMFLOAT3& position, const DirectX::XMF
 		? "resource/model/blue_arm003_reticle.fbx"
 		: "resource/model/red_arm003_reticle.fbx";
 	m_ReticleModel = ModelLoad(reticlePath, 1.0f);
+	Reticle_Initialize();
+	m_ReticleCenter = Reticle_GetCenter(m_ReticleModel);
 }
 
 void PlayerFps::Finalize()
@@ -152,6 +156,8 @@ void PlayerFps::SetTeam(uint8_t teamId)
 		? "resource/model/blue_arm003_reticle.fbx"
 		: "resource/model/red_arm003_reticle.fbx";
 	m_ReticleModel = ModelLoad(reticlePath, 1.0f);
+	Reticle_Initialize();
+	m_ReticleCenter = Reticle_GetCenter(m_ReticleModel);
 }
 
 //=============================================================================
@@ -563,7 +569,7 @@ void PlayerFps::Draw()
 		{
 			XMMATRIX bone = XMLoadFloat4x4(&boneMatrices[boneIdx]);
 			XMMATRIX worldAni = XMMatrixRotationX(XMConvertToRadians(90.0f)) * world;
-			ModelDrawUnlit(m_ReticleModel, bone * worldAni);
+			Reticle_Draw(m_ReticleModel, m_ReticleCenter, bone * worldAni);
 		}
 	}
 }

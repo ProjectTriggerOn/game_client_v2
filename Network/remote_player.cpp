@@ -8,6 +8,7 @@
 //=============================================================================
 
 #include "remote_player.h"
+#include "reticle.h"
 #include "shader_3d_ani.h"
 #include "direct3d.h"
 #include <cmath>
@@ -45,6 +46,7 @@ RemotePlayer::RemotePlayer()
     , m_StateMachine(nullptr)
     , m_WeaponModel(nullptr)
     , m_ReticleModel(nullptr)
+    , m_ReticleCenter({ 0.0f, 0.0f, 0.0f })
 {
 }
 
@@ -94,6 +96,8 @@ void RemotePlayer::Initialize(const XMFLOAT3& position)
         ? "resource/model/m4_003_reticle.fbx"
         : "resource/model/ak_002_reticle.fbx";
     m_ReticleModel = ModelLoad(reticlePath, 1.0f);
+    Reticle_Initialize();
+    m_ReticleCenter = Reticle_GetCenter(m_ReticleModel);
 
     // Initialize state machine
     m_StateMachine = new RemotePlayerStateMachine();
@@ -189,6 +193,8 @@ void RemotePlayer::SetTeam(uint8_t teamId)
         ? "resource/model/m4_003_reticle.fbx"
         : "resource/model/ak_002_reticle.fbx";
     m_ReticleModel = ModelLoad(reticlePath, 1.0f);
+    Reticle_Initialize();
+    m_ReticleCenter = Reticle_GetCenter(m_ReticleModel);
 }
 
 //-----------------------------------------------------------------------------
@@ -504,7 +510,7 @@ void RemotePlayer::Draw()
             // Drawn unlit so it stays bright regardless of scene lighting.
             if (m_ReticleModel)
             {
-                ModelDrawUnlit(m_ReticleModel, weaponWorld);
+                Reticle_Draw(m_ReticleModel, m_ReticleCenter, weaponWorld);
             }
         }
     }

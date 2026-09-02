@@ -217,6 +217,7 @@ exit /b 0
     <ClCompile Include="Game\mouse_policy.cpp" />
     <ClCompile Include="Game\ui_policy.cpp" />
     <ClCompile Include="Game\score.cpp" />
+    <ClCompile Include="Graphics\reticle.cpp" />
     <ClCompile Include="Graphics\shader.cpp" />
     <ClCompile Include="Graphics\shader_3d.cpp" />
     <ClCompile Include="Graphics\shader_3d_ani.cpp" />
@@ -294,6 +295,7 @@ exit /b 0
     <ClInclude Include="Game\mouse_policy.h" />
     <ClInclude Include="Game\ui_policy.h" />
     <ClInclude Include="Game\score.h" />
+    <ClInclude Include="Graphics\reticle.h" />
     <ClInclude Include="Graphics\shader.h" />
     <ClInclude Include="Graphics\shader_3d.h" />
     <ClInclude Include="Graphics\shader_3d_ani.h" />

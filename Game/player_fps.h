@@ -151,6 +151,7 @@ private:
 	MODEL_ANI* m_Model;
 	Animator* m_Animator;
 	MODEL* m_ReticleModel;  // Red-dot quad on the weapon sight, drawn unlit
+	DirectX::XMFLOAT3 m_ReticleCenter;  // its centroid; weapon.reticle_scale scales about this
 	PlayerStateMachine* m_StateMachine;
 
 	//-------------------------------------------------------------------------
