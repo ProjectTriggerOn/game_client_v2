@@ -586,12 +586,19 @@ void Game_Draw()
 		s_gap += (gapTarget - s_gap) * 0.2f;
 		const float gap = s_gap;
 
-		const XMFLOAT4 GREEN = { 0.1f, 1.0f, 0.1f, 0.9f };
-		// four arms: N/S/E/W bars from the inner gap outward
-		Sprite_Draw(g_OverlayTexId, cx - TH * 0.5f, cy - gap - arm, TH, arm, GREEN);
-		Sprite_Draw(g_OverlayTexId, cx - TH * 0.5f, cy + gap,       TH, arm, GREEN);
-		Sprite_Draw(g_OverlayTexId, cx - gap - arm, cy - TH * 0.5f, arm, TH, GREEN);
-		Sprite_Draw(g_OverlayTexId, cx + gap,       cy - TH * 0.5f, arm, TH, GREEN);
+		const XMFLOAT4 BLACK = { 0.0f, 0.0f, 0.0f, 0.55f };
+		const XMFLOAT4 WHITE = { 1.0f, 1.0f, 1.0f, 0.9f };
+		// four arms: N/S/E/W bars from the inner gap outward. Each arm draws a
+		// 1px-larger black underlay first, then the white core, so the white
+		// stays crisp against any background.
+		Sprite_Draw(g_OverlayTexId, cx - TH * 0.5f - 1.0f, cy - gap - arm - 1.0f, TH + 2.0f, arm + 2.0f, BLACK);
+		Sprite_Draw(g_OverlayTexId, cx - TH * 0.5f,       cy - gap - arm,         TH,        arm,        WHITE);
+		Sprite_Draw(g_OverlayTexId, cx - TH * 0.5f - 1.0f, cy + gap - 1.0f,        TH + 2.0f, arm + 2.0f, BLACK);
+		Sprite_Draw(g_OverlayTexId, cx - TH * 0.5f,       cy + gap,               TH,        arm,        WHITE);
+		Sprite_Draw(g_OverlayTexId, cx - gap - arm - 1.0f, cy - TH * 0.5f - 1.0f,  arm + 2.0f, TH + 2.0f, BLACK);
+		Sprite_Draw(g_OverlayTexId, cx - gap - arm,       cy - TH * 0.5f,         arm,        TH,         WHITE);
+		Sprite_Draw(g_OverlayTexId, cx + gap - 1.0f,       cy - TH * 0.5f - 1.0f,  arm + 2.0f, TH + 2.0f, BLACK);
+		Sprite_Draw(g_OverlayTexId, cx + gap,             cy - TH * 0.5f,         arm,        TH,         WHITE);
 	}
 
 	// Hitmarker — four short axis-aligned ticks just outside the arm tips;

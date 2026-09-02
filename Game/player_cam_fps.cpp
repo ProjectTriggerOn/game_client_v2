@@ -202,9 +202,9 @@ void PlayerCamFps_AddPunch(float dPitch, float dYaw)
 	g_punchYaw += dYaw;
 }
 
-void PlayerCamFps_DecayPunch(float dt)
+void PlayerCamFps_DecayPunch(float decayHz, float dt)
 {
-	const float k = expf(-5.0f * dt);   // matches RecoilConfig decayHz = 5
+	const float k = expf(-decayHz * dt);   // matches the shooter's WeaponSpec decayHz
 	g_punchPitch *= k;
 	g_punchYaw *= k;
 }

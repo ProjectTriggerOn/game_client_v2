@@ -81,13 +81,19 @@ int main()
     //    exact identity only when dt→0, so assert loose equality).
     //-------------------------------------------------------------------------
     {
+        // decayHz*dt is fixed at 2.5 (exp(-2.5) ≈ 0.082 < 0.1); dt is derived
+        // from the spec so the assertion holds for any decayHz tuning.
+        const float decayHz = RecoilConfig::SpecForTeam(PlayerTeam::RED).decayHz;
+        const float totalDt = 2.5f / decayHz;
+
         RecoilState once; once.punchPitch = 1.0f;
-        RecoilAdvance(once, PlayerTeam::RED, 1, false, false, 0.5f);
+        RecoilAdvance(once, PlayerTeam::RED, 1, false, false, totalDt);
         CHECK(once.punchPitch < 0.1f, "punch decays >90% after decayHz*dt=2.5");
 
         RecoilState fine;
         fine.punchPitch = 1.0f;
-        for (int i = 0; i < 50; ++i) RecoilAdvance(fine, PlayerTeam::RED, 1, false, false, 0.01f);
+        for (int i = 0; i < 50; ++i)
+            RecoilAdvance(fine, PlayerTeam::RED, 1, false, false, totalDt / 50.0f);
         CHECK(Near(once.punchPitch, fine.punchPitch, 0.02f),
               "decay is dt-granularity independent (within discretization error)");
     }
@@ -103,7 +109,10 @@ int main()
               "bloom saturates at bloomMaxDeg");
 
         RecoilState rs2 = rs;
-        RecoilAdvance(rs2, PlayerTeam::RED, 41, false, false, 1.0f); // 5Hz decay, 1s
+        // decayHz*dt fixed at 5.0 (exp(-5.0) ≈ 0.0067 → bloom < 1% of max);
+        // dt derived from the spec so the assertion holds for any decayHz.
+        RecoilAdvance(rs2, PlayerTeam::RED, 41, false, false,
+                      5.0f / RecoilConfig::SpecForTeam(PlayerTeam::RED).decayHz);
         CHECK(rs2.bloomDeg < rs.bloomDeg * 0.01f, "bloom decays with punch");
     }
 

@@ -173,8 +173,8 @@ private:
 	// the HUD flash; the falling edge just clears the latch (no animation).
 	bool m_WasHit = false;
 	// Recoil (COD model): client-side prediction, advanced on ConsumeRound,
-	// decayed per frame HERE (RecoilAdvance, same exp(-5dt) the server ticks
-	// with) and mirrored into the camera punch accumulator (PlayerCamFps_*
+	// decayed per frame HERE (RecoilAdvance, same exp(-decayHz*dt) the server
+	// ticks with) and mirrored into the camera punch accumulator (PlayerCamFps_*
 	// follows the pool's deltas + its own same-rate decay), reconciled against
 	// the snapshot in ApplyServerCorrection. punch NEVER touches camera yaw/pitch.
 	RecoilMath::RecoilState m_Recoil{};

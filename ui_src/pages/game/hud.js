@@ -82,10 +82,13 @@
 
     // Damage vignette: C++ pulses GameHUD.onDamage; the CSS transition owns
     // the decay (instant-on via .flash, 0.45s fade after removal).
-    const vignette = document.getElementById('damage-vignette');
+    // NOTE: lookup happens on every pulse (like the HP/ammo handlers above) —
+    // hud.js loads before router.js injects the page markup, so a top-level
+    // getElementById captures null and the flash would silently never fire.
     let vignetteTimer = 0;
     window.GameHUD = window.GameHUD || {};
     GameHUD.onDamage = () => {
+      const vignette = document.getElementById('damage-vignette');
       if (!vignette) return;
       vignette.classList.add('flash');
       clearTimeout(vignetteTimer);

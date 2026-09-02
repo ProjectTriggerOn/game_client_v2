@@ -186,9 +186,10 @@ void PlayerFps::Update(double elapsed_time)
 	// Recoil punch decay at frame rate (fps-independent exponential). The
 	// camera punch accumulator keeps its OWN recovery — it is a pure delta-sync
 	// follower of the pool below (AddPunch is called only on fire/reconcile, so
-	// the pool's per-frame negative delta is never fed to it). Same exp(-5dt)
-	// rate on both sides, so the rendered view tracks the pool exactly.
-	PlayerCamFps_DecayPunch(frameDt);
+	// the pool's per-frame negative delta is never fed to it). Same
+	// exp(-decayHz*dt) rate as the pool (both read the shooter's WeaponSpec
+	// decayHz), so the rendered view tracks the pool exactly.
+	PlayerCamFps_DecayPunch(RecoilConfig::SpecForTeam(m_TeamId).decayHz, frameDt);
 
 	// Recoil pool decay at frame rate — SAME exponential formula the server
 	// ticks with (spec §5.1/§5.2: one truth source). Previously m_Recoil was
