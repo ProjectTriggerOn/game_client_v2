@@ -37,6 +37,7 @@ PlayerFps::PlayerFps()
 	, m_PhysicsAlpha(0.0f)
 	, m_Model(nullptr)
 	, m_Animator(nullptr)
+	, m_ReticleModel(nullptr)
 	, m_StateMachine(nullptr)
 	, m_Ammo(WeaponConfig::MAG_SIZE)
 	, m_AmmoReserve(WeaponConfig::MAX_RESERVE)
@@ -88,6 +89,11 @@ void PlayerFps::Initialize(const DirectX::XMFLOAT3& position, const DirectX::XMF
 		m_Animator = new Animator();
 		m_Animator->Init(m_Model);
 	}
+
+	const char* reticlePath = (m_TeamId == PlayerTeam::BLUE)
+		? "resource/model/blue_arm003_reticle.fbx"
+		: "resource/model/red_arm003_reticle.fbx";
+	m_ReticleModel = ModelLoad(reticlePath, 1.0f);
 }
 
 void PlayerFps::Finalize()
@@ -101,6 +107,11 @@ void PlayerFps::Finalize()
 	{
 		ModelAni_Release(m_Model);
 		m_Model = nullptr;
+	}
+	if (m_ReticleModel)
+	{
+		ModelRelease(m_ReticleModel);
+		m_ReticleModel = nullptr;
 	}
 }
 
@@ -120,6 +131,11 @@ void PlayerFps::SetTeam(uint8_t teamId)
 		ModelAni_Release(m_Model);
 		m_Model = nullptr;
 	}
+	if (m_ReticleModel)
+	{
+		ModelRelease(m_ReticleModel);
+		m_ReticleModel = nullptr;
+	}
 
 	const char* modelPath = (m_TeamId == PlayerTeam::BLUE)
 		? "resource/model/blue_arm003.fbx"
@@ -131,6 +147,11 @@ void PlayerFps::SetTeam(uint8_t teamId)
 		m_Animator = new Animator();
 		m_Animator->Init(m_Model);
 	}
+
+	const char* reticlePath = (m_TeamId == PlayerTeam::BLUE)
+		? "resource/model/blue_arm003_reticle.fbx"
+		: "resource/model/red_arm003_reticle.fbx";
+	m_ReticleModel = ModelLoad(reticlePath, 1.0f);
 }
 
 //=============================================================================
@@ -529,6 +550,22 @@ void PlayerFps::Draw()
 	world = XMMatrixTranslation(0.0f, -1.085f, 0.0f) * world; // Adjust vertical position if needed
 
 	ModelAni_Draw(m_Model, world, m_Animator, true); // isBlender=false as we constructed the matrix manually
+
+	// Red-dot reticle. The sight mesh is rigid-bound 100% to the "weapon" bone, so applying
+	// that bone's skinning matrix (offset * global) to a quad authored in bind-pose space
+	// lands it exactly where the shader puts the sight. The RotationX(90) reproduces the
+	// transform ModelAni_Draw applies internally when isBlender is true.
+	if (m_ReticleModel && m_Animator && m_Model->BoneMapping.count("weapon"))
+	{
+		const int boneIdx = m_Model->BoneMapping.at("weapon");
+		const std::vector<XMFLOAT4X4>& boneMatrices = m_Animator->GetFinalBoneMatrices();
+		if (boneIdx >= 0 && (size_t)boneIdx < boneMatrices.size())
+		{
+			XMMATRIX bone = XMLoadFloat4x4(&boneMatrices[boneIdx]);
+			XMMATRIX worldAni = XMMatrixRotationX(XMConvertToRadians(90.0f)) * world;
+			ModelDrawUnlit(m_ReticleModel, bone * worldAni);
+		}
+	}
 }
 
 const DirectX::XMFLOAT3& PlayerFps::GetPosition() const

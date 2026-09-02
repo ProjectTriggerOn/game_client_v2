@@ -153,6 +153,7 @@ private:
 
     // Weapon attachment
     MODEL* m_WeaponModel;
+    MODEL* m_ReticleModel;  // Red-dot quad on the weapon sight, drawn unlit
 };
 
 // Global remote player array (pre-allocated, indexed by playerId)

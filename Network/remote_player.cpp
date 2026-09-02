@@ -44,6 +44,7 @@ RemotePlayer::RemotePlayer()
     , m_Animator(nullptr)
     , m_StateMachine(nullptr)
     , m_WeaponModel(nullptr)
+    , m_ReticleModel(nullptr)
 {
 }
 
@@ -89,6 +90,11 @@ void RemotePlayer::Initialize(const XMFLOAT3& position)
         : "resource/model/ak_002.fbx";
     m_WeaponModel = ModelLoad(weaponPath, 1.0f);
 
+    const char* reticlePath = (m_TeamId == PlayerTeam::BLUE)
+        ? "resource/model/m4_003_reticle.fbx"
+        : "resource/model/ak_002_reticle.fbx";
+    m_ReticleModel = ModelLoad(reticlePath, 1.0f);
+
     // Initialize state machine
     m_StateMachine = new RemotePlayerStateMachine();
 }
@@ -123,6 +129,12 @@ void RemotePlayer::Finalize()
     {
         ModelRelease(m_WeaponModel);
         m_WeaponModel = nullptr;
+    }
+
+    if (m_ReticleModel)
+    {
+        ModelRelease(m_ReticleModel);
+        m_ReticleModel = nullptr;
     }
 }
 
@@ -163,10 +175,20 @@ void RemotePlayer::SetTeam(uint8_t teamId)
         ModelRelease(m_WeaponModel);
         m_WeaponModel = nullptr;
     }
+    if (m_ReticleModel)
+    {
+        ModelRelease(m_ReticleModel);
+        m_ReticleModel = nullptr;
+    }
     const char* weaponPath = (m_TeamId == PlayerTeam::BLUE)
         ? "resource/model/m4_003.fbx"
         : "resource/model/ak_002.fbx";
     m_WeaponModel = ModelLoad(weaponPath, 1.0f);
+
+    const char* reticlePath = (m_TeamId == PlayerTeam::BLUE)
+        ? "resource/model/m4_003_reticle.fbx"
+        : "resource/model/ak_002_reticle.fbx";
+    m_ReticleModel = ModelLoad(reticlePath, 1.0f);
 }
 
 //-----------------------------------------------------------------------------
@@ -477,6 +499,13 @@ void RemotePlayer::Draw()
 
             XMMATRIX weaponWorld = offset * postRot * weaponBone * preRot * world;
             ModelDraw(m_WeaponModel, weaponWorld);
+
+            // Red-dot reticle rides the same transform as the weapon.
+            // Drawn unlit so it stays bright regardless of scene lighting.
+            if (m_ReticleModel)
+            {
+                ModelDrawUnlit(m_ReticleModel, weaponWorld);
+            }
         }
     }
 }
