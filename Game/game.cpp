@@ -477,6 +477,14 @@ void Game_Draw()
 
 	SkyDome_Draw();
 
+	// Opaque world geometry goes down before the players. Anything translucent drawn
+	// during the player pass (the sight reticle today; muzzle flashes, glass or
+	// particles later) needs the map already resolved in the depth and colour buffers
+	// to composite against. With the map drawn last, a translucent fragment that wrote
+	// depth made the map behind it fail the LESS test and the sky dome showed through.
+	Cube_SetUVMode(CUBE_UV_PER_FACE);
+	Map_Draw();
+
 	g_PlayerFps->Draw();
 
 	// Draw all active Remote Players
@@ -487,9 +495,6 @@ void Game_Draw()
 		if (g_RemotePlayerActive[i])
 			g_RemotePlayers[i].Draw();
 	}
-
-	Cube_SetUVMode(CUBE_UV_PER_FACE);
-	Map_Draw();
 
 	// Debug draw: collision shapes (F3 toggle)
 	if (isDebugCollision)
