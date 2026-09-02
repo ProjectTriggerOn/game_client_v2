@@ -178,6 +178,12 @@ private:
 	// follows the pool's deltas + its own same-rate decay), reconciled against
 	// the snapshot in ApplyServerCorrection. punch NEVER touches camera yaw/pitch.
 	RecoilMath::RecoilState m_Recoil{};
+	// Frame-accumulated monotonic clock (s) driving the recoil decay-suspend
+	// window (spec §5.1 COD burst ramp): ConsumeRound stamps m_Recoil.lastFireTime
+	// with this, and the per-frame pool decay resumes only once m_NowSec is ≥
+	// FIRE_SUSPEND_DECAY_S past it. Frame time on purpose — NOT the snapshot/
+	// tick (reconciliation) domain.
+	double m_NowSec = 0.0;
 	bool m_TransitionFiring;
 	uint8_t m_TeamId;
 	uint8_t m_Health;

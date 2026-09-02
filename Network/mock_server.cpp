@@ -227,7 +227,7 @@ void MockServer::Tick()
     // decay — matching the client's accumulate-then-decay order.
     RecoilMath::RecoilAdvance(m_PlayerRecoil, LOCAL_PLAYER_TEAM, m_FireCounter,
                               /*ads=*/false, /*newlyFired=*/false,
-                              static_cast<float>(TICK_DURATION));
+                              static_cast<float>(TICK_DURATION), m_ServerTime);
     m_PlayerState.punchPitch    = m_PlayerRecoil.punchPitch;
     m_PlayerState.punchYaw      = m_PlayerRecoil.punchYaw;
     m_PlayerState.shotKickPitch = m_PlayerRecoil.shotKickPitch;
@@ -752,7 +752,7 @@ void MockServer::ProcessFiring()
     // is Tick()'s job (runs right after, before the broadcast).
     const bool adsShot = (m_PlayerState.stateFlags & NetStateFlags::IS_ADS) != 0;
     RecoilMath::RecoilAdvance(m_PlayerRecoil, LOCAL_PLAYER_TEAM, m_FireCounter,
-                              adsShot, /*newlyFired=*/true, /*dt=*/0.0f);
+                              adsShot, /*newlyFired=*/true, /*dt=*/0.0f, m_ServerTime);
 
     // Eye position
     DirectX::XMFLOAT3 eyePos = {

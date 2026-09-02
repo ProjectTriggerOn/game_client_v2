@@ -601,9 +601,10 @@ void Game_Draw()
 		Sprite_Draw(g_OverlayTexId, cx + gap,             cy - TH * 0.5f,         arm,        TH,         WHITE);
 	}
 
-	// Hitmarker — four short axis-aligned ticks just outside the arm tips;
-	// white = hit, red = kill. Sprite_Draw has no rotation, so the 45° ideal
-	// is drawn as L-steps (2 rects per corner) — reads identically at 2px.
+	// Hitmarker — four 45° stair-stepped ticks in an X, just outside the arm
+	// tips; white = hit, red = kill. Sprite_Draw has no rotation, so each tick
+	// is 4 steps of 2px squares along the diagonal with a 1px black underlay —
+	// reads as a clean X with the same black-outline style as the crosshair.
 	// Alpha decays ~100ms; PlayerFps owns the fade.
 	if (g_GameState == PLAY && g_PlayerFps)
 	{
@@ -611,23 +612,27 @@ void Game_Draw()
 		if (a > 0.0f)
 		{
 			const float cx = sw * 0.5f, cy = sh * 0.5f;
-			constexpr float O = 14.0f, L = 7.0f, TH2 = 2.0f;
+			// Each corner draws a short diagonal tick outward from the inner ring
+			// at radius O: 4 steps of S=2px, per step a 2×2 white/red core over a
+			// 4×4 black underlay (1px border — drawn first so it sits beneath).
+			constexpr float O = 14.0f, S = 2.0f;
+			constexpr int   N = 4;
+			const XMFLOAT4 BLACK = { 0.0f, 0.0f, 0.0f, 0.55f * a };
 			const XMFLOAT4 WHITE = { 1.0f, 1.0f, 1.0f, 0.9f * a };
 			const XMFLOAT4 RED   = { 1.0f, 0.25f, 0.25f, 0.9f * a };
 			const XMFLOAT4& col =
 				g_PlayerFps->GetHitmarkerKill() ? RED : WHITE;
-			// NE
-			Sprite_Draw(g_OverlayTexId, cx + O,     cy - O - L, TH2, L, col);
-			Sprite_Draw(g_OverlayTexId, cx + O,     cy - O - L, L,  TH2, col);
-			// NW
-			Sprite_Draw(g_OverlayTexId, cx - O - L, cy - O - L, TH2, L, col);
-			Sprite_Draw(g_OverlayTexId, cx - O - L, cy - O,     L,  TH2, col);
-			// SE
-			Sprite_Draw(g_OverlayTexId, cx + O,     cy + O,     TH2, L, col);
-			Sprite_Draw(g_OverlayTexId, cx + O,     cy + O,     L,  TH2, col);
-			// SW
-			Sprite_Draw(g_OverlayTexId, cx - O - L, cy + O,     TH2, L, col);
-			Sprite_Draw(g_OverlayTexId, cx - O - L, cy + O,     L,  TH2, col);
+			// Corner directions: NE, NW, SE, SW (X shape).
+			const float dx[4] = {  1.0f, -1.0f,  1.0f, -1.0f };
+			const float dy[4] = { -1.0f, -1.0f,  1.0f,  1.0f };
+			for (int c = 0; c < 4; c++)
+				for (int i = 0; i < N; i++)
+				{
+					const float px = cx + (O + i * S) * dx[c];
+					const float py = cy + (O + i * S) * dy[c];
+					Sprite_Draw(g_OverlayTexId, px - 2.0f, py - 2.0f, 4.0f, 4.0f, BLACK); // underlay
+					Sprite_Draw(g_OverlayTexId, px - 1.0f, py - 1.0f, 2.0f, 2.0f, col);   // core
+				}
 		}
 	}
 

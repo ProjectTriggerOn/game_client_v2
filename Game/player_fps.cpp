@@ -172,7 +172,7 @@ void PlayerFps::ConsumeRound()
 		RecoilMath::RecoilTotalOffsets(m_Recoil, preDp, preDy);
 		RecoilMath::RecoilAdvance(m_Recoil, m_TeamId,
 		                          static_cast<uint16_t>(m_FireCounter & 0xFFFFu),
-		                          ads, /*newlyFired=*/true, /*dt=*/0.0f);
+		                          ads, /*newlyFired=*/true, /*dt=*/0.0f, m_NowSec);
 		float dp = 0.0f, dy = 0.0f;
 		RecoilMath::RecoilTotalOffsets(m_Recoil, dp, dy);
 		PlayerCamFps_AddPunch(dp - preDp, dy - preDy);   // increment only
@@ -182,26 +182,34 @@ void PlayerFps::ConsumeRound()
 void PlayerFps::Update(double elapsed_time)
 {
 	const float frameDt = static_cast<float>(elapsed_time);
+	// Monotonic clock for the recoil decay-suspend window (spec §5.1): must be
+	// advanced before the fire sites below so a shot stamped this frame uses a
+	// nowSec at/after the pool-decay call above it.
+	m_NowSec += elapsed_time;
 
 	// Recoil punch decay at frame rate (fps-independent exponential). The
 	// camera punch accumulator keeps its OWN recovery — it is a pure delta-sync
 	// follower of the pool below (AddPunch is called only on fire/reconcile, so
 	// the pool's per-frame negative delta is never fed to it). Same
 	// exp(-decayHz*dt) rate as the pool (both read the shooter's WeaponSpec
-	// decayHz), so the rendered view tracks the pool exactly.
-	PlayerCamFps_DecayPunch(RecoilConfig::SpecForTeam(m_TeamId).decayHz, frameDt);
+	// decayHz), so the rendered view tracks the pool exactly. While the trigger
+	// is down (a shot within the last FIRE_SUSPEND_DECAY_S) the camera does NOT
+	// decay either — a burst keeps climbing like COD; recovery starts only once
+	// the pool's decay gate below clears.
+	if (m_NowSec - m_Recoil.lastFireTime >= RecoilConfig::FIRE_SUSPEND_DECAY_S)
+		PlayerCamFps_DecayPunch(RecoilConfig::SpecForTeam(m_TeamId).decayHz, frameDt);
 
 	// Recoil pool decay at frame rate — SAME exponential formula the server
-	// ticks with (spec §5.1/§5.2: one truth source). Previously m_Recoil was
-	// only advanced with dt=0 in ConsumeRound, so the pool never shrank between
-	// shots: bloomDeg racheted up while the 32Hz snapshot correction fought it
-	// (injection ≈ extraction at steady state ⇒ rendered punch ≈ 0, bloom only
-	// grew). Decaying the pool here makes it converge to the server's steady
-	// state; the camera punch follows via its own decay + the reconcile delta.
+	// ticks with (spec §5.1/§5.2: one truth source). The exp(-decayHz*dt)
+	// recovery is applied ONLY when nowSec is at least FIRE_SUSPEND_DECAY_S past
+	// the last shot (see RecoilAdvance) — punch/bloom accumulate for a whole
+	// burst, then return to zero once the trigger is released. Previously the
+	// pool shrank between shots and punch plateaued ~5° after a few rounds; the
+	// camera punch follows via its own gated decay + the reconcile delta.
 	RecoilMath::RecoilAdvance(m_Recoil, m_TeamId,
 	                          static_cast<uint16_t>(m_FireCounter & 0xFFFFu),
 	                          /*ads=*/false, /*newlyFired=*/false,
-	                          frameDt);
+	                          frameDt, m_NowSec);
 
 	// Hitmarker fade (~100ms linear, spec §6.2).
 	constexpr float HITMARKER_LIFE = 0.1f;
