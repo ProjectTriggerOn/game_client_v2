@@ -610,24 +610,36 @@ void Game_Draw()
 		Sprite_Draw(g_OverlayTexId, cx + gapClamped,             cy - TH * 0.5f,         arm,        TH,         WHITE);
 	}
 
-	// Hitmarker — four 45° stair-stepped ticks in an X, just outside the arm
-	// tips; white = hit, red = kill. Sprite_Draw has no rotation, so each tick
-	// is 4 steps of S=3px along the diagonal: a 4×4 white/red core over a 6×6
-	// black underlay — reads as a bold X in the same outline style as the
-	// crosshair. Alpha decays ~140ms; PlayerFps owns the fade.
+	// Hitmarker — four true 45° rotated ticks in an X, just outside the arm
+	// tips; white = hit, red = kill. The 9-arg Sprite_Draw overload (rotation
+	// about the rect centre) was previously assumed not to exist, so each tick
+	// was stair-stepped from 4 squares and read as a pixel bar (串珠). A real
+	// diagonal is one rotated rect; UV is the full white texture. Alpha decays
+	// ~140ms; PlayerFps owns the fade.
 	if (g_GameState == PLAY && g_PlayerFps)
 	{
 		const float a = g_PlayerFps->GetHitmarkerAlpha();
 		if (a > 0.0f)
 		{
 			const float cx = sw * 0.5f, cy = sh * 0.5f;
-			// Each corner draws a short diagonal tick outward from the inner ring
-			// at radius O: 4 steps of S=3px, per step a 4×4 white/red core over a
-			// 6×6 black underlay (1px border — drawn first so it sits beneath).
-			// S=3 with the 6px underlay overlaps neighbours by 3px, so the black
-			// outline runs continuous and thick — the desired "bolder" read.
-			constexpr float O = 14.0f, S = 3.0f;
-			constexpr int   N = 4;
+			// Tick geometry. Each tick runs outward from radius O to O+L along a
+			// 45° diagonal, so its midpoint sits at radius O+L/2 from the centre:
+			//   mx,my = centre + (O+L/2)·(dx,dy)/√2
+			// Sprite_Draw positions a rect by its UNROTATED top-left, so
+			//   sx = mx - sw/2,  sy = my - sh/2
+			// Angle sign: screen y is down and this engine's positive RotationZ
+			// turns +x toward +y (clockwise), so a horizontal bar at +45° leans
+			// down-right "╲" (the NW↔SE diagonal) and at -45° leans up-right
+			// "╱" (the NE↔SW diagonal). X arms: NE & SW are the collinear "╱"
+			// pair, NW & SE the collinear "╲" pair — that is what makes the
+			// four bars read as one X (two clean crossing strokes).
+			constexpr float O = 14.0f;         // inner radius (tick inner end)
+			constexpr float L = 13.0f;         // tick length along the diagonal
+			constexpr float CORE_T = 4.0f;     // white/red core thickness
+			constexpr float OUTLINE_T = 6.0f;  // black underlay thickness (1px a side)
+			constexpr float PI = 3.14159265f;
+			const float ang[4] = { -PI / 4.0f, +PI / 4.0f, +PI / 4.0f, -PI / 4.0f };
+			                        // NE=╱     NW=╲       SE=╲       SW=╱
 			const XMFLOAT4 BLACK = { 0.0f, 0.0f, 0.0f, 0.7f * a };
 			const XMFLOAT4 WHITE = { 1.0f, 1.0f, 1.0f, 1.0f * a };
 			const XMFLOAT4 RED   = { 1.0f, 0.25f, 0.25f, 1.0f * a };
@@ -636,14 +648,23 @@ void Game_Draw()
 			// Corner directions: NE, NW, SE, SW (X shape).
 			const float dx[4] = {  1.0f, -1.0f,  1.0f, -1.0f };
 			const float dy[4] = { -1.0f, -1.0f,  1.0f,  1.0f };
+			const int texW = (int)Texture_GetWidth(g_OverlayTexId);
+			const int texH = (int)Texture_GetHeight(g_OverlayTexId);
+			const float mid = O + L * 0.5f;   // tick midpoint radius
+			const float invSqrt2 = 0.70710678f;
 			for (int c = 0; c < 4; c++)
-				for (int i = 0; i < N; i++)
-				{
-					const float px = cx + (O + i * S) * dx[c];
-					const float py = cy + (O + i * S) * dy[c];
-					Sprite_Draw(g_OverlayTexId, px - 3.0f, py - 3.0f, 6.0f, 6.0f, BLACK); // underlay
-					Sprite_Draw(g_OverlayTexId, px - 2.0f, py - 2.0f, 4.0f, 4.0f, col);   // core
-				}
+			{
+				const float mx = cx + mid * invSqrt2 * dx[c];
+				const float my = cy + mid * invSqrt2 * dy[c];
+				// Black underlay first (1px thicker each long side), then the
+				// core; both length L, rotated about the same midpoint.
+				Sprite_Draw(g_OverlayTexId,
+					mx - L * 0.5f, my - OUTLINE_T * 0.5f,
+					L, OUTLINE_T, 0, 0, texW, texH, ang[c], BLACK);
+				Sprite_Draw(g_OverlayTexId,
+					mx - L * 0.5f, my - CORE_T * 0.5f,
+					L, CORE_T, 0, 0, texW, texH, ang[c], col);
+			}
 		}
 	}
 
