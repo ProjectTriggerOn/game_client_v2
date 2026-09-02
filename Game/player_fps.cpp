@@ -211,8 +211,8 @@ void PlayerFps::Update(double elapsed_time)
 	                          /*ads=*/false, /*newlyFired=*/false,
 	                          frameDt, m_NowSec);
 
-	// Hitmarker fade (~100ms linear, spec §6.2).
-	constexpr float HITMARKER_LIFE = 0.1f;
+	// Hitmarker fade (~140ms linear, spec §6.2 — bolder marker, longer read).
+	constexpr float HITMARKER_LIFE = 0.14f;
 	if (m_HitmarkerAlpha > 0.0f)
 		m_HitmarkerAlpha = std::fmax(0.0f, m_HitmarkerAlpha - frameDt / HITMARKER_LIFE);
 

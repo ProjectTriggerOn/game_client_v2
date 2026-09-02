@@ -584,28 +584,37 @@ void Game_Draw()
 		static float s_gap = 4.0f;
 		const float gapTarget = 4.0f + spreadPx + punchPx;
 		s_gap += (gapTarget - s_gap) * 0.2f;
-		const float gap = s_gap;
+		// Visual cap applied AFTER smoothing — the punch pulse alone is ~470px
+		// at the 12° PUNCH_MAX (0.21 rad × 2250px/rad), which shoves the arms
+		// off-screen. Truncating a punch pulse at the cap is accepted: the
+		// visual bound wins, the crosshair never leaves the screen area
+		// (user ruling 2026-09-02). The eased state itself is pinned so a
+		// recovery eases down from the visible 36px instead of stalling there
+		// while a hidden higher value decays.
+		constexpr float GAP_MAX = 36.0f;
+		if (s_gap > GAP_MAX) s_gap = GAP_MAX;
+		const float gapClamped = s_gap;
 
 		const XMFLOAT4 BLACK = { 0.0f, 0.0f, 0.0f, 0.55f };
 		const XMFLOAT4 WHITE = { 1.0f, 1.0f, 1.0f, 0.9f };
 		// four arms: N/S/E/W bars from the inner gap outward. Each arm draws a
 		// 1px-larger black underlay first, then the white core, so the white
 		// stays crisp against any background.
-		Sprite_Draw(g_OverlayTexId, cx - TH * 0.5f - 1.0f, cy - gap - arm - 1.0f, TH + 2.0f, arm + 2.0f, BLACK);
-		Sprite_Draw(g_OverlayTexId, cx - TH * 0.5f,       cy - gap - arm,         TH,        arm,        WHITE);
-		Sprite_Draw(g_OverlayTexId, cx - TH * 0.5f - 1.0f, cy + gap - 1.0f,        TH + 2.0f, arm + 2.0f, BLACK);
-		Sprite_Draw(g_OverlayTexId, cx - TH * 0.5f,       cy + gap,               TH,        arm,        WHITE);
-		Sprite_Draw(g_OverlayTexId, cx - gap - arm - 1.0f, cy - TH * 0.5f - 1.0f,  arm + 2.0f, TH + 2.0f, BLACK);
-		Sprite_Draw(g_OverlayTexId, cx - gap - arm,       cy - TH * 0.5f,         arm,        TH,         WHITE);
-		Sprite_Draw(g_OverlayTexId, cx + gap - 1.0f,       cy - TH * 0.5f - 1.0f,  arm + 2.0f, TH + 2.0f, BLACK);
-		Sprite_Draw(g_OverlayTexId, cx + gap,             cy - TH * 0.5f,         arm,        TH,         WHITE);
+		Sprite_Draw(g_OverlayTexId, cx - TH * 0.5f - 1.0f, cy - gapClamped - arm - 1.0f, TH + 2.0f, arm + 2.0f, BLACK);
+		Sprite_Draw(g_OverlayTexId, cx - TH * 0.5f,       cy - gapClamped - arm,         TH,        arm,        WHITE);
+		Sprite_Draw(g_OverlayTexId, cx - TH * 0.5f - 1.0f, cy + gapClamped - 1.0f,        TH + 2.0f, arm + 2.0f, BLACK);
+		Sprite_Draw(g_OverlayTexId, cx - TH * 0.5f,       cy + gapClamped,               TH,        arm,        WHITE);
+		Sprite_Draw(g_OverlayTexId, cx - gapClamped - arm - 1.0f, cy - TH * 0.5f - 1.0f,  arm + 2.0f, TH + 2.0f, BLACK);
+		Sprite_Draw(g_OverlayTexId, cx - gapClamped - arm,       cy - TH * 0.5f,         arm,        TH,         WHITE);
+		Sprite_Draw(g_OverlayTexId, cx + gapClamped - 1.0f,       cy - TH * 0.5f - 1.0f,  arm + 2.0f, TH + 2.0f, BLACK);
+		Sprite_Draw(g_OverlayTexId, cx + gapClamped,             cy - TH * 0.5f,         arm,        TH,         WHITE);
 	}
 
 	// Hitmarker — four 45° stair-stepped ticks in an X, just outside the arm
 	// tips; white = hit, red = kill. Sprite_Draw has no rotation, so each tick
-	// is 4 steps of 2px squares along the diagonal with a 1px black underlay —
-	// reads as a clean X with the same black-outline style as the crosshair.
-	// Alpha decays ~100ms; PlayerFps owns the fade.
+	// is 4 steps of S=3px along the diagonal: a 4×4 white/red core over a 6×6
+	// black underlay — reads as a bold X in the same outline style as the
+	// crosshair. Alpha decays ~140ms; PlayerFps owns the fade.
 	if (g_GameState == PLAY && g_PlayerFps)
 	{
 		const float a = g_PlayerFps->GetHitmarkerAlpha();
@@ -613,13 +622,15 @@ void Game_Draw()
 		{
 			const float cx = sw * 0.5f, cy = sh * 0.5f;
 			// Each corner draws a short diagonal tick outward from the inner ring
-			// at radius O: 4 steps of S=2px, per step a 2×2 white/red core over a
-			// 4×4 black underlay (1px border — drawn first so it sits beneath).
-			constexpr float O = 14.0f, S = 2.0f;
+			// at radius O: 4 steps of S=3px, per step a 4×4 white/red core over a
+			// 6×6 black underlay (1px border — drawn first so it sits beneath).
+			// S=3 with the 6px underlay overlaps neighbours by 3px, so the black
+			// outline runs continuous and thick — the desired "bolder" read.
+			constexpr float O = 14.0f, S = 3.0f;
 			constexpr int   N = 4;
-			const XMFLOAT4 BLACK = { 0.0f, 0.0f, 0.0f, 0.55f * a };
-			const XMFLOAT4 WHITE = { 1.0f, 1.0f, 1.0f, 0.9f * a };
-			const XMFLOAT4 RED   = { 1.0f, 0.25f, 0.25f, 0.9f * a };
+			const XMFLOAT4 BLACK = { 0.0f, 0.0f, 0.0f, 0.7f * a };
+			const XMFLOAT4 WHITE = { 1.0f, 1.0f, 1.0f, 1.0f * a };
+			const XMFLOAT4 RED   = { 1.0f, 0.25f, 0.25f, 1.0f * a };
 			const XMFLOAT4& col =
 				g_PlayerFps->GetHitmarkerKill() ? RED : WHITE;
 			// Corner directions: NE, NW, SE, SW (X shape).
@@ -630,8 +641,8 @@ void Game_Draw()
 				{
 					const float px = cx + (O + i * S) * dx[c];
 					const float py = cy + (O + i * S) * dy[c];
-					Sprite_Draw(g_OverlayTexId, px - 2.0f, py - 2.0f, 4.0f, 4.0f, BLACK); // underlay
-					Sprite_Draw(g_OverlayTexId, px - 1.0f, py - 1.0f, 2.0f, 2.0f, col);   // core
+					Sprite_Draw(g_OverlayTexId, px - 3.0f, py - 3.0f, 6.0f, 6.0f, BLACK); // underlay
+					Sprite_Draw(g_OverlayTexId, px - 2.0f, py - 2.0f, 4.0f, 4.0f, col);   // core
 				}
 		}
 	}

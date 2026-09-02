@@ -232,6 +232,29 @@ int main()
         CHECK(Near(rs.punchPitch, capRad, 1e-4f), "30-round dump sits AT the cap");
     }
 
+    //-------------------------------------------------------------------------
+    // 14. SPREAD_MAX_DEG cap: HIP moving at max bloom (1.2×1.5 + 1.5 = 3.3°)
+    //     clamps to exactly 1.8°; a still ADS shot (0.2° base, no bloom) sits
+    //     below the cap and is unaffected.
+    //-------------------------------------------------------------------------
+    {
+        const float capRad = RecoilConfig::SPREAD_MAX_DEG * kDegToRad;
+        // HIP, moveFactor=1, bloom at its 1.5° max → raw 3.3° → clamped to cap.
+        CHECK(Near(RecoilSpreadRadians(PlayerTeam::RED, false, 1.5f, 1.0f), capRad, 1e-4f),
+              "HIP moving at max bloom clamps to SPREAD_MAX_DEG");
+        CHECK(Near(RecoilSpreadRadians(PlayerTeam::BLUE, false, 1.5f, 1.0f), capRad, 1e-4f),
+              "BLUE HIP moving at max bloom clamps too (mirror spec)");
+        // ADS, still, no bloom → 0.2° base cone — well under the cap.
+        const float adsStill =
+            RecoilConfig::SpecForTeam(PlayerTeam::RED).spreadBaseDegAds * kDegToRad;
+        CHECK(Near(RecoilSpreadRadians(PlayerTeam::RED, true, 0.0f, 0.0f), adsStill, 1e-4f),
+              "ADS still (0.2°) unaffected by the cap");
+        // Sanity: raw total (3.3°) exceeds the cap so the clamp is load-bearing.
+        const float raw = RecoilConfig::SpecForTeam(PlayerTeam::RED).spreadBaseDegHip
+                            * kDegToRad * 1.5f + 1.5f * kDegToRad;
+        CHECK(raw > capRad + 1e-4f, "raw HIP moving + bloom exceeds the cap (clamp matters)");
+    }
+
     if (g_fail == 0) std::printf("test_recoil_math: ALL PASS\n");
     else             std::printf("test_recoil_math: %d FAILURES\n", g_fail);
     return g_fail == 0 ? 0 : 1;
