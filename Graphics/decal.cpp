@@ -16,9 +16,8 @@ using namespace DirectX;
 namespace
 {
 	constexpr float DECAL_SIZE = 0.15f;  // square side, world units
-	constexpr float DECAL_LIFT = 0.05f;  // along the normal, anti z-fighting
-	                                     // TEMP raised from 0.01: probing whether the
-	                                     // visual surface sits above the collider face
+	constexpr float DECAL_LIFT_WALL = 0.05f;   // walls: cube visual faces sit a hair outside the collider
+	constexpr float DECAL_LIFT_FLAT = 0.015f;  // floor/ceiling: mesh lies exactly on the collider plane
 
 	struct Decal
 	{
@@ -65,10 +64,14 @@ namespace
 		// world units (rows are right/up/normal, so uniform scaling works).
 		const XMMATRIX scaled = w * XMMatrixScaling(DECAL_SIZE, DECAL_SIZE, DECAL_SIZE);
 
+		// Per-surface lift: the wall cubes' visual faces sit a hair outside the
+		// collider AABBs (needs ~0.05), while the floor mesh lies exactly on the
+		// collider top (0.05 floats visibly — 0.015 hides the seam).
+		const float liftAmount = (std::fabs(normal.y) > 0.999f) ? DECAL_LIFT_FLAT : DECAL_LIFT_WALL;
 		const XMMATRIX lift = XMMatrixTranslation(
-			hitPos.x + normal.x * DECAL_LIFT,
-			hitPos.y + normal.y * DECAL_LIFT,
-			hitPos.z + normal.z * DECAL_LIFT);
+			hitPos.x + normal.x * liftAmount,
+			hitPos.y + normal.y * liftAmount,
+			hitPos.z + normal.z * liftAmount);
 
 		XMStoreFloat4x4(&outWorld, scaled * lift);
 	}

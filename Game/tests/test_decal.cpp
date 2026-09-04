@@ -57,11 +57,11 @@ int main()
 	CHECK(Near(floorWorld._12, 0.0f) && Near(floorWorld._33, 0.0f), "normal cross components zero");
 
 	//-------------------------------------------------------------------------
-	// 4. Lift: world._42 = hitPos.y + normal.y * DECAL_LIFT = 0 + 0.05
-	//    (lift raised 0.01 -> 0.05: the visual cube mesh sits a hair above the
-	//    collider face; 0.01 was buried and depth-tested away)
+	// 4. Lift (per-surface): floor decal gets DECAL_LIFT_FLAT = 0.015
+	//    (walls need more — their visual faces sit outside the collider — but
+	//    the floor mesh lies exactly on the collider plane)
 	//-------------------------------------------------------------------------
-	CHECK(Near(floorWorld._42, 0.05f), "decal lifted 0.05 along +Y (anti z-fight)");
+	CHECK(Near(floorWorld._42, 0.015f), "floor decal lifted 0.015 along +Y");
 	Decal_Finalize();
 
 	std::printf(g_fail ? "\n%d FAILED\n" : "\nALL PASSED\n", g_fail);
