@@ -652,8 +652,8 @@ void Game_Draw()
 			// four bars read as one X (two clean crossing strokes).
 			constexpr float O = 14.0f;         // inner radius (tick inner end)
 			constexpr float L = 13.0f;         // tick length along the diagonal
-			constexpr float CORE_T = 4.0f;     // white/red core thickness
-			constexpr float OUTLINE_T = 6.0f;  // black underlay thickness (1px a side)
+			constexpr float CORE_T = 2.0f;     // white/red core thickness — matches the crosshair arm TH
+			constexpr float OUTLINE_T = 4.0f;  // black underlay thickness (1px a side), same as the crosshair arm outline
 			constexpr float PI = 3.14159265f;
 			const float ang[4] = { -PI / 4.0f, +PI / 4.0f, +PI / 4.0f, -PI / 4.0f };
 			                        // NE=╱     NW=╲       SE=╲       SW=╱
