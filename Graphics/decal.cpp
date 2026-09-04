@@ -16,7 +16,9 @@ using namespace DirectX;
 namespace
 {
 	constexpr float DECAL_SIZE = 0.15f;  // square side, world units
-	constexpr float DECAL_LIFT = 0.01f;  // along the normal, anti z-fighting
+	constexpr float DECAL_LIFT = 0.05f;  // along the normal, anti z-fighting
+	                                     // TEMP raised from 0.01: probing whether the
+	                                     // visual surface sits above the collider face
 
 	struct Decal
 	{
@@ -47,15 +49,16 @@ namespace
 		const XMVECTOR t1 = XMVector3Normalize(XMVector3Cross(helper, n));
 		const XMVECTOR t2 = XMVector3Cross(n, t1);
 
-		// Axes go into the matrix COLUMNS (live-game A/B verified): the pipeline's
-		// effective transform reads basis axes from columns, exactly like the
-		// working camera path (transpose(view) = axes in columns). Row packing
-		// effectively transposes the rotation, which flips the quad's front face
-		// into the wall — CULL_BACK then discarded every decal.
+		// Axes go into the matrix ROWS. Live-game evidence (2026-09-04): with
+		// column packing the FLOOR decal rendered vertical (its local +X mapped
+		// to world +Y), which is only possible if the pipeline's effective
+		// transform reads basis axes from matrix ROWS. Row packing puts t1/t2/n
+		// in the rows; paired with CULL_NONE in ImpactFx_Draw (decals are opaque
+		// splats, double-sided rendering removes winding from the equation).
 		const XMMATRIX w = XMMatrixSet(
-			XMVectorGetX(t1), XMVectorGetX(t2), XMVectorGetX(n), 0.0f,
-			XMVectorGetY(t1), XMVectorGetY(t2), XMVectorGetY(n), 0.0f,
-			XMVectorGetZ(t1), XMVectorGetZ(t2), XMVectorGetZ(n), 0.0f,
+			XMVectorGetX(t1), XMVectorGetY(t1), XMVectorGetZ(t1), 0.0f,
+			XMVectorGetX(t2), XMVectorGetY(t2), XMVectorGetZ(t2), 0.0f,
+			XMVectorGetX(n), XMVectorGetY(n), XMVectorGetZ(n), 0.0f,
 			0.0f, 0.0f, 0.0f, 1.0f);
 
 		// Fold the decal size into the basis so the unit quad spans DECAL_SIZE

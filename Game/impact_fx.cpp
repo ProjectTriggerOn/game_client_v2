@@ -8,6 +8,7 @@
 #include "player_fps.h"
 #include "direct3d.h"
 #include "texture.h"
+#include "debug_log.h"
 
 using namespace DirectX;
 
@@ -134,6 +135,16 @@ void ImpactFx_Update(double elapsed_time)
 
 		Decal_Create(hitPos, bestNormal);
 		HitSparkBurst(hitPos, bestNormal);
+
+		// TEMP DIAGNOSTIC (missing-wall-directions): log every spawn's normal +
+		// lifted center so the missing orientations can be diffed offline.
+		const XMFLOAT3 lifted{ hitPos.x + bestNormal.x * 0.05f,
+			hitPos.y + bestNormal.y * 0.05f,
+			hitPos.z + bestNormal.z * 0.05f };
+		DebugLog_Printf("impact",
+			"spawn n=(%.2f,%.2f,%.2f) hit=(%.2f,%.2f,%.2f) center=(%.2f,%.2f,%.2f)",
+			bestNormal.x, bestNormal.y, bestNormal.z,
+			hitPos.x, hitPos.y, hitPos.z, lifted.x, lifted.y, lifted.z);
 	}
 }
 
@@ -145,7 +156,11 @@ void ImpactFx_SetCamera(const XMFLOAT4X4& view)
 void ImpactFx_Draw()
 {
 	Direct3D_SetDepthWriteEnable(false);
+	// TEMP DIAGNOSTIC (direction asymmetry): disable back-face culling so a
+	// wrong-winding quad still renders — separates culling from transform bugs.
+	Direct3D_SetCullMode(D3D11_CULL_NONE);
 	Decal_Draw();
+	Direct3D_SetCullMode(D3D11_CULL_BACK);
 	Particle_Draw();
 	Direct3D_SetDepthWriteEnable(true);
 }
