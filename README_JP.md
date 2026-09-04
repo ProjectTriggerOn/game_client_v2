@@ -14,6 +14,7 @@ Direct3D 11 / Win32 ベースのマルチプレイヤー FPS ゲームクライ�
 - **3 つの接続モード**: mock（オフライン）、local（LAN）、remote（インターネット）
 - **スケルタルアニメーション** — ASSIMP によるモデル読み込み、スナップショット式クロスフェード + 加算ブレンディング対応
 - **Ultralight による HTML/CSS/JS UI** — タイトルメニュー、ゲーム内 HUD、ポーズ / 設定オーバーレイを単一ページアプリ（SPA）として 3D シーンの上に合成。設定はエンジンへ即時反映（例: マウス感度）され、自動生成される `user_settings.toml` に保存されて次回起動時も維持されます。Debug ビルドでは `ui_src/` の変更をホットリロードします。
+- **3D オーディオ** — バックエンド非依存のファサードの下に miniaudio を配置し、4 系統のミックスバス（SFX / UI / Music / Ambient）、優先度つき奪取に対応したボイスプール、TOML の音表を持ちます。ゲーム内の効果音（発砲・リロード・ジャンプ・着地・被弾・死亡・キル確定、プレイヤーごとの足音メトロノーム）は連続するサーバースナップショットの差分からクライアント側で導出しており、プロトコル変更は一切不要でした。ローカルプレイヤー自身の銃声 / ADS 音は予測系から鳴らすため往復遅延の影響を受けません。バス音量は設定画面から即時反映されます。
 
 ## 動作環境
 
@@ -89,11 +90,13 @@ bin/                       # すべての DLL（下記の注記を参照）
 └── msvcp140*.dll  vcruntime140*.dll   # VC++ 再頒布可能パッケージ
 config/
 ├── config.toml            # 同梱のデフォルト設定（手書き用）
+├── audio_catalog.toml     # 音表: ファイル・バス・ミックス / 空間化パラメータ
 └── user_settings.toml     # 自動生成のオーバーレイ（実行時に作成）
 logs/                      # 実行時に作成
 ├── ultralight.log
 └── <timestamp>/*.log
 resource/
+├── audio/                 # モノラル 16bit 44.1kHz WAV（武器・キャラクター・UI・環境音）
 ├── maps/                  # マップデータ
 ├── model/                 # 3D モデル・アニメーション (.fbx)
 ├── shader/                # コンパイル済みシェーダー (.cso, ビルド時生成)
@@ -128,6 +131,7 @@ ui_src/
 ## ディレクトリ構成
 
 ```
+Audio/          miniaudio バックエンド、音表、スナップショット差分によるイベント導出
 Core/           ウィンドウ、Direct3D 初期化、入力、設定、タイマー
 Game/           ゲームループ、プレイヤーロジック、当たり判定、ステートマシン、シーン管理、UI/マウスポリシー
 Graphics/       シェーダー、モデル (ASSIMP)、スプライト、テクスチャ、カメラ、ライティング
@@ -135,5 +139,17 @@ Network/        INetwork インターフェース、ENet クライアント、�
 UI/             Ultralight 統合: マネージャ、D3D11 合成、JS ブリッジ、入力キュー、ファイルシステム、ホットリロード
 Shaders/        HLSL ソースファイル（3D + UI 合成）
 ui_src/         HTML/CSS/JS UI 単一ページアプリ（「ゲーム内 UI」を参照）
-ThirdParty/     ENet, ASSIMP, toml++, Ultralight
+ThirdParty/     ENet, ASSIMP, miniaudio, toml++, Ultralight
 ```
+
+## クレジット
+
+このプロジェクトで使用しているサードパーティ素材・ライブラリ:
+
+- **Low Poly Shooter Pack**（Unity Asset Store）— キャラクター/武器モデル、および `resource/audio/` 以下の音声素材
+- **miniaudio** — オーディオ再生バックエンド（パブリックドメイン / MIT-0）
+- **ENet** — 信頼性のある UDP ネットワーキング
+- **Assimp** — モデルインポート
+- **toml++** — 設定ファイルのパース
+- **Ultralight** — HTML/CSS による UI 描画
+- **DirectXTK `WICTextureLoader11`**（Microsoft, MIT）— WIC 画像を D3D11 テクスチャとして読み込み（`Graphics/`）

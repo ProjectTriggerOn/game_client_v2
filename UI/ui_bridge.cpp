@@ -5,6 +5,7 @@
 #include "scene.h"
 #include "game.h"
 #include "display_manager.h"
+#include "audio.h"
 
 #include <Ultralight/View.h>
 #include <AppCore/JSHelpers.h>
@@ -308,6 +309,14 @@ void Register(ultralight::View* view) {
     // the view stuck on the boot default (docs §10).
     game["getBootPage"] = (JSCallbackWithRetval)[](const JSObject&, const JSArgs&) -> JSValue {
         return JSValue(UIPolicy_DerivePage());
+    };
+
+    // Menu click sound. Called from router.js's delegated button listener, so
+    // every <button> in the SPA clicks with one call site — including the
+    // purely JS-side navigations (title -> SETTINGS, settings BACK) that never
+    // reach one of the state verbs above. No-op while audio is degraded.
+    game["uiClick"] = (JSCallback)[](const JSObject&, const JSArgs&) {
+        Audio_PlayOneShot(SoundId::UiClick);
     };
 
     game["log"] = (JSCallback)[](const JSObject&, const JSArgs& args) {

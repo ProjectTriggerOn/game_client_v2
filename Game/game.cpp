@@ -31,6 +31,9 @@
 #include "ui_widget.h"
 #include "ui_manager.h"
 #include "mouse.h"
+#include "audio.h"
+#include "audio_events.h"
+#include "debug_log.h"
 #include <cwchar>
 #include <vector>
 #include <cstdio>
@@ -89,6 +92,26 @@ namespace{
 	bool     g_HasSnapshot = false;
 	uint32_t g_LastShownKillSeq = 0;   // highest kill seq already pushed to the feed
 	bool     g_ScoreboardShown = false;
+
+	// ========================================================================
+	// Audio events: latest snapshot cache for once-per-frame derivation
+	// ========================================================================
+	// Latest snapshot of this frame, kept for the audio event derivation.
+	// Derivation runs once per frame rather than per snapshot: every signal it
+	// reads is either cumulative (fireCounter, latestKillSeq) or a level flag,
+	// so the newest snapshot carries the full delta and running it once keeps
+	// the footstep metronome on the frame clock.
+	//
+	// g_HasSnapshot (above) already tracks "at least one snapshot received
+	// this session" with exactly the semantics needed here, so audio reuses
+	// it instead of declaring a second bool with the same name.
+	Snapshot        g_LatestSnapshot{};
+	AudioEventState g_AudioEventState{};
+	uint8_t         g_LastAudioEventCount = 0;  // debug readout: last derivation's event count
+
+	// Ambient bed loop handle. Started in Game_Initialize, stopped in
+	// Game_Finalize, so a scene exit never leaves it playing.
+	AudioHandle g_AmbientLoop{};
 
 	// Append {"id":I,"k":K,"d":D,"me":bool} rows for one team into a bounded
 	// buffer; returns chars written. Iterates localPlayer (under localPlayerTeam)
@@ -173,11 +196,21 @@ void Game_Initialize()
 	if (g_pMockServer) g_pMockServer->ResetSession();
 
 	// Reset client-side scoring trackers so a fresh match starts clean (the
-	// scoreboard overlay hidden, kill-feed dedup re-zeroed).
+	// scoreboard overlay hidden, kill-feed dedup re-zeroed). Audio event
+	// derivation resets alongside them: g_LastAudioEventCount so the debug
+	// readout can't show a stale count across the gap before the next
+	// snapshot, and g_AudioEventState so footstep phase and edge-detection
+	// start clean rather than relying on the derivation layer's fire-counter
+	// and kill-sequence guards to absorb a carried-over match.
 	g_HasSnapshot = false;
 	g_LastShownKillSeq = 0;
 	g_ScoreboardShown = false;
+	g_LastAudioEventCount = 0;
+	g_AudioEventState.Reset();
 	UI::PushScoreboardVisible(false);
+
+	// Ambient bed.  Not spatialised: it is the room, not a point in it.
+	g_AmbientLoop = Audio_PlayLoop(SoundId::AmbientLoop);
 }
 
 bool Game_WantsUICursor()
@@ -360,6 +393,11 @@ void Game_Update(double elapsed_time)
 			UI::PushMatchResult(rjson);
 			g_GameState = RESULT;
 		}
+
+		// Cache for audio event derivation (see g_LatestSnapshot above) — this
+		// runs once per frame, after the loop, using the newest snapshot, not
+		// once per packet.
+		g_LatestSnapshot = snap;
 	}
 
 	// Tab scoreboard: an overlay WITHIN the hud page (Display level — no cursor
@@ -413,6 +451,36 @@ void Game_Update(double elapsed_time)
 	{
 		if (g_RemotePlayerActive[i])
 			g_RemotePlayers[i].Update(elapsed_time, g_ClientClock);
+	}
+
+	// Audio events derived from the newest snapshot.  Positions resolve to the
+	// remote player's RENDER position so the sound lines up with the model the
+	// player can see, not with the raw server state they cannot.
+	if (g_HasSnapshot)
+	{
+		AudioEvent    events[32];
+		uint8_t       dropped = 0;
+		const uint8_t count = AudioEvents_Derive(g_AudioEventState, g_LatestSnapshot,
+		                                         elapsed_time, events, 32, &dropped);
+		g_LastAudioEventCount = count;
+		// The buffer is sized for a bad frame, not an impossible one (ten
+		// players all shooting, landing and taking damage at once can exceed
+		// it). Overflow is dropped by design; log it so a silent sound has a
+		// visible cause instead of looking like a backend fault.
+		if (dropped) DebugLog_Printf("audio", "event buffer full - dropped %u events", (unsigned)dropped);
+		for (uint8_t i = 0; i < count; ++i)
+		{
+			const AudioEvent& e = events[i];
+			if (e.playerId == AUDIO_EVENT_LOCAL)
+			{
+				Audio_PlayOneShot(e.id, e.gainScale);
+			}
+			else if (e.playerId < MAX_PLAYERS && g_RemotePlayerActive[e.playerId])
+			{
+				Audio_PlayOneShotAt(e.id, g_RemotePlayers[e.playerId].GetRenderPosition(),
+				                    e.gainScale);
+			}
+		}
 	}
 
 	Fade_Update(elapsed_time);
@@ -595,6 +663,9 @@ void Game_Draw()
 
 void Game_Finalize()
 {
+	Audio_StopLoop(g_AmbientLoop);
+	g_AmbientLoop = AudioHandle{};
+
 	Camera_Finalize();
 	PlayerCamTps_Finalize();
 	PlayerCamFps_Finalize();
@@ -697,4 +768,6 @@ void Game_GetViewTick(uint32_t& outTick, float& outFrac)
 	}
 	// renderTime < oldest (WAIT mode) → outTick stays 0 (no compensation)
 }
+
+int Game_LastAudioEventCount() { return (int)g_LastAudioEventCount; }
 

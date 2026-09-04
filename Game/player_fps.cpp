@@ -1,6 +1,7 @@
 #include "player_fps.h"
 #include "player_cam_fps.h"
 #include "animator.h"
+#include "audio.h"
 #include "key_logger.h"
 #include "cube.h"
 #include "debug_log.h"
@@ -182,8 +183,19 @@ void PlayerFps::ConsumeRound()
 	m_Ammo--;
 	m_FireCounter++;
 
+	// Predicted locally so the shot is heard the instant the trigger is pulled.
+	// Waiting for the snapshot would put the whole RTT between input and sound.
+	Audio_PlayOneShot(SoundId::WeaponFire);
+
 	if (m_Ammo == 0 && m_AmmoReserve > 0)
+	{
 		m_StateMachine->SetWeaponState(WeaponState::RELOADING_OUT_OF_AMMO);
+		// The mag just ran dry with rounds left in reserve: the auto-reload
+		// starts immediately (no separate trigger pull needed), so its
+		// "empty" cue plays right alongside the shot that emptied it —
+		// matches the sound the manual R-press path plays in this situation.
+		Audio_PlayOneShot(SoundId::WeaponReloadEmpty);
+	}
 }
 
 void PlayerFps::Update(double elapsed_time)
@@ -328,6 +340,12 @@ void PlayerFps::Update(double elapsed_time)
 	     ws != WeaponState::ADS && ws != WeaponState::ADS_FIRING) ||
 	    (isRightTrigger && isReloading))
 	{
+		// The condition above is still true while ADS_IN is playing out (the
+		// button is simply held), so gate the sound on the state actually
+		// changing — otherwise the sight-raise plays once per frame.
+		// 2D like every other local-player sound: it happens at the shoulder,
+		// not somewhere in the world.
+		if (ws != WeaponState::ADS_IN) Audio_PlayOneShot(SoundId::AdsIn);
 		m_StateMachine->SetWeaponState(WeaponState::ADS_IN);
 	}
 
@@ -336,7 +354,10 @@ void PlayerFps::Update(double elapsed_time)
 		 m_StateMachine->GetWeaponState() == WeaponState::ADS_IN ||
 		 m_StateMachine->GetWeaponState() == WeaponState::ADS_FIRING))
 	{
-		// Exit ADS — transition fire (additive) will keep firing if left is held
+		// Exit ADS — transition fire (additive) will keep firing if left is held.
+		// No edge guard needed here: the three states tested are all left behind
+		// by the transition, so this branch cannot re-enter from ADS_OUT.
+		Audio_PlayOneShot(SoundId::AdsOut);
 		m_StateMachine->SetWeaponState(WeaponState::ADS_OUT);
 	}
 
@@ -380,6 +401,13 @@ void PlayerFps::Update(double elapsed_time)
 			// Fallback: only reachable if the mag was zeroed from outside a shot
 			// (e.g. an ammo sync), since ConsumeRound auto-reloads on the last round.
 			m_StateMachine->SetWeaponState(WeaponState::RELOADING_OUT_OF_AMMO);
+		} else if (MSLogger_IsTrigger(MBT_LEFT)) {
+			// Completely dry: no round, no reserve to reload from. Unlike the
+			// two branches above, this one never changes weapon state (there is
+			// nothing to transition to), so it stays re-entrant while the
+			// trigger is held — gate on the press edge, not isPressingLeft's
+			// level state, so holding a dry trigger clicks once, not every frame.
+			Audio_PlayOneShot(SoundId::WeaponFireEmpty);
 		}
 	}
 
@@ -419,6 +447,13 @@ void PlayerFps::Update(double elapsed_time)
 			// Fallback: only reachable if the mag was zeroed from outside a shot
 			// (e.g. an ammo sync), since ConsumeRound auto-reloads on the last round.
 			m_StateMachine->SetWeaponState(WeaponState::RELOADING_OUT_OF_AMMO);
+		} else if (MSLogger_IsTrigger(MBT_LEFT)) {
+			// Completely dry: no round, no reserve to reload from. Unlike the
+			// two branches above, this one never changes weapon state (there is
+			// nothing to transition to), so it stays re-entrant while the
+			// trigger is held — gate on the press edge, not isPressingLeft's
+			// level state, so holding a dry trigger clicks once, not every frame.
+			Audio_PlayOneShot(SoundId::WeaponFireEmpty);
 		}
 	}
 
@@ -451,6 +486,8 @@ void PlayerFps::Update(double elapsed_time)
 			WeaponState nextReload = (m_Ammo == 0)
 				? WeaponState::RELOADING_OUT_OF_AMMO
 				: WeaponState::RELOADING;
+			Audio_PlayOneShot(m_Ammo == 0 ? SoundId::WeaponReloadEmpty
+			                              : SoundId::WeaponReload);
 			m_StateMachine->SetWeaponState(nextReload);
 		}
 	}
@@ -880,6 +917,11 @@ void PlayerFps::ApplyServerCorrection(const NetPlayerState& serverState)
 
 		// Play the "taking out" draw on respawn (auto-transitions to HIP),
 		// matching match-start instead of snapping straight to hip-idle.
+		// This is the respawn rising edge (runs once, not the per-frame
+		// m_RespawnLockTimer > 0.0 block above) -- setting it there would
+		// restart the animation every frame for the whole lock duration.
+		// No sound plays here: the respawn take-out cue is retired for want
+		// of a correct asset (see the design doc's section 14).
 		m_StateMachine->SetWeaponState(WeaponState::TAKING_OUT);
 
 		// Clear input history and sync tick on respawn

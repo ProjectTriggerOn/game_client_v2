@@ -60,6 +60,9 @@ bool Game_IsPlayerInputLocked();
 // InputCmd.viewTick / viewTickFrac for lag compensation.
 void Game_GetViewTick(uint32_t& outTick, float& outFrac);
 
+// Debug readout: how many audio events the last snapshot derivation produced.
+int Game_LastAudioEventCount();
+
 
 
 

@@ -164,6 +164,16 @@
         syncDropdown(sel);
     }
 
+    // Volume sliders. All five are live keys: setConfig applies immediately
+    // through the C++ Config subscriber, and SAVE is what persists them.
+    const VOLUME_KEYS = {
+        'set-vol-master':  'audio.master',
+        'set-vol-sfx':     'audio.sfx',
+        'set-vol-ui':      'audio.ui',
+        'set-vol-music':   'audio.music',
+        'set-vol-ambient': 'audio.ambient',
+    };
+
     function refresh() {
         const g = window.game;
         if (!g) return;
@@ -176,6 +186,12 @@
             const invert = el('set-invert');
             const inv = g.getConfig('input.invert_y');
             if (invert && inv != null) invert.checked = !!inv;
+
+            for (const [id, key] of Object.entries(VOLUME_KEYS)) {
+                const slider = el(id), out = el(id + '-val');
+                const v = g.getConfig(key);
+                if (slider && v != null) { slider.value = v; if (out) out.textContent = Number(v).toFixed(2); }
+            }
         }
 
         // --- display settings from real DXGI enumeration ---
@@ -200,6 +216,12 @@
             const v = parseFloat(e.target.value);
             const out = el('set-sens-val'); if (out) out.textContent = v.toFixed(4);
             window.game?.setConfig?.('input.sensitivity', v);
+        }
+        const volKey = VOLUME_KEYS[e.target.id];
+        if (volKey) {
+            const v = parseFloat(e.target.value);
+            const out = el(e.target.id + '-val'); if (out) out.textContent = v.toFixed(2);
+            window.game?.setConfig?.(volKey, v);
         }
         // FOV control is temporarily hidden (see settings.html) — no handler.
     });

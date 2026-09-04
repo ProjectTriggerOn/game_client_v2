@@ -89,6 +89,17 @@
 
     window.Router = Router;
 
+    // Menu click sound. One delegated capture-phase listener for the whole SPA
+    // rather than a call inside every button handler: the pages already use
+    // delegation for their own clicks, and several buttons (title -> SETTINGS,
+    // settings BACK) navigate purely in JS and never reach a C++ verb, so
+    // per-verb calls on the C++ side would leave those silent. game.uiClick is
+    // optional-chained, so the browser dev harness and the window before the
+    // bridge is bound both no-op instead of throwing.
+    document.addEventListener('click', (e) => {
+        if (e.target?.closest?.('button')) window.game?.uiClick?.();
+    }, true);
+
     // Loading curtain — a top-most black overlay (NOT a Router page, so it
     // persists across the page/scene switch happening underneath it). Toggled by
     // C++ (UI::SetCurtain) to mask the scene-transition init hitch; the opacity
