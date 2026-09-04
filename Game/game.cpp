@@ -625,14 +625,6 @@ void Game_Draw()
 			Sprite_Draw(g_OverlayTexId, cx + gapClamped - 1.0f,       cy - TH * 0.5f - 1.0f,  arm + 2.0f, TH + 2.0f, armBlack);
 			Sprite_Draw(g_OverlayTexId, cx + gapClamped,             cy - TH * 0.5f,         arm,        TH,         armWhite);
 		}
-		Sprite_Draw(g_OverlayTexId, cx - TH * 0.5f - 1.0f, cy - gapClamped - arm - 1.0f, TH + 2.0f, arm + 2.0f, BLACK);
-		Sprite_Draw(g_OverlayTexId, cx - TH * 0.5f,       cy - gapClamped - arm,         TH,        arm,        WHITE);
-		Sprite_Draw(g_OverlayTexId, cx - TH * 0.5f - 1.0f, cy + gapClamped - 1.0f,        TH + 2.0f, arm + 2.0f, BLACK);
-		Sprite_Draw(g_OverlayTexId, cx - TH * 0.5f,       cy + gapClamped,               TH,        arm,        WHITE);
-		Sprite_Draw(g_OverlayTexId, cx - gapClamped - arm - 1.0f, cy - TH * 0.5f - 1.0f,  arm + 2.0f, TH + 2.0f, BLACK);
-		Sprite_Draw(g_OverlayTexId, cx - gapClamped - arm,       cy - TH * 0.5f,         arm,        TH,         WHITE);
-		Sprite_Draw(g_OverlayTexId, cx + gapClamped - 1.0f,       cy - TH * 0.5f - 1.0f,  arm + 2.0f, TH + 2.0f, BLACK);
-		Sprite_Draw(g_OverlayTexId, cx + gapClamped,             cy - TH * 0.5f,         arm,        TH,         WHITE);
 	}
 
 	// Hitmarker — four true 45° rotated ticks in an X, just outside the arm
