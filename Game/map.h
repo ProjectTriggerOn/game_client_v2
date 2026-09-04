@@ -69,7 +69,7 @@ void Map_UpdatePointLightsNearCamera(const DirectX::XMFLOAT3& cameraPos);
 void Map_SetLoadedData(const mapio::MapData& d);
 
 // Returns true if the loaded map authored a non-empty environment block.
-// Currently visualSize==0 on default.map (the legacy map ships no env), so
-// callers use this to fall back to the hardcoded in-code defaults. Remove
+// default.map DOES author one (sky + 0.5 ambient via map_convert), so the
+// hardcoded in-code fallbacks only serve hand-made maps without env. Remove
 // once every shipped map carries an env block.
 bool Map_HasEnvironment();

@@ -501,8 +501,8 @@ void Game_Draw()
 	Sampler_SetFilterAnisotropic();
 
 	// Ambient comes from the loaded map's MapEnv when one is authored.
-	// default.map ships with no env block (visualSize == 0), so fall back to
-	// the historical hardcoded ambient to avoid a visible dark regression.
+	// default.map does author one (sky + 0.5 ambient via map_convert), so the
+	// historical hardcoded 0.5 below is the fallback for maps without env.
 	if (Map_HasEnvironment()) {
 		Light_SetAmbient(Map_GetAmbient());
 	} else {
@@ -519,7 +519,7 @@ void Game_Draw()
 
 	// Directional light: authored in the .map as the first LIGHT_DIRECTIONAL
 	// record; falls back to the historical straight-down white sun when the
-	// map ships none (default.map has an empty visual section).
+	// map ships none (default.map authors no lights, only its env block).
 	{
 		XMFLOAT3 sunDir  = { 0.0f, -1.0f, 0.0f };
 		XMFLOAT3 sunColor = { 1.0f, 1.0f, 1.0f };
