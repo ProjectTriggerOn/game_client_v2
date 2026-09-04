@@ -42,6 +42,11 @@ bool IsModalActive();   // == Modal. Read by MousePolicy_Apply to free the curso
 void PushHealth(int current, int maxHp);
 void PushAmmo(int current, int reserve);
 
+// Damage feedback (C++ fire-and-forget): a rising-edge pulse that starts the
+// red vignette flash. Latched like the other HUD pushes and flushed at the
+// top of UI::Render; the DOM side owns the fade-out (CSS transition).
+void PushDamageFlash();
+
 // Scoring pushes. Stored when called (during Game_Update) and flushed at the top
 // of UI::Render — the one safe JS-call point per frame. Kill-feed events use a
 // queue (not a dirty flag) so multiple kills in one frame all surface.

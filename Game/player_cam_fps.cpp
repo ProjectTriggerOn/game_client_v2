@@ -38,6 +38,12 @@ namespace
 	// Mouse sensitivity
 	float g_Sensitivity = 0.002f;
 
+	// Recoil punch (COD model): VISUAL camera offset, decays to zero. Never
+	// written into g_cameraYaw/g_cameraPitch — the player's aim stays pure;
+	// punch is added when building the front vector and the view matrix.
+	float g_punchPitch = 0.0f;
+	float g_punchYaw   = 0.0f;
+
 	// Vertical FOV in radians (driven live by config key display.fov, in degrees)
 	float g_Fov = XM_PIDIV4;   // 45° default
 }
@@ -113,11 +119,15 @@ void PlayerCamFps_Update([[maybe_unused]] double elapsed_time, const DirectX::XM
 	constexpr float PITCH_LIMIT = XM_PIDIV2 - 0.01f;
 	g_cameraPitch = std::max(-PITCH_LIMIT, std::min(g_cameraPitch, PITCH_LIMIT));
 
-	// 2. Calculate Camera Front Vector
-	// Spherical coordinates to Cartesian coordinates
-	float x = cosf(g_cameraPitch) * sinf(g_cameraYaw);
-	float y = sinf(g_cameraPitch);
-	float z = cosf(g_cameraPitch) * cosf(g_cameraYaw);
+	// 2. Calculate Camera Front Vector — RENDERED angles include the recoil
+	// punch (visual only; the raw aim angles above stay untouched for input,
+	// UI, and the InputCmd).  WYSIWYG: the rendered view IS the aim line the
+	// server ray-casts through.
+	const float renderedYaw   = g_cameraYaw + g_punchYaw;
+	const float renderedPitch = g_cameraPitch + g_punchPitch;
+	float x = cosf(renderedPitch) * sinf(renderedYaw);
+	float y = sinf(renderedPitch);
+	float z = cosf(renderedPitch) * cosf(renderedYaw);
 
 	XMVECTOR front = XMVector3Normalize(XMVectorSet(x, y, z, 0.0f));
 	XMStoreFloat3(&g_CameraFront, front);
@@ -175,6 +185,35 @@ void PlayerCamFps_SetPitch(float pitch)
 	if (pitch > PITCH_LIMIT)  pitch = PITCH_LIMIT;
 	if (pitch < -PITCH_LIMIT) pitch = -PITCH_LIMIT;
 	g_cameraPitch = pitch;
+}
+
+float PlayerCamFps_GetRawYaw()
+{
+	return g_cameraYaw;
+}
+
+float PlayerCamFps_GetRawPitch()
+{
+	return g_cameraPitch;
+}
+
+void PlayerCamFps_AddPunch(float dPitch, float dYaw)
+{
+	g_punchPitch += dPitch;
+	g_punchYaw += dYaw;
+}
+
+void PlayerCamFps_DecayPunch(float decayHz, float dt)
+{
+	const float k = expf(-decayHz * dt);   // matches the shooter's WeaponSpec decayHz
+	g_punchPitch *= k;
+	g_punchYaw *= k;
+}
+
+void PlayerCamFps_GetPunch(float& punchPitch, float& punchYaw)
+{
+	punchPitch = g_punchPitch;
+	punchYaw   = g_punchYaw;
 }
 
 void PlayerCamFps_SetInvertY(bool invert)

@@ -52,6 +52,14 @@ void MockServer::Initialize(INetwork* pNetwork, CollisionWorld* pCollisionWorld)
     m_LastInputCmd = {};
 
     m_FireTimer = 0.0;
+    // NOTE: PR#23's `m_FireCounter = 0;` reset is dropped here — PR#18 removed that
+    // shadow member; m_PlayerState.fireCounter is already zeroed above.
+    m_LastShotResult = LastShotResult::MISS;
+    m_LastShotSeqMod = 0;
+
+    // Recoil pool reset (spec §7): shotKick never decays, so a fresh round
+    // must start from a clean pool — mirrors GameServer's respawn reset.
+    m_PlayerRecoil = RecoilMath::RecoilState{};
 
     // Fresh match (ResetSession routes through Initialize, so this also re-arms
     // a new round on every game-scene re-entry).
@@ -198,17 +206,32 @@ void MockServer::Tick()
     if (playing && playerAlive)
         SimulatePhysics();
 
-    // 3b. Advance all bots BEFORE firing (mirrors GameServer's physics-before-
-    // combat order, so a shot at viewTick == m_CurrentTick tests each bot's
-    // post-move live position). Movement + intermittent fire + reload + respawn.
+    // 3b. Clear the local player's hit signal, then advance all bots BEFORE
+    // firing (mirrors GameServer's physics-before-combat order, so a shot at
+    // viewTick == m_CurrentTick tests each bot's post-move live position).
+    // Movement + intermittent fire + reload + respawn. A bot shot that lands
+    // this tick writes the attacker id into hitByPlayerId (see BotFireShot)
+    // and it survives to the broadcast below.
+    m_PlayerState.hitByPlayerId = 0xFF;
     if (playing)
         UpdateBots();
 
-    // 4. Clear the local hit marker, then resolve the local player's shots
-    // against every bot. Skip if a bot just killed the player this tick.
-    m_PlayerState.hitByPlayerId = 0xFF;
+    // 4. Resolve the local player's shots against every bot. Skip if a bot
+    // just killed the player this tick.
     if (playing && (m_PlayerState.stateFlags & NetStateFlags::IS_DEAD) == 0)
         ProcessFiring();
+
+    // 4b. Recoil decay + broadcast (spec §4.3) — mirror of GameServer's
+    // per-tick decay: one tick's worth of punch/bloom recovery with the same
+    // exponential factor the client uses per frame. Runs AFTER ProcessFiring,
+    // so a shot fired this tick gets its punch applied and then one tick of
+    // decay — matching the client's accumulate-then-decay order.
+    RecoilMath::RecoilAdvance(m_PlayerRecoil, LOCAL_PLAYER_TEAM, m_PlayerState.fireCounter,
+                              /*ads=*/false, /*newlyFired=*/false,
+                              static_cast<float>(TICK_DURATION), m_ServerTime);
+    m_PlayerState.punchPitch    = m_PlayerRecoil.punchPitch;
+    m_PlayerState.punchYaw      = m_PlayerRecoil.punchYaw;
+    m_PlayerState.shotKickPitch = m_PlayerRecoil.shotKickPitch;
 
     // 5. Update tick ID in local state (and ack of last processed input — see GameServer)
     m_PlayerState.tickId = m_CurrentTick;
@@ -721,6 +744,14 @@ void MockServer::ProcessFiring()
         m_PlayerState.stateFlags |= NetStateFlags::IS_RELOAD_EMPTY;
     }
 
+    // Advance recoil for THIS shot (spec §4.3) — mirror of
+    // GameServer::ProcessFiring 3a/3b. fireCounter was already incremented,
+    // so (fireCounter-1) indexes the shot just taken. dt=0: per-tick decay
+    // is Tick()'s job (runs right after, before the broadcast).
+    const bool adsShot = (m_PlayerState.stateFlags & NetStateFlags::IS_ADS) != 0;
+    RecoilMath::RecoilAdvance(m_PlayerRecoil, LOCAL_PLAYER_TEAM, m_PlayerState.fireCounter,
+                              adsShot, /*newlyFired=*/true, /*dt=*/0.0f, m_ServerTime);
+
     // Eye position
     DirectX::XMFLOAT3 eyePos = {
         m_PlayerState.position.x,
@@ -728,12 +759,23 @@ void MockServer::ProcessFiring()
         m_PlayerState.position.z
     };
 
-    // Ray direction from yaw/pitch
-    float cosPitch = cosf(m_PlayerState.pitch);
+    // Ray direction from yaw/pitch — WYSIWYG (spec §2): bullets follow the
+    // punched view the client renders, plus this shot's deterministic
+    // bloom-cone offset (fireCounter is the seed; no RNG on either side).
+    // Same formula as GameServer::ProcessFiring (DirectionFromYawPitch).
+    float dPitch = 0.0f, dYaw = 0.0f;
+    RecoilMath::RecoilTotalOffsets(m_PlayerRecoil, dPitch, dYaw);
+    const float spread = RecoilMath::RecoilSpreadRadians(
+        LOCAL_PLAYER_TEAM, adsShot, m_PlayerRecoil.bloomDeg, 0.0f);
+    float coneDP = 0.0f, coneDY = 0.0f;
+    RecoilMath::RecoilConeOffset(spread, m_PlayerState.fireCounter, coneDP, coneDY);
+    const float aimYaw   = m_PlayerState.yaw + dYaw + coneDY;
+    const float aimPitch = m_PlayerState.pitch + dPitch + coneDP;
+    float cosPitch = cosf(aimPitch);
     DirectX::XMFLOAT3 rayDir = {
-        sinf(m_PlayerState.yaw) * cosPitch,
-        sinf(m_PlayerState.pitch),
-        cosf(m_PlayerState.yaw) * cosPitch
+        sinf(aimYaw) * cosPitch,
+        sinf(aimPitch),
+        cosf(aimYaw) * cosPitch
     };
 
     // Lag compensation: clamp the client-reported view tick (same rules as
@@ -807,10 +849,23 @@ void MockServer::ProcessFiring()
 
     if (hitBot >= 0)
     {
+        // Last-shot result (hitmarker): HIT_PLAYER / HIT_KILL decided the same
+        // way as GameServer::ProcessFiring — by whether the target survives
+        // RED_DAMAGE (DamageBot kills when health <= dmg).
+        m_LastShotResult = (m_Bots[hitBot].state.health > RED_DAMAGE)
+            ? LastShotResult::HIT_PLAYER
+            : LastShotResult::HIT_KILL;
         DamageBot(hitBot, RED_DAMAGE, /*killerId=*/0);  // local player = id 0
-        // Hit marker for local player (carries the bot id it struck)
-        m_PlayerState.hitByPlayerId = static_cast<uint8_t>(hitBot + 1);
     }
+
+    // Record the shot result for the local player's snapshot (hitmarker,
+    // spec §6.2) — mirrors GameServer::ProcessFiring's tail. HIT_PLAYER /
+    // HIT_KILL were already written in the hit branch above; here we only
+    // stamp MISS on a clean whiff, so the kill marker is never clobbered.
+    // seqMod dedups the cross-tick persistent result on the client.
+    if (hitBot < 0)
+        m_LastShotResult = LastShotResult::MISS;
+    m_LastShotSeqMod = static_cast<uint8_t>(m_PlayerState.fireCounter & 0xFFu);
 }
 
 //-----------------------------------------------------------------------------
@@ -1125,7 +1180,13 @@ void MockServer::BotFireShot(const Bot& shooter, int shooterIndex)
 
     const uint8_t shooterId = static_cast<uint8_t>(shooterIndex + 1);
     if (hitPlayer)
+    {
+        // Damage-flash semantics (net_common.h: 0xFF = no hit, else attacker
+        // id): mark the LOCAL PLAYER's snapshot with the bot that hit them.
+        // The player reads their own snapshot and flashes.
+        m_PlayerState.hitByPlayerId = shooterId;
         DamagePlayer(BOT_DAMAGE, shooterId);
+    }
     else if (hitBot >= 0)
         DamageBot(hitBot, BOT_DAMAGE, shooterId);
 }
@@ -1154,6 +1215,14 @@ void MockServer::UpdatePlayerRespawn()
     m_ReloadTimer = 0.0;
     m_FireTimer = 0.0;
     m_PrevButtons = 0;  // reset edge detection across respawn
+    // Clear the last-shot latch for the fresh life (mirrors GameServer's
+    // respawn branch) so no stale hit marker fires after revival.
+    m_LastShotResult = LastShotResult::MISS;
+    m_LastShotSeqMod = 0;
+    // Recoil pool reset (spec §7): shotKick never decays, so a pre-death
+    // accumulation must not permanently skew the WYSIWYG ray direction after
+    // revival — mirrors GameServer's respawn reset.
+    m_PlayerRecoil = RecoilMath::RecoilState{};
 }
 
 //-----------------------------------------------------------------------------
@@ -1235,6 +1304,11 @@ void MockServer::BroadcastSnapshot()
     snapshot.localPlayer = m_PlayerState;
     snapshot.localPlayerId = 0;
     snapshot.localPlayerTeam = LOCAL_PLAYER_TEAM;
+    // Recoil shot result (hitmarker, spec §6.2): the RECIPIENT's own latest
+    // shot. Mirrors GameServer::BroadcastSnapshots — only the local player's
+    // result is signaled, exactly what the hitmarker needs.
+    snapshot.lastShotResult = m_LastShotResult;
+    snapshot.lastShotSeqMod = m_LastShotSeqMod;
 
     // Global match / scoring state (mirrors GameServer::BroadcastSnapshots).
     snapshot.matchState         = m_MatchState;

@@ -142,6 +142,7 @@ struct PendingHud {
     bool sbDataDirty = false; std::string sbJson;
     bool resultDirty = false; std::string resultJson;
     bool revertDirty = false; int  revertSec  = 0;
+    bool damageFlash = false;
 };
 PendingHud g_pendingHud;
 // Kill-feed events are discrete, so they queue (not a dirty flag): every kill
@@ -324,6 +325,10 @@ void Render() {
         UI::Bridge::PushDisplayRevertTick(g_pendingHud.revertSec);
         g_pendingHud.revertDirty = false;
     }
+    if (g_pendingHud.damageFlash) {
+        g_pendingHud.damageFlash = false;
+        UI::Bridge::PushDamageFlash();
+    }
     for (const auto& k : g_pendingKills) {
         UI::Bridge::PushKillFeed(k[0], k[1], k[2], k[3]);
     }
@@ -399,6 +404,9 @@ void PushHealth(int current, int maxHp) {
 void PushAmmo(int current, int reserve) {
     g_pendingHud.ammo = current; g_pendingHud.ammoReserve = reserve;
     g_pendingHud.ammoDirty = true;
+}
+void PushDamageFlash() {
+    g_pendingHud.damageFlash = true;   // latched; UI::Render flush consumes it
 }
 void PushScores(int red, int blue) {
     g_pendingHud.red = red; g_pendingHud.blue = blue;

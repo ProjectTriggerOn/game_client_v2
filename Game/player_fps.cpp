@@ -13,6 +13,7 @@
 #include "ms_logger.h"
 #include "reticle.h"
 #include "shader_3d_ani.h"
+#include "../UI/ui_manager.h"   // UI::PushDamageFlash (spec §6.3)
 
 using namespace DirectX;
 
@@ -196,11 +197,63 @@ void PlayerFps::ConsumeRound()
 		// matches the sound the manual R-press path plays in this situation.
 		Audio_PlayOneShot(SoundId::WeaponReloadEmpty);
 	}
+
+	// ---- Recoil prediction (COD model, spec §5.1) ------------------------
+	// Same pure table as the server: fireCounter was just incremented, so
+	// (fireCounter-1) is this shot's pattern index. dt=0 — the per-frame
+	// decay below owns recovery. AddPunch feeds the RENDERED offset only.
+	{
+		const bool ads = IsADS();
+		// Per-shot increment: RecoilAdvance returns the new integrated pool;
+		// the camera punch accumulator only receives THIS shot's delta, so the
+		// rendered offset converges like the server's (spec §5.1).
+		float preDp = 0.0f, preDy = 0.0f;
+		RecoilMath::RecoilTotalOffsets(m_Recoil, preDp, preDy);
+		RecoilMath::RecoilAdvance(m_Recoil, m_TeamId,
+		                          static_cast<uint16_t>(m_FireCounter & 0xFFFFu),
+		                          ads, /*newlyFired=*/true, /*dt=*/0.0f, m_NowSec);
+		float dp = 0.0f, dy = 0.0f;
+		RecoilMath::RecoilTotalOffsets(m_Recoil, dp, dy);
+		PlayerCamFps_AddPunch(dp - preDp, dy - preDy);   // increment only
+	}
 }
 
 void PlayerFps::Update(double elapsed_time)
 {
 	const float frameDt = static_cast<float>(elapsed_time);
+	// Monotonic clock for the recoil decay-suspend window (spec §5.1): must be
+	// advanced before the fire sites below so a shot stamped this frame uses a
+	// nowSec at/after the pool-decay call above it.
+	m_NowSec += elapsed_time;
+
+	// Recoil punch decay at frame rate (fps-independent exponential). The
+	// camera punch accumulator keeps its OWN recovery — it is a pure delta-sync
+	// follower of the pool below (AddPunch is called only on fire/reconcile, so
+	// the pool's per-frame negative delta is never fed to it). Same
+	// exp(-decayHz*dt) rate as the pool (both read the shooter's WeaponSpec
+	// decayHz), so the rendered view tracks the pool exactly. While the trigger
+	// is down (a shot within the last FIRE_SUSPEND_DECAY_S) the camera does NOT
+	// decay either — a burst keeps climbing like COD; recovery starts only once
+	// the pool's decay gate below clears.
+	if (m_NowSec - m_Recoil.lastFireTime >= RecoilConfig::FIRE_SUSPEND_DECAY_S)
+		PlayerCamFps_DecayPunch(RecoilConfig::SpecForTeam(m_TeamId).decayHz, frameDt);
+
+	// Recoil pool decay at frame rate — SAME exponential formula the server
+	// ticks with (spec §5.1/§5.2: one truth source). The exp(-decayHz*dt)
+	// recovery is applied ONLY when nowSec is at least FIRE_SUSPEND_DECAY_S past
+	// the last shot (see RecoilAdvance) — punch/bloom accumulate for a whole
+	// burst, then return to zero once the trigger is released. Previously the
+	// pool shrank between shots and punch plateaued ~5° after a few rounds; the
+	// camera punch follows via its own gated decay + the reconcile delta.
+	RecoilMath::RecoilAdvance(m_Recoil, m_TeamId,
+	                          static_cast<uint16_t>(m_FireCounter & 0xFFFFu),
+	                          /*ads=*/false, /*newlyFired=*/false,
+	                          frameDt, m_NowSec);
+
+	// Hitmarker fade (~140ms linear, spec §6.2 — bolder marker, longer read).
+	constexpr float HITMARKER_LIFE = 0.14f;
+	if (m_HitmarkerAlpha > 0.0f)
+		m_HitmarkerAlpha = std::fmax(0.0f, m_HitmarkerAlpha - frameDt / HITMARKER_LIFE);
 
 	// ========================================================================
 	// Render Offset Decay (for smooth server correction) — runs at FRAME RATE
@@ -649,6 +702,49 @@ void PlayerFps::ApplyServerCorrection(const NetPlayerState& serverState)
 	if (serverState.tickId <= m_LastServerTick && m_LastServerTick != 0)
 		return;
 
+	// ---- Recoil reconciliation (spec §5.2) -------------------------------
+	// Soft-correct small punch drift toward the server's integrated value;
+	// hard-snap on gross divergence (packet loss / prediction blowup).
+	// fireCounter regression (server behind us) resets the pool — those
+	// shots never happened server-side.
+	{
+		// Snapshot the pool offsets BEFORE any correction so the visual punch
+		// accumulator can be synced by delta at the end (spec §5.2).
+		float preDp = 0.0f, preDy = 0.0f;
+		RecoilMath::RecoilTotalOffsets(m_Recoil, preDp, preDy);
+
+		const uint16_t serverFire = serverState.fireCounter;
+		const uint16_t myFire = static_cast<uint16_t>(m_FireCounter & 0xFFFFu);
+		if (serverFire != myFire &&
+		    static_cast<uint16_t>(serverFire - myFire) > 0x8000u)
+		{
+			// Server is behind myFire (wrap-aware comparison): trust server.
+			m_FireCounter = serverFire;
+			m_Recoil = RecoilMath::RecoilState{};
+		}
+		constexpr float HARD_SNAP_RAD = 0.0524f;   // ~3°
+		const float errP = serverState.punchPitch - m_Recoil.punchPitch;
+		const float errY = serverState.punchYaw   - m_Recoil.punchYaw;
+		if (fabsf(errP) > HARD_SNAP_RAD || fabsf(errY) > HARD_SNAP_RAD)
+		{
+			m_Recoil.punchPitch = serverState.punchPitch;
+			m_Recoil.punchYaw   = serverState.punchYaw;
+		}
+		else
+		{
+			m_Recoil.punchPitch += errP * 0.3f;
+			m_Recoil.punchYaw   += errY * 0.3f;
+		}
+		m_Recoil.shotKickPitch = serverState.shotKickPitch;  // authoritative acc.
+
+		// Sync the visual punch accumulator with the reconciled pool: hard reset
+		// must be visible to the camera immediately, or a stale punch lingers
+		// until the next shot (spec §5.2).
+		float postDp = 0.0f, postDy = 0.0f;
+		RecoilMath::RecoilTotalOffsets(m_Recoil, postDp, postDy);
+		PlayerCamFps_AddPunch(postDp - preDp, postDy - preDy);
+	}
+
 	// Capture mode at entry — used for MODE_CHANGE log at the end of this function.
 	const char* prevMode = m_CorrectionMode ? m_CorrectionMode : "NONE";
 
@@ -947,6 +1043,48 @@ void PlayerFps::ApplyServerCorrection(const NetPlayerState& serverState)
 		m_Ammo = serverState.ammo;
 		m_AmmoReserve = serverState.ammoReserve;
 	}
+
+	// ---- Damage vignette pulse (spec §6.3) --------------------------------
+	// hitByPlayerId rising edge (0xFF -> attacker id) fires the HUD flash.
+	// Push is fire-and-forget; the DOM owns the decay. Falling edge just
+	// clears the latch — no animation.
+	{
+		const bool hit = (serverState.hitByPlayerId != 0xFF);
+		if (hit && !m_WasHit)
+			UI::PushDamageFlash();
+		m_WasHit = hit;
+	}
+}
+
+//=============================================================================
+// ApplyLastShot — hitmarker latch (spec §6.2).
+//
+// The snapshot carries the result of this player's LATEST resolved shot tagged
+// with its fireCounter low byte. The server's result is cross-tick persistent
+// (rewritten only by the NEXT shot), so dedup by shot seq: the FIRST snapshot
+// carrying a new seqMod fires the marker; later snapshots of the same result
+// are ignored. This keeps the ~100ms fade from being re-refreshed at 32Hz.
+// A MISS also advances the latch — the server overwrites the result on every
+// shot, so an 0xFF-ish old hit must not re-latch after a newer miss re-broadcast.
+//=============================================================================
+void PlayerFps::ApplyLastShot(const Snapshot& snap)
+{
+	const bool hit = (snap.lastShotResult != LastShotResult::MISS);
+	if (hit && (!m_HasLatchedShot || snap.lastShotSeqMod != m_LastLatchedShotSeq))
+	{
+		// New shot resolved as a hit — fire the marker (or first-ever hit).
+		m_LastLatchedShotSeq = snap.lastShotSeqMod;
+		m_HasLatchedShot     = true;
+		m_HitmarkerKill      = (snap.lastShotResult == LastShotResult::HIT_KILL);
+		m_HitmarkerAlpha     = 1.0f;
+	}
+	else if (!hit)
+	{
+		// MISS refreshes the latch record (a hit with the same seq can never
+		// be re-broadcast after a miss that superseded it).
+		m_LastLatchedShotSeq = snap.lastShotSeqMod;
+		m_HasLatchedShot     = true;
+	}
 }
 
 AABB PlayerFps::GetAABB() const
@@ -975,6 +1113,19 @@ DirectX::XMFLOAT3 PlayerFps::GetEyePosition() const
 	eyePos.y = m_PrevPhysicsPosition.y + (m_Position.y - m_PrevPhysicsPosition.y) * a + 1.5f;
 	eyePos.z = m_PrevPhysicsPosition.z + (m_Position.z - m_PrevPhysicsPosition.z) * a;
 	return eyePos;
+}
+
+float PlayerFps::GetSpreadRadians() const
+{
+	const bool ads = IsADS();
+	return RecoilMath::RecoilSpreadRadians(m_TeamId, ads, m_Recoil.bloomDeg, 0.0f);
+}
+
+bool PlayerFps::IsADS() const
+{
+	const WeaponState ws = m_StateMachine->GetWeaponState();
+	return ws == WeaponState::ADS || ws == WeaponState::ADS_FIRING ||
+	       ws == WeaponState::ADS_IN || ws == WeaponState::ADS_OUT;
 }
 
 std::string PlayerFps::GetPlayerState() const

@@ -18,6 +18,7 @@
 #include "mouse.h"
 #include "player_state_machine.h"
 #include "net_common.h"
+#include "../Network/recoil_math.h"
 
 //=============================================================================
 // InputHistoryEntry - Stores one tick of input + resulting physics state
@@ -56,7 +57,10 @@ public:
 	// Server Reconciliation (Prediction + Correction)
 	//-------------------------------------------------------------------------
 	void ApplyServerCorrection(const NetPlayerState& serverState);
-	
+	// Hitmarker latch (spec §6.2): consumes the snapshot's lastShot* pair (see
+	// ApplyLastShot in the .cpp). Called by game.cpp right after the correction.
+	void ApplyLastShot(const Snapshot& snap);
+
 	AABB GetAABB() const;
 	Capsule GetCapsule() const;
 
@@ -88,6 +92,16 @@ public:
 	// matches the tickId stored in m_InputHistory — required for RESIM lookup)
 	//-------------------------------------------------------------------------
 	uint32_t GetClientTick() const { return m_CurrentClientTick; }
+
+	// Recoil accessors: spread = current aim-cone half-angle (rad), consumed by
+	// the native crosshair. The camera punch lives in the player_cam_fps
+	// accumulator (PlayerCamFps_GetPunch) — the crosshair reads it from there.
+	float GetSpreadRadians() const;
+	bool IsADS() const;
+
+	// Hitmarker state for the native 2D pass.
+	float GetHitmarkerAlpha() const { return m_HitmarkerAlpha; }
+	bool  GetHitmarkerKill()  const { return m_HitmarkerKill; }
 
 	//-------------------------------------------------------------------------
 	// Debug info
@@ -142,6 +156,35 @@ private:
 	double m_WeaponRPM;
 	double m_FireTimer;
 	int m_FireCounter;
+	// Hitmarker (spec §6.2): latched from the snapshot's lastShot* pair.
+	// Dedup by shot seq — the server's result is cross-tick persistent, so
+	// only the FIRST snapshot carrying a new seqMod fires the marker; later
+	// snapshots of the same result are ignored. Alpha decays at frame rate;
+	// kill variant recolors.
+	float m_HitmarkerAlpha = 0.0f;   // 1..0 over HITMARKER_LIFE
+	bool  m_HitmarkerKill  = false;
+	// Latch state. seqMod is an 8-bit wire value, so 0xFF is a REAL sequence,
+	// not a usable "no latch" sentinel — a separate hasLatched bool removes
+	// the ambiguity (a fresh player with seqMod==0xFF would otherwise never
+	// re-fire a hit until the seq wrapped).
+	bool    m_HasLatchedShot    = false;
+	uint8_t m_LastLatchedShotSeq = 0;   // dedup: seqMod of the last latched shot
+	// Damage-vignette rising-edge latch (spec §6.3): remembers the previous
+	// snapshot's hitByPlayerId so only the 0xFF -> attacker-id transition fires
+	// the HUD flash; the falling edge just clears the latch (no animation).
+	bool m_WasHit = false;
+	// Recoil (COD model): client-side prediction, advanced on ConsumeRound,
+	// decayed per frame HERE (RecoilAdvance, same exp(-decayHz*dt) the server
+	// ticks with) and mirrored into the camera punch accumulator (PlayerCamFps_*
+	// follows the pool's deltas + its own same-rate decay), reconciled against
+	// the snapshot in ApplyServerCorrection. punch NEVER touches camera yaw/pitch.
+	RecoilMath::RecoilState m_Recoil{};
+	// Frame-accumulated monotonic clock (s) driving the recoil decay-suspend
+	// window (spec §5.1 COD burst ramp): ConsumeRound stamps m_Recoil.lastFireTime
+	// with this, and the per-frame pool decay resumes only once m_NowSec is ≥
+	// FIRE_SUSPEND_DECAY_S past it. Frame time on purpose — NOT the snapshot/
+	// tick (reconciliation) domain.
+	double m_NowSec = 0.0;
 	bool m_TransitionFiring;
 	uint8_t m_TeamId;
 	uint8_t m_Health;

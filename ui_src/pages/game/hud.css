@@ -66,3 +66,14 @@
 #page-hud .sb-red .sb-row{border-left:2px solid var(--ui-red);background:var(--ui-red-tint);}
 #page-hud .sb-blue .sb-row{border-left:2px solid var(--ui-blue);background:var(--ui-blue-tint);}
 #page-hud .sb-row.sb-me{border-left-color:var(--ui-gold);color:var(--ui-gold);font-weight:600;}
+
+/* Damage vignette — full-screen red edge flash on hit (spec §6.3). C++ pulses
+   GameHUD.onDamage; the transition owns the 0.45s decay (instant-on via .flash). */
+#damage-vignette {
+  position: fixed; inset: 0; pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(ellipse at center,
+              transparent 55%, rgba(200, 20, 20, 0.55) 100%);
+  transition: opacity 0.45s ease-out;
+}
+#damage-vignette.flash { opacity: 1; transition: none; }

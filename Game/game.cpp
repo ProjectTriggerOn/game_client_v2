@@ -39,6 +39,7 @@
 #include <vector>
 #include <cstdio>
 #include <cstring>
+#include <cmath>
 using namespace DirectX;
 
 namespace{
@@ -310,6 +311,7 @@ void Game_Update(double elapsed_time)
 		if (gameplayActive)
 		{
 			g_PlayerFps->ApplyServerCorrection(snap.localPlayer);
+			g_PlayerFps->ApplyLastShot(snap);
 			g_PlayerFps->SetTeam(snap.localPlayerTeam);
 
 			// Feed server state to InputProducer (for jump-pending logic)
@@ -641,21 +643,141 @@ void Game_Draw()
 
 	Direct3D_SetDepthEnable(false);
 
-	// Crosshair — native green cross, centered. Drawn natively (not in
-	// Ultralight) because the crosshair is frame-locked and pixel-exact; see
-	// docs §12.1. Placeholder static cross for now; a spread-driven dynamic
-	// crosshair + hitmarker will replace this in the same 2D pass.
-	if (g_GameState == PLAY)
+	// Crosshair — native four-arm dynamic crosshair, centered. Inner gap
+	// follows the predicted spread cone plus the recoil punch; arms shorten
+	// in ADS. Drawn natively (not Ultralight) — frame-locked and pixel-exact
+	// (docs §12.1). Replaces the static placeholder cross.
+	if (g_GameState == PLAY && g_PlayerFps)
 	{
 		const float cx = sw * 0.5f;
 		const float cy = sh * 0.5f;
-		constexpr float ARM = 10.0f;   // arm half-length (px)
-		constexpr float TH  = 2.0f;    // line thickness (px)
-		const XMFLOAT4 GREEN = { 0.1f, 1.0f, 0.1f, 0.9f };
-		// horizontal bar
-		Sprite_Draw(g_OverlayTexId, cx - ARM, cy - TH * 0.5f, ARM * 2.0f, TH, GREEN);
-		// vertical bar
-		Sprite_Draw(g_OverlayTexId, cx - TH * 0.5f, cy - ARM, TH, ARM * 2.0f, GREEN);
+		constexpr float TH = 2.0f;                  // line thickness (px)
+		float dP = 0.0f, dY = 0.0f;
+		PlayerCamFps_GetPunch(dP, dY);
+		// rad -> px: tuned so bloomMax (1.5° ≈ 0.026 rad) lands ~24px at 1080p.
+		constexpr float PX_PER_RAD = 900.0f;
+		const float spreadPx = g_PlayerFps->GetSpreadRadians() * PX_PER_RAD;
+		const float punchPx  = fabsf(dP) * (PX_PER_RAD * 2.5f);  // punch opens wider
+		const bool  ads      = g_PlayerFps->IsADS();
+
+		// ADS blend (spec §6.1: no arm-length pop on the ADS transition).
+		// Game_Draw has no frame dt (its signature takes no time), so the
+		// blend converges with a fixed exponential factor — ~90% in 10 frames
+		// (≈80ms at 75Hz), frame-rate dependent but imperceptibly so. IsADS()
+		// already covers ADS_IN/ADS_OUT, so this eases across the whole
+		// weapon-state-machine transition, matching the arm-length intent.
+		static float s_adsBlend = 0.0f;
+		const float adsTarget = ads ? 1.0f : 0.0f;
+		s_adsBlend += (adsTarget - s_adsBlend) * 0.2f;
+		const float arm = 10.0f + (6.0f - 10.0f) * s_adsBlend;   // 10 → 6 px
+
+		// Inner gap eases toward its target (base + spread + punch). The
+		// spread's ADS/HIP difference is a HARD switch inside
+		// GetSpreadRadians (1.2° → 0.2° base cone); smoothing the gap absorbs
+		// that pop instead of the crosshair snapping open/closed. The gap is
+		// draw-layer state, so this also dampens spread jitter between frames.
+		static float s_gap = 4.0f;
+		const float gapTarget = 4.0f + spreadPx + punchPx;
+		s_gap += (gapTarget - s_gap) * 0.2f;
+		// Visual cap applied AFTER smoothing — the punch pulse alone is ~470px
+		// at the 12° PUNCH_MAX (0.21 rad × 2250px/rad), which shoves the arms
+		// off-screen. Truncating a punch pulse at the cap is accepted: the
+		// visual bound wins, the crosshair never leaves the screen area
+		// (user ruling 2026-09-02). The eased state itself is pinned so a
+		// recovery eases down from the visible 36px instead of stalling there
+		// while a hidden higher value decays.
+		constexpr float GAP_MAX = 36.0f;
+		if (s_gap > GAP_MAX) s_gap = GAP_MAX;
+		const float gapClamped = s_gap;
+
+		const XMFLOAT4 BLACK = { 0.0f, 0.0f, 0.0f, 0.55f };
+		const XMFLOAT4 WHITE = { 1.0f, 1.0f, 1.0f, 0.9f };
+		// four arms: N/S/E/W bars from the inner gap outward. Each arm draws a
+		// 1px-larger black underlay first, then the white core, so the white
+		// stays crisp against any background.
+		//
+		// ADS fade-out (COD-style): the crosshair dissolves as the aim-down-
+		// sight transition completes — at full ADS the player aims with the
+		// model's iron sight instead. Alpha rides the SAME eased blend as the
+		// arm shrink, so length, gap and opacity animate together. The
+		// hitmarker below intentionally does NOT fade — hit feedback stays
+		// visible while sighted.
+		const float adsFade = 1.0f - s_adsBlend;
+		if (adsFade <= 0.01f)
+		{
+			// fully sighted — nothing to draw
+		}
+		else
+		{
+			const XMFLOAT4 armBlack = { BLACK.x, BLACK.y, BLACK.z, BLACK.w * adsFade };
+			const XMFLOAT4 armWhite = { WHITE.x, WHITE.y, WHITE.z, WHITE.w * adsFade };
+			Sprite_Draw(g_OverlayTexId, cx - TH * 0.5f - 1.0f, cy - gapClamped - arm - 1.0f, TH + 2.0f, arm + 2.0f, armBlack);
+			Sprite_Draw(g_OverlayTexId, cx - TH * 0.5f,       cy - gapClamped - arm,         TH,        arm,        armWhite);
+			Sprite_Draw(g_OverlayTexId, cx - TH * 0.5f - 1.0f, cy + gapClamped - 1.0f,        TH + 2.0f, arm + 2.0f, armBlack);
+			Sprite_Draw(g_OverlayTexId, cx - TH * 0.5f,       cy + gapClamped,               TH,        arm,        armWhite);
+			Sprite_Draw(g_OverlayTexId, cx - gapClamped - arm - 1.0f, cy - TH * 0.5f - 1.0f,  arm + 2.0f, TH + 2.0f, armBlack);
+			Sprite_Draw(g_OverlayTexId, cx - gapClamped - arm,       cy - TH * 0.5f,         arm,        TH,         armWhite);
+			Sprite_Draw(g_OverlayTexId, cx + gapClamped - 1.0f,       cy - TH * 0.5f - 1.0f,  arm + 2.0f, TH + 2.0f, armBlack);
+			Sprite_Draw(g_OverlayTexId, cx + gapClamped,             cy - TH * 0.5f,         arm,        TH,         armWhite);
+		}
+	}
+
+	// Hitmarker — four true 45° rotated ticks in an X, just outside the arm
+	// tips; white = hit, red = kill. The 9-arg Sprite_Draw overload (rotation
+	// about the rect centre) was previously assumed not to exist, so each tick
+	// was stair-stepped from 4 squares and read as a pixel bar (串珠). A real
+	// diagonal is one rotated rect; UV is the full white texture. Alpha decays
+	// ~140ms; PlayerFps owns the fade.
+	if (g_GameState == PLAY && g_PlayerFps)
+	{
+		const float a = g_PlayerFps->GetHitmarkerAlpha();
+		if (a > 0.0f)
+		{
+			const float cx = sw * 0.5f, cy = sh * 0.5f;
+			// Tick geometry. Each tick runs outward from radius O to O+L along a
+			// 45° diagonal, so its midpoint sits at radius O+L/2 from the centre:
+			//   mx,my = centre + (O+L/2)·(dx,dy)/√2
+			// Sprite_Draw positions a rect by its UNROTATED top-left, so
+			//   sx = mx - sw/2,  sy = my - sh/2
+			// Angle sign: screen y is down and this engine's positive RotationZ
+			// turns +x toward +y (clockwise), so a horizontal bar at +45° leans
+			// down-right "╲" (the NW↔SE diagonal) and at -45° leans up-right
+			// "╱" (the NE↔SW diagonal). X arms: NE & SW are the collinear "╱"
+			// pair, NW & SE the collinear "╲" pair — that is what makes the
+			// four bars read as one X (two clean crossing strokes).
+			constexpr float O = 14.0f;         // inner radius (tick inner end)
+			constexpr float L = 13.0f;         // tick length along the diagonal
+			constexpr float CORE_T = 2.0f;     // white/red core thickness — matches the crosshair arm TH
+			constexpr float OUTLINE_T = 4.0f;  // black underlay thickness (1px a side), same as the crosshair arm outline
+			constexpr float PI = 3.14159265f;
+			const float ang[4] = { -PI / 4.0f, +PI / 4.0f, +PI / 4.0f, -PI / 4.0f };
+			                        // NE=╱     NW=╲       SE=╲       SW=╱
+			const XMFLOAT4 BLACK = { 0.0f, 0.0f, 0.0f, 0.7f * a };
+			const XMFLOAT4 WHITE = { 1.0f, 1.0f, 1.0f, 1.0f * a };
+			const XMFLOAT4 RED   = { 1.0f, 0.25f, 0.25f, 1.0f * a };
+			const XMFLOAT4& col =
+				g_PlayerFps->GetHitmarkerKill() ? RED : WHITE;
+			// Corner directions: NE, NW, SE, SW (X shape).
+			const float dx[4] = {  1.0f, -1.0f,  1.0f, -1.0f };
+			const float dy[4] = { -1.0f, -1.0f,  1.0f,  1.0f };
+			const int texW = (int)Texture_GetWidth(g_OverlayTexId);
+			const int texH = (int)Texture_GetHeight(g_OverlayTexId);
+			const float mid = O + L * 0.5f;   // tick midpoint radius
+			const float invSqrt2 = 0.70710678f;
+			for (int c = 0; c < 4; c++)
+			{
+				const float mx = cx + mid * invSqrt2 * dx[c];
+				const float my = cy + mid * invSqrt2 * dy[c];
+				// Black underlay first (1px thicker each long side), then the
+				// core; both length L, rotated about the same midpoint.
+				Sprite_Draw(g_OverlayTexId,
+					mx - L * 0.5f, my - OUTLINE_T * 0.5f,
+					L, OUTLINE_T, 0, 0, texW, texH, ang[c], BLACK);
+				Sprite_Draw(g_OverlayTexId,
+					mx - L * 0.5f, my - CORE_T * 0.5f,
+					L, CORE_T, 0, 0, texW, texH, ang[c], col);
+			}
+		}
 	}
 
 	// NOTE: the legacy Widget_* HUD panels (HP/Ammo) and the immediate-mode
