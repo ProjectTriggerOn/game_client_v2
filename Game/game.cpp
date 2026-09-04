@@ -600,6 +600,31 @@ void Game_Draw()
 		// four arms: N/S/E/W bars from the inner gap outward. Each arm draws a
 		// 1px-larger black underlay first, then the white core, so the white
 		// stays crisp against any background.
+		//
+		// ADS fade-out (COD-style): the crosshair dissolves as the aim-down-
+		// sight transition completes — at full ADS the player aims with the
+		// model's iron sight instead. Alpha rides the SAME eased blend as the
+		// arm shrink, so length, gap and opacity animate together. The
+		// hitmarker below intentionally does NOT fade — hit feedback stays
+		// visible while sighted.
+		const float adsFade = 1.0f - s_adsBlend;
+		if (adsFade <= 0.01f)
+		{
+			// fully sighted — nothing to draw
+		}
+		else
+		{
+			const XMFLOAT4 armBlack = { BLACK.x, BLACK.y, BLACK.z, BLACK.w * adsFade };
+			const XMFLOAT4 armWhite = { WHITE.x, WHITE.y, WHITE.z, WHITE.w * adsFade };
+			Sprite_Draw(g_OverlayTexId, cx - TH * 0.5f - 1.0f, cy - gapClamped - arm - 1.0f, TH + 2.0f, arm + 2.0f, armBlack);
+			Sprite_Draw(g_OverlayTexId, cx - TH * 0.5f,       cy - gapClamped - arm,         TH,        arm,        armWhite);
+			Sprite_Draw(g_OverlayTexId, cx - TH * 0.5f - 1.0f, cy + gapClamped - 1.0f,        TH + 2.0f, arm + 2.0f, armBlack);
+			Sprite_Draw(g_OverlayTexId, cx - TH * 0.5f,       cy + gapClamped,               TH,        arm,        armWhite);
+			Sprite_Draw(g_OverlayTexId, cx - gapClamped - arm - 1.0f, cy - TH * 0.5f - 1.0f,  arm + 2.0f, TH + 2.0f, armBlack);
+			Sprite_Draw(g_OverlayTexId, cx - gapClamped - arm,       cy - TH * 0.5f,         arm,        TH,         armWhite);
+			Sprite_Draw(g_OverlayTexId, cx + gapClamped - 1.0f,       cy - TH * 0.5f - 1.0f,  arm + 2.0f, TH + 2.0f, armBlack);
+			Sprite_Draw(g_OverlayTexId, cx + gapClamped,             cy - TH * 0.5f,         arm,        TH,         armWhite);
+		}
 		Sprite_Draw(g_OverlayTexId, cx - TH * 0.5f - 1.0f, cy - gapClamped - arm - 1.0f, TH + 2.0f, arm + 2.0f, BLACK);
 		Sprite_Draw(g_OverlayTexId, cx - TH * 0.5f,       cy - gapClamped - arm,         TH,        arm,        WHITE);
 		Sprite_Draw(g_OverlayTexId, cx - TH * 0.5f - 1.0f, cy + gapClamped - 1.0f,        TH + 2.0f, arm + 2.0f, BLACK);
