@@ -16,6 +16,7 @@
 #include "editor_pick.h"
 #include "editor_command.h"
 #include "editor_gizmo.h"
+#include "editor_input.h"
 #include "cube.h"
 #include "mesh_field.h"
 #include "model.h"
@@ -29,10 +30,13 @@
 #include "direct3d.h"
 #include "key_logger.h"
 #include "ms_logger.h"
+#include "ui_manager.h"
 
 #include <DirectXMath.h>
 #include <cmath>
+#include <cstdio>
 #include <memory>
+#include <string>
 #include <Windows.h>
 
 using namespace DirectX;
@@ -48,6 +52,12 @@ namespace {
     bool g_MouseInit  = false;
 
     int  g_CurCatalog = 0;   // which catalog model the FBX-place hotkey drops
+
+    // Snap toggle owned by the toolbar (SceneEditor_SetSnap). Ctrl INVERTS it for
+    // the duration of a drag, so the M3 muscle memory ("hold Ctrl for free
+    // movement") still works when the toggle is on, and becomes "hold Ctrl to
+    // snap" when it is off.
+    bool g_SnapOn = true;
 
     // AABB over everything drawable, for "frame all" (A). Falls back to a unit box.
     void MapWorldBounds(DirectX::XMFLOAT3& mn, DirectX::XMFLOAT3& mx)
@@ -142,10 +152,104 @@ namespace {
         if (g_Sel.kind == SelKind::Model) return g_Sel.index < (int)g_Map.models.size();
         return g_Sel.index < (int)g_Map.colliders.size();
     }
+
+    void DoSave() {
+        const bool ok = editor::EditorMap_Save(kEditorSavePath, g_Map);
+        if (ok) {
+            // Mirror the fresh map into the runtime accessor so the game's next
+            // Map_Get* call (and any future play-test in the same session) sees
+            // exactly what we just saved. This lives in the helper, not at the F9
+            // site, because the toolbar's SAVE button reaches the same path via
+            // window.editor.save() — putting it at the hotkey would leave the
+            // button silently skipping the mirror.
+            Map_SetLoadedData(editor::EditorMap_ToMapData(g_Map));
+        }
+        OutputDebugStringA(ok ? "[EDITOR] saved resource/maps/_editor_save.map\n"
+                              : "[EDITOR] save FAILED (is resource/maps/ writable?)\n");
+    }
+
+    void DoReload() {
+        if (editor::EditorMap_Load(kEditorSavePath, g_Map)) {
+            // g_Map was replaced wholesale: buffered commands hold indices into
+            // the old vectors and g_Sel may point past the new end. Drop both.
+            g_Cmds.Clear();
+            g_Sel = Selection{};
+            // Same reasoning as DoSave: keep the runtime cache aligned with the
+            // editor's current copy (reached from F10 and from window.editor.reload).
+            Map_SetLoadedData(editor::EditorMap_ToMapData(g_Map));
+            OutputDebugStringA("[EDITOR] reloaded resource/maps/_editor_save.map\n");
+        } else {
+            OutputDebugStringA("[EDITOR] reload FAILED (save with F9 first)\n");
+        }
+    }
+
+    void DoDelete() {
+        if (!g_Sel.has || !SelectionIndexValid()) return;
+        g_Cmds.Execute(std::make_unique<editor::DeleteCommand>(g_Map, g_Sel.kind, g_Sel.index));
+        g_Sel.has = false;
+    }
+
+    // Last-published payloads. Pushing only on change keeps the editor from
+    // making a JS call every frame while nothing moves.
+    std::string g_LastSelJson, g_LastStatusJson;
+
+    const char* KindName(SelKind k) {
+        return (k == SelKind::Box) ? "box" : (k == SelKind::Model) ? "model" : "collider";
+    }
+
+    const char* ToolName(Tool t) {
+        return (t == Tool::Select) ? "select" : (t == Tool::Move) ? "move"
+             : (t == Tool::Rotate) ? "rotate" : "scale";
+    }
+
+    // rotEuler is stored in radians; the inspector speaks degrees.
+    float Deg(float rad) { return rad * (180.0f / XM_PI); }
+    float Rad(float deg) { return deg * (XM_PI / 180.0f); }
+
+    void PublishSelection() {
+        char buf[512];
+        if (!g_Sel.has || !SelectionIndexValid()) {
+            snprintf(buf, sizeof(buf), "{\"has\":false}");
+        } else if (g_Sel.kind == SelKind::Collider) {
+            const auto& c = g_Map.colliders[g_Sel.index];
+            snprintf(buf, sizeof(buf),
+                "{\"has\":true,\"kind\":\"collider\",\"index\":%d,"
+                "\"collider\":{\"isGround\":%s,\"min\":[%.4f,%.4f,%.4f],\"max\":[%.4f,%.4f,%.4f]}}",
+                g_Sel.index, c.isGround ? "true" : "false",
+                c.min.x, c.min.y, c.min.z, c.max.x, c.max.y, c.max.z);
+        } else {
+            const bool isBox = (g_Sel.kind == SelKind::Box);
+            const XMFLOAT3 p = isBox ? g_Map.boxes[g_Sel.index].pos      : g_Map.models[g_Sel.index].pos;
+            const XMFLOAT3 r = isBox ? g_Map.boxes[g_Sel.index].rotEuler : g_Map.models[g_Sel.index].rotEuler;
+            const XMFLOAT3 s = isBox ? g_Map.boxes[g_Sel.index].scale    : g_Map.models[g_Sel.index].scale;
+            snprintf(buf, sizeof(buf),
+                "{\"has\":true,\"kind\":\"%s\",\"index\":%d,"
+                "\"pos\":[%.4f,%.4f,%.4f],\"rot\":[%.2f,%.2f,%.2f],\"scale\":[%.4f,%.4f,%.4f],"
+                "\"collider\":null}",
+                KindName(g_Sel.kind), g_Sel.index,
+                p.x, p.y, p.z, Deg(r.x), Deg(r.y), Deg(r.z), s.x, s.y, s.z);
+        }
+        if (g_LastSelJson != buf) { g_LastSelJson = buf; UI::PushEditorSelection(buf); }
+    }
+
+    void PublishStatus() {
+        char buf[256];
+        snprintf(buf, sizeof(buf),
+            "{\"tool\":\"%s\",\"snap\":%s,\"boxes\":%d,\"models\":%d,\"colliders\":%d,"
+            "\"canUndo\":%s,\"canRedo\":%s}",
+            ToolName(g_Tool), g_SnapOn ? "true" : "false",
+            (int)g_Map.boxes.size(), (int)g_Map.models.size(), (int)g_Map.colliders.size(),
+            g_Cmds.CanUndo() ? "true" : "false", g_Cmds.CanRedo() ? "true" : "false");
+        if (g_LastStatusJson != buf) { g_LastStatusJson = buf; UI::PushEditorStatus(buf); }
+    }
 }
 
 void SceneEditor_Initialize()
 {
+    // A textFocus flag left true by a previous session or a hot reload would
+    // silently disable every editor hotkey.
+    EditorInput_Reset();
+
     // Create the shared view/projection constant buffers (slots b1/b2) that
     // Camera_SetMatrixToShader binds in SceneEditor_Draw. Game_Initialize does
     // this for the game scene; the editor boot path never runs it, so without
@@ -171,6 +275,10 @@ void SceneEditor_Initialize()
     // the old map. Start every editor session with an empty stack + no selection.
     g_Cmds.Clear();
     g_Sel = Selection{};
+
+    UI::PushEditorLayout(EditorInput_Layout().topH, EditorInput_Layout().rightW);
+    g_LastSelJson.clear();
+    g_LastStatusJson.clear();   // force a fresh publish on the first Update
 }
 
 void SceneEditor_Finalize()
@@ -183,6 +291,9 @@ void SceneEditor_Finalize()
 
 void SceneEditor_Update([[maybe_unused]] double elapsed_time)
 {
+    // Decide who owns the mouse this frame before anything reads it.
+    EditorInput_BeginFrame();
+
     // Frame-to-frame mouse delta (cursor stays absolute+visible; see spec §8.1).
     // The editor runs in MOUSE_POSITION_MODE_ABSOLUTE (MousePolicy_Apply forces
     // every non-SCENE_GAME scene into absolute/UI mode), so the cursor lives in
@@ -208,7 +319,7 @@ void SceneEditor_Update([[maybe_unused]] double elapsed_time)
     // so the live button state lives in MSLogger's UI slot — the MODE_GAME buttons
     // stay frozen at their init value. Read the *UI accessors (matching the T2 pick
     // branch below), or tumble/track/dolly never fire.
-    if (alt) {
+    if (alt && EditorInput_ViewportOwnsMouse()) {
         if (MSLogger_IsPressedUI(MBT_LEFT))   EditorCamera_Tumble(dx, dy);
         if (MSLogger_IsPressedUI(MBT_MIDDLE)) EditorCamera_Track(dx, dy);
         if (MSLogger_IsPressedUI(MBT_RIGHT))  EditorCamera_Dolly(dx * 0.05f);
@@ -218,7 +329,7 @@ void SceneEditor_Update([[maybe_unused]] double elapsed_time)
     // live-apply has already mutated g_Map, and the release path only records a
     // command for the tool that started the drag (g_Tool==Move). Letting the tool
     // change here would orphan that mutation (no command => cannot be undone).
-    if (!g_Dragging) {
+    if (!g_Dragging && EditorInput_ViewportOwnsKeys()) {
         if (KeyLogger_IsTrigger(KK_Q)) g_Tool = Tool::Select;
         if (KeyLogger_IsTrigger(KK_W)) g_Tool = Tool::Move;
         if (KeyLogger_IsTrigger(KK_E)) g_Tool = Tool::Rotate;
@@ -226,7 +337,7 @@ void SceneEditor_Update([[maybe_unused]] double elapsed_time)
     }
 
     // B = drop a 1x1x1 box brush at the cursor's ground hit (grid-snapped).
-    if (KeyLogger_IsTrigger(KK_B)) {
+    if (EditorInput_ViewportOwnsKeys() && KeyLogger_IsTrigger(KK_B)) {
         Ray r = EditorPick_ScreenRay(mx, my, EditorCamera_GetView(), EditorCamera_GetProj());
         XMFLOAT3 hit;
         if (!EditorPick_RayGroundY(r, 0.0f, hit)) hit = SelectionCenter();
@@ -241,7 +352,7 @@ void SceneEditor_Update([[maybe_unused]] double elapsed_time)
         (void)idx;
     }
     // N = drop the current catalog FBX at the cursor; auto-seed its collider.
-    if (KeyLogger_IsTrigger(KK_N) && ModelCatalog_Count() > 0) {
+    if (EditorInput_ViewportOwnsKeys() && KeyLogger_IsTrigger(KK_N) && ModelCatalog_Count() > 0) {
         Ray r = EditorPick_ScreenRay(mx, my, EditorCamera_GetView(), EditorCamera_GetProj());
         XMFLOAT3 hit;
         if (!EditorPick_RayGroundY(r, 0.0f, hit)) hit = SelectionCenter();
@@ -259,17 +370,25 @@ void SceneEditor_Update([[maybe_unused]] double elapsed_time)
         g_Tool = Tool::Move;
     }
     // [ / ] cycle which catalog model N drops.
-    if (KeyLogger_IsTrigger(KK_OEMOPENBRACKETS))  g_CurCatalog = (g_CurCatalog + ModelCatalog_Count() - 1) % (ModelCatalog_Count() > 0 ? ModelCatalog_Count() : 1);
-    if (KeyLogger_IsTrigger(KK_OEMCLOSEBRACKETS)) g_CurCatalog = (g_CurCatalog + 1) % (ModelCatalog_Count() > 0 ? ModelCatalog_Count() : 1);
+    if (EditorInput_ViewportOwnsKeys() && KeyLogger_IsTrigger(KK_OEMOPENBRACKETS))  g_CurCatalog = (g_CurCatalog + ModelCatalog_Count() - 1) % (ModelCatalog_Count() > 0 ? ModelCatalog_Count() : 1);
+    if (EditorInput_ViewportOwnsKeys() && KeyLogger_IsTrigger(KK_OEMCLOSEBRACKETS)) g_CurCatalog = (g_CurCatalog + 1) % (ModelCatalog_Count() > 0 ? ModelCatalog_Count() : 1);
 
     // §8.3 arbitration rule 2: no Alt => gizmo/pick. Begin a drag on a handle,
     // continue it (live-apply so the user sees the move), release => push ONE
     // command with before/after, else ray-pick to select/deselect. The editor
     // runs in absolute/UI mouse mode (MousePolicy_Apply), so the live LMB state
     // lives in MSLogger's UI slot — read *UI accessors (matching the T2 pick).
-    if (!alt) {
+    // NOTE: `g_Dragging ||` is load-bearing, not defensive noise. Ownership
+    // unlatches on release, so on the release frame ViewportOwnsMouse() falls
+    // back to the raw cursor hit. Release the mouse while the cursor happens to
+    // be over the inspector and a plain ownership gate would skip the whole
+    // block — the release branch never runs, g_Dragging stays true forever, and
+    // the editor is stuck dragging. A drag can only be in flight if it latched
+    // in the viewport, so honouring it here is always correct.
+    if (!alt && (g_Dragging || EditorInput_ViewportOwnsMouse())) {
         Ray ray = EditorPick_ScreenRay(mx, my, EditorCamera_GetView(), EditorCamera_GetProj());
-        const bool ctrlSnap = !KeyLogger_IsPressed(KK_LEFTCONTROL);   // Ctrl held = free (no snap)
+        // XOR: Ctrl inverts the toolbar toggle rather than hard-coding "Ctrl = free".
+        const bool ctrlSnap = (g_SnapOn != KeyLogger_IsPressed(KK_LEFTCONTROL));
 
         if (g_Dragging) {
             if (!SelectionIndexValid()) {
@@ -304,7 +423,7 @@ void SceneEditor_Update([[maybe_unused]] double elapsed_time)
                 }
                 else if (g_Tool == Tool::Rotate) {
                     float ang = EditorGizmo_DragRotate(ray, SelectionCenter());
-                    const bool snap = !KeyLogger_IsPressed(KK_LEFTCONTROL);
+                    const bool snap = (g_SnapOn != KeyLogger_IsPressed(KK_LEFTCONTROL));
                     if (snap) ang = SnapTo(ang, XM_PI/12.0f);   // 15 degrees
                     XMFLOAT3 e = g_DragBeforeA;
                     if (g_HotAxis==GizmoAxis::X) e.x += ang; else if (g_HotAxis==GizmoAxis::Y) e.y += ang; else e.z += ang;
@@ -366,51 +485,27 @@ void SceneEditor_Update([[maybe_unused]] double elapsed_time)
     // §8.2 delete + undo/redo. Clearing selection avoids a stale index pointing
     // at a shifted/removed element after the structural change (safe v1 choice).
     const bool ctrl = KeyLogger_IsPressed(KK_LEFTCONTROL);
-    if (KeyLogger_IsTrigger(KK_DELETE) && g_Sel.has) {
-        g_Cmds.Execute(std::make_unique<editor::DeleteCommand>(g_Map, g_Sel.kind, g_Sel.index));
-        g_Sel.has = false;
-    }
-    if (ctrl && KeyLogger_IsTrigger(KK_Z)) { g_Cmds.Undo(); g_Sel.has = false; }
-    if (ctrl && KeyLogger_IsTrigger(KK_Y)) { g_Cmds.Redo(); g_Sel.has = false; }
+    const bool keys = EditorInput_ViewportOwnsKeys();
+    if (keys && KeyLogger_IsTrigger(KK_DELETE) && g_Sel.has) DoDelete();
+    if (keys && ctrl && KeyLogger_IsTrigger(KK_Z)) { g_Cmds.Undo(); g_Sel.has = false; }
+    if (keys && ctrl && KeyLogger_IsTrigger(KK_Y)) { g_Cmds.Redo(); g_Sel.has = false; }
 
-    if (wheelSteps != 0.0f) EditorCamera_Dolly(wheelSteps);   // wheel dollies (Maya), no Alt needed
+    if (wheelSteps != 0.0f && EditorInput_ViewportOwnsWheel()) EditorCamera_Dolly(wheelSteps);   // wheel dollies (Maya), no Alt needed
 
     // Framing: F frames the selection (whole map if nothing is selected), A frames all.
-    if (KeyLogger_IsTrigger(KK_F)) {
+    if (keys && KeyLogger_IsTrigger(KK_F)) {
         AABB a;
         if (g_Sel.has && SelectableAABB(g_Sel.kind, g_Sel.index, a))
             EditorCamera_FrameBounds(a.min, a.max);
         else { DirectX::XMFLOAT3 mn, mx2; MapWorldBounds(mn, mx2); EditorCamera_FrameBounds(mn, mx2); }
     }
-    if (KeyLogger_IsTrigger(KK_A)) { DirectX::XMFLOAT3 mn, mx2; MapWorldBounds(mn, mx2); EditorCamera_FrameBounds(mn, mx2); }
+    if (keys && KeyLogger_IsTrigger(KK_A)) { DirectX::XMFLOAT3 mn, mx2; MapWorldBounds(mn, mx2); EditorCamera_FrameBounds(mn, mx2); }
 
-    if (KeyLogger_IsTrigger(KK_F9)) {
-        bool ok = editor::EditorMap_Save(kEditorSavePath, g_Map);
-        if (ok) {
-            // Mirror the fresh map into the runtime accessor so the game's
-            // next Map_Get* call (and any future play-test in the same
-            // session) sees exactly what we just saved.
-            Map_SetLoadedData(editor::EditorMap_ToMapData(g_Map));
-        }
-        OutputDebugStringA(ok ? "[EDITOR] saved resource/maps/_editor_save.map\n"
-                              : "[EDITOR] save FAILED (is resource/maps/ writable?)\n");
-    }
-    if (KeyLogger_IsTrigger(KK_F10)) {
-        if (editor::EditorMap_Load(kEditorSavePath, g_Map)) {
-            // g_Map was replaced wholesale: any buffered command holds indices
-            // into the old (differently-sized) vectors, and g_Sel may point past
-            // the new end. Both are stale now — undo/redo or Delete against them
-            // would insert/erase/read out of bounds. Drop both.
-            g_Cmds.Clear();
-            g_Sel = Selection{};
-            // Same reasoning as F9: keep the runtime cache aligned with the
-            // editor's current copy.
-            Map_SetLoadedData(editor::EditorMap_ToMapData(g_Map));
-            OutputDebugStringA("[EDITOR] reloaded resource/maps/_editor_save.map\n");
-        } else {
-            OutputDebugStringA("[EDITOR] reload FAILED (save with F9 first)\n");
-        }
-    }
+    if (keys && KeyLogger_IsTrigger(KK_F9))  DoSave();
+    if (keys && KeyLogger_IsTrigger(KK_F10)) DoReload();
+
+    PublishSelection();
+    PublishStatus();
 }
 
 void SceneEditor_Draw()
@@ -523,6 +618,92 @@ void SceneEditor_Draw()
 
     Direct3D_SetDepthEnable(true);
     Sprite_Begin();
+}
+
+// --- Bridge entry points -----------------------------------------------------
+// Reached from inside a JS callback (UI::Render). They only touch editor state.
+
+void SceneEditor_SetTool(int tool)
+{
+    if (g_Dragging) return;                       // same rule as the Q/W/E/R hotkeys
+    switch (tool) {
+    case 1:  g_Tool = Tool::Move;   break;
+    case 2:  g_Tool = Tool::Rotate; break;
+    case 3:  g_Tool = Tool::Scale;  break;
+    default: g_Tool = Tool::Select; break;
+    }
+}
+
+void SceneEditor_SetSnap(bool on) { g_SnapOn = on; }
+
+void SceneEditor_Undo() { if (g_Dragging) return; g_Cmds.Undo(); g_Sel.has = false; }
+void SceneEditor_Redo() { if (g_Dragging) return; g_Cmds.Redo(); g_Sel.has = false; }
+void SceneEditor_DeleteSelection() { if (g_Dragging) return; DoDelete(); }
+void SceneEditor_Save()   { DoSave(); }
+void SceneEditor_Reload() { if (g_Dragging) return; DoReload(); }
+
+void SceneEditor_SetTransform(const char* field, float x, float y, float z)
+{
+    if (!field || g_Dragging) return;             // never accept a typed edit mid-drag
+    if (!g_Sel.has || !SelectionIndexValid()) return;
+    // A non-numeric JS value (empty field, "-", "1.2.3") reaches here as NaN via
+    // JSValueToFloat's ToNumber(). A NaN written into g_Map survives into every
+    // later PublishSelection, whose %.4f formats it as "nan"/"-nan(ind)" —
+    // invalid JSON that breaks the page's JSON.parse forever, not just once.
+    if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(z)) return;
+
+    const std::string f = field;
+    const XMFLOAT3 v { x, y, z };
+
+    if (f == "pos") {
+        // MoveCommand tracks the min corner for colliders; SelectionMovePos()
+        // already returns the right value per kind.
+        g_Cmds.Execute(std::make_unique<editor::MoveCommand>(
+            g_Map, g_Sel.kind, g_Sel.index, SelectionMovePos(), v));
+    }
+    else if (f == "rot") {
+        if (g_Sel.kind == SelKind::Collider) return;      // AABBs do not rotate
+        const XMFLOAT3 before = (g_Sel.kind == SelKind::Box)
+            ? g_Map.boxes[g_Sel.index].rotEuler : g_Map.models[g_Sel.index].rotEuler;
+        const XMFLOAT3 after { Rad(x), Rad(y), Rad(z) };  // page sends degrees
+        g_Cmds.Execute(std::make_unique<editor::RotateCommand>(
+            g_Map, g_Sel.index, g_Sel.kind, before, after));
+    }
+    else if (f == "scale") {
+        if (g_Sel.kind == SelKind::Collider) return;      // colliders scale via cmin/cmax
+        const XMFLOAT3 before = (g_Sel.kind == SelKind::Box)
+            ? g_Map.boxes[g_Sel.index].scale : g_Map.models[g_Sel.index].scale;
+        g_Cmds.Execute(std::make_unique<editor::ScaleCommand>(
+            g_Map, g_Sel.kind, g_Sel.index, before, XMFLOAT3{0,0,0}, v, XMFLOAT3{0,0,0}));
+    }
+    else if (f == "cmin" || f == "cmax") {
+        if (g_Sel.kind != SelKind::Collider) return;
+        const auto& c = g_Map.colliders[g_Sel.index];
+        const XMFLOAT3 beforeMin = c.min, beforeMax = c.max;
+        const XMFLOAT3 afterMin = (f == "cmin") ? v : beforeMin;
+        const XMFLOAT3 afterMax = (f == "cmax") ? v : beforeMax;
+        g_Cmds.Execute(std::make_unique<editor::ScaleCommand>(
+            g_Map, g_Sel.kind, g_Sel.index, beforeMin, beforeMax, afterMin, afterMax));
+    }
+}
+
+void SceneEditor_SetColliderGround(bool isGround)
+{
+    if (g_Dragging) return;
+    if (!g_Sel.has || !SelectionIndexValid()) return;
+    if (g_Sel.kind != SelKind::Collider) return;
+    // Not undoable in v1: there is no command type for a bool field, and adding
+    // one is M4b work. Flagged deliberately rather than silently.
+    g_Map.colliders[g_Sel.index].isGround = isGround;
+}
+
+void SceneEditor_RequestRepublish()
+{
+    // Clearing the last-published strings makes the next PublishSelection/
+    // PublishStatus call in SceneEditor_Update push unconditionally, even if the
+    // freshly-computed JSON is byte-identical to what was (silently) dropped.
+    g_LastSelJson.clear();
+    g_LastStatusJson.clear();
 }
 
 #endif // EDITOR_ENABLED

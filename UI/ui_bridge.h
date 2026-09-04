@@ -30,5 +30,12 @@ void PushMatchResult(const char* json);
 // Display-settings revert countdown → window.onDisplayRevertTick(secondsLeft).
 void PushDisplayRevertTick(int secondsLeft);
 
+// Editor pushes (Debug/editor builds only in practice; the helpers themselves
+// are unconditional and no-op when the page defines no handler). Each takes a
+// JSON string the page JSON.parses, like PushScoreboard.
+void PushEditorLayout(const char* json);
+void PushEditorSelection(const char* json);
+void PushEditorStatus(const char* json);
+
 }  // namespace Bridge
 }  // namespace UI

@@ -28,6 +28,14 @@
 #include <array>
 #include <filesystem>
 #include <system_error>
+#include <cstdio>
+
+#ifdef EDITOR_ENABLED
+// Editor code is Debug-only (TriggerOn.vcxproj EDITOR_ENABLED); editor_input.cpp
+// does not exist in Release, so this call must be guarded or the Release link
+// fails on an unresolved external.
+#include "editor_input.h"
+#endif
 
 namespace {
 
@@ -76,6 +84,17 @@ public:
 };
 UIViewListener g_viewListener;
 
+// Editor panel state. Kept separate from PendingHud so the editor can be built
+// out (and later compiled out) without touching the HUD path. Declared above
+// UILoadListener (below) because its OnDOMReady body re-arms these dirty flags.
+struct PendingEditor {
+    bool        layoutDirty = false;
+    int         topH = 0, rightW = 0;      // CLIENT px as pushed by the editor
+    bool        selDirty = false;   std::string selJson;
+    bool        statusDirty = false; std::string statusJson;
+};
+PendingEditor g_pendingEditor;
+
 // The JSContext is reset on every navigation/reload — rebind game.* each time
 // the DOM is ready (docs §8.3).
 class UILoadListener : public ultralight::LoadListener {
@@ -84,6 +103,22 @@ public:
                     bool is_main_frame, const ultralight::String& /*url*/) override {
         if (!is_main_frame) return;
         UI::Bridge::Register(caller);
+
+#ifdef EDITOR_ENABLED
+        // The JSContext was just rebuilt, which drops the page's in-memory
+        // textFocus state along with it. Without this, a stale textFocus==true
+        // left over from before the reload survives in C++ until the router's
+        // async boot re-reaches PageEditor.onEnter — and forever if that boot
+        // fails, silently killing every editor hotkey. This reset does not
+        // depend on any JS running successfully.
+        EditorInput_Reset();
+#endif
+
+        // The JSContext was just rebuilt (navigation or hot-reload Reload()), so
+        // every C++-owned value the page renders has to be sent again.
+        if (g_pendingEditor.topH || g_pendingEditor.rightW) g_pendingEditor.layoutDirty = true;
+        if (!g_pendingEditor.selJson.empty())              g_pendingEditor.selDirty = true;
+        if (!g_pendingEditor.statusJson.empty())           g_pendingEditor.statusDirty = true;
     }
 };
 UILoadListener g_loadListener;
@@ -232,6 +267,8 @@ void Resize(int w, int h) {
         g_view->Resize((uint32_t)w, (uint32_t)h);
         g_deviceScale = DeviceScaleFor(w);                    // larger surface → more scale
         g_view->set_device_scale((double)g_deviceScale);
+        // The device scale just changed, so the CSS-px dock sizes did too.
+        if (g_pendingEditor.topH || g_pendingEditor.rightW) g_pendingEditor.layoutDirty = true;
     }
     g_d3d_renderer.Resize(w, h);
     g_width  = w;
@@ -291,6 +328,25 @@ void Render() {
         UI::Bridge::PushKillFeed(k[0], k[1], k[2], k[3]);
     }
     g_pendingKills.clear();
+
+    if (g_pendingEditor.layoutDirty) {
+        // CSS px = client px / device scale. Doing the division here (where the
+        // scale lives) keeps the page free of coordinate-space math.
+        const float s = (g_deviceScale > 0.0f) ? g_deviceScale : 1.0f;
+        char buf[128];
+        snprintf(buf, sizeof(buf), "{\"topH\":%.2f,\"rightW\":%.2f}",
+                 (double)(g_pendingEditor.topH / s), (double)(g_pendingEditor.rightW / s));
+        UI::Bridge::PushEditorLayout(buf);
+        g_pendingEditor.layoutDirty = false;
+    }
+    if (g_pendingEditor.selDirty) {
+        UI::Bridge::PushEditorSelection(g_pendingEditor.selJson.c_str());
+        g_pendingEditor.selDirty = false;
+    }
+    if (g_pendingEditor.statusDirty) {
+        UI::Bridge::PushEditorStatus(g_pendingEditor.statusJson.c_str());
+        g_pendingEditor.statusDirty = false;
+    }
 
     g_renderer->Update();
 
@@ -366,6 +422,24 @@ void PushMatchResult(const char* json) {
 }
 void PushDisplayRevertTick(int secondsLeft) {
     g_pendingHud.revertSec = secondsLeft; g_pendingHud.revertDirty = true;
+}
+
+void PushEditorLayout(int topHClientPx, int rightWClientPx) {
+    g_pendingEditor.topH   = topHClientPx;
+    g_pendingEditor.rightW = rightWClientPx;
+    g_pendingEditor.layoutDirty = true;
+}
+
+void PushEditorSelection(const char* json) {
+    if (!json) return;
+    g_pendingEditor.selJson  = json;
+    g_pendingEditor.selDirty = true;
+}
+
+void PushEditorStatus(const char* json) {
+    if (!json) return;
+    g_pendingEditor.statusJson  = json;
+    g_pendingEditor.statusDirty = true;
 }
 
 void ProcessInput() {
