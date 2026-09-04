@@ -47,8 +47,18 @@ jobs:
           Copy-Item x64\Release\WebCore.dll        release\bin\
           Copy-Item x64\Release\AppCore.dll        release\bin\
 
-          # --- Config (defaults only; user_settings.toml is written at runtime) ---
-          Copy-Item config\config.toml release\config\
+          # --- Config (defaults only; user_settings.toml is written at runtime
+          #     and must never ship, or an update would clobber saved settings).
+          #
+          #     Copied by pattern rather than named one by one: audio_catalog.toml
+          #     landed in v1.3.0 and was never added here, so that release shipped
+          #     with no sound at all. Nothing failed loudly — the audio layer is
+          #     built to degrade to silence when its catalog is missing, so the
+          #     game ran fine and only a play-test caught it. A pattern copy makes
+          #     the next config file ship on its own instead of waiting to be
+          #     noticed. ---
+          Get-ChildItem config\*.toml -Exclude user_settings.toml |
+            Copy-Item -Destination release\config\
 
           # --- Asset tree. Ultralight's engine data rides along inside it at
           #     resource\ultralight\resources (post-build mirrors it there), so
@@ -87,10 +97,16 @@ jobs:
             'release\bin\vcruntime140.dll',
             'release\bin\vcruntime140_1.dll',
             'release\config\config.toml',
+            'release\config\audio_catalog.toml',
             'release\resource\ultralight\resources\icudt67l.dat',
             'release\resource\ultralight\resources\cacert.pem',
             'release\resource\ui\index.html',
-            'release\resource\shader'
+            'release\resource\shader',
+            # Audio degrades to silence rather than failing, so a missing catalog
+            # or asset tree produces a launchable build that is simply mute — the
+            # exact failure v1.3.0 shipped. These two entries are what turn that
+            # into a red run instead of a play-test discovery.
+            'release\resource\audio\weapons\fire_001.wav'
           )
           $missing = $required | Where-Object { -not (Test-Path -LiteralPath $_) }
           if ($missing) {
