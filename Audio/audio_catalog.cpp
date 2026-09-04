@@ -18,7 +18,6 @@ const char* const kSoundKeys[] = {
     "weapon_fire_empty",
     "weapon_reload",
     "weapon_reload_empty",
-    "weapon_take_out",
     "footstep",
     "jump_start",
     "jump_land",

@@ -875,20 +875,11 @@ void PlayerFps::ApplyServerCorrection(const NetPlayerState& serverState)
 		// Play the "taking out" draw on respawn (auto-transitions to HIP),
 		// matching match-start instead of snapping straight to hip-idle.
 		// This is the respawn rising edge (runs once, not the per-frame
-		// m_RespawnLockTimer > 0.0 block above) -- playing it there would
-		// retrigger the sound every frame for the whole lock duration.
+		// m_RespawnLockTimer > 0.0 block above) -- setting it there would
+		// restart the animation every frame for the whole lock duration.
+		// No sound plays here: the respawn take-out cue is retired for want
+		// of a correct asset (see the design doc's section 14).
 		m_StateMachine->SetWeaponState(WeaponState::TAKING_OUT);
-
-		// TEMPORARY DIAGNOSTIC (Defect 2, 2026-08-30 playtest report: respawn
-		// take-out is still silent). Confirms this call site is actually
-		// reached on the respawn rising edge. Read alongside the "play
-		// dropped: ..." logging in Audio/audio_backend_miniaudio.cpp: if this
-		// line appears with no matching drop log, the voice started and the
-		// remaining explanation is something making it inaudible (bus/master
-		// volume, gain, or the file itself) rather than a dropped play.
-		// Remove once the next run's log has answered the question.
-		DebugLog_Printf("audio", "respawn take-out: calling Audio_PlayOneShot(WeaponTakeOut)");
-		Audio_PlayOneShot(SoundId::WeaponTakeOut);
 
 		// Clear input history and sync tick on respawn
 		ClearInputHistory();
