@@ -84,6 +84,9 @@
     <ClCompile Include="Game\grid.cpp">
       <Filter>Game</Filter>
     </ClCompile>
+    <ClCompile Include="Game\impact_fx.cpp">
+      <Filter>Game</Filter>
+    </ClCompile>
     <ClCompile Include="Game\player_cam_tps.cpp">
       <Filter>Game</Filter>
     </ClCompile>
@@ -108,7 +111,13 @@
     <ClCompile Include="Game\collision_world.cpp">
       <Filter>Game</Filter>
     </ClCompile>
+    <ClCompile Include="Game\raycast.cpp">
+      <Filter>Game</Filter>
+    </ClCompile>
     <ClCompile Include="Graphics\polygon.cpp">
+      <Filter>Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphics\particle.cpp">
       <Filter>Graphics</Filter>
     </ClCompile>
     <ClCompile Include="Graphics\shader.cpp">
@@ -172,6 +181,15 @@
       <Filter>Graphics</Filter>
     </ClCompile>
     <ClCompile Include="Graphics\shader_3d_unlit.cpp">
+      <Filter>Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphics\shader_billboard.cpp">
+      <Filter>Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphics\billboard.cpp">
+      <Filter>Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphics\decal.cpp">
       <Filter>Graphics</Filter>
     </ClCompile>
     <ClCompile Include="Graphics\ui_widget.cpp">
@@ -263,6 +281,9 @@
     <ClInclude Include="Game\grid.h">
       <Filter>Game</Filter>
     </ClInclude>
+    <ClInclude Include="Game\impact_fx.h">
+      <Filter>Game</Filter>
+    </ClInclude>
     <ClInclude Include="Game\player_cam_tps.h">
       <Filter>Game</Filter>
     </ClInclude>
@@ -287,10 +308,16 @@
     <ClInclude Include="Game\collision_world.h">
       <Filter>Game</Filter>
     </ClInclude>
+    <ClInclude Include="Game\raycast.h">
+      <Filter>Game</Filter>
+    </ClInclude>
     <ClInclude Include="Graphics\shader.h">
       <Filter>Graphics</Filter>
     </ClInclude>
     <ClInclude Include="Graphics\polygon.h">
+      <Filter>Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Graphics\particle.h">
       <Filter>Graphics</Filter>
     </ClInclude>
     <ClInclude Include="Graphics\sprite.h">
@@ -351,6 +378,15 @@
       <Filter>Graphics</Filter>
     </ClInclude>
     <ClInclude Include="Graphics\shader_3d_unlit.h">
+      <Filter>Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Graphics\shader_billboard.h">
+      <Filter>Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Graphics\billboard.h">
+      <Filter>Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Graphics\decal.h">
       <Filter>Graphics</Filter>
     </ClInclude>
     <ClInclude Include="Graphics\ui_widget.h">
@@ -431,6 +467,12 @@
       <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\shader_vertex_3dunlit.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\shader_pixel_billboard.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\shader_vertex_billboard.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
   </ItemGroup>

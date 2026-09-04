@@ -37,6 +37,7 @@
 #include "scene.h"
 #include "shader_3d_ani.h"
 #include "shader_3d_unlit.h"
+#include "shader_billboard.h"
 #include "shader_field.h"
 #include "shader_infinite.h"
 
@@ -193,6 +194,11 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,[[maybe_unused
 	Sprite_Initialize(Direct3D_GetDevice(), Direct3D_GetDeviceContext());
 
 	SpriteAnime_Initialize();
+
+	// Billboard shader is owned once per process here (like every other shader
+	// module), not per game-scene entry — ImpactFx re-enters via Game_Initialize
+	// on every round, and only the billboard vertex buffer is per-scene.
+	Shader_Billboard_Initialize();
 
 	Fade_Initialize();
 
@@ -540,6 +546,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,[[maybe_unused
 	UI::Finalize();
 
 	Fade_Finalize();
+
+	Shader_Billboard_Finalize();
 
 	SpriteAnime_Finalize();
 

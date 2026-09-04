@@ -4,6 +4,7 @@
 #include "config.h"
 #include "scene.h"
 #include "game.h"
+#include "impact_fx.h"
 #include "display_manager.h"
 #include "audio.h"
 
@@ -334,14 +335,17 @@ void Register(ultralight::View* view) {
         const int  mode = JSValueToInt(args[2]);
         g_pFloodNet->SetFloodDebug(on, rate, mode);
     };
-    // game.getFloodStats() -> JSON the panel polls: {active, sendRate, snapMs}
+    // game.getFloodStats() -> JSON the panel polls: {active, sendRate, snapMs, fxDecals, fxParticles}
     game["getFloodStats"] = (JSCallbackWithRetval)[](const JSObject&, const JSArgs&) -> JSValue {
         if (!g_pFloodNet) return JSValue("{\"active\":false,\"sendRate\":0,\"snapMs\":0}");
         char buf[128];
-        snprintf(buf, sizeof(buf), "{\"active\":%s,\"sendRate\":%.0f,\"snapMs\":%.1f}",
+        int fxDecals = 0, fxParticles = 0;
+        ImpactFx_DebugInfo(fxDecals, fxParticles);
+        snprintf(buf, sizeof(buf), "{\"active\":%s,\"sendRate\":%.0f,\"snapMs\":%.1f,\"fxDecals\":%d,\"fxParticles\":%d}",
                  g_pFloodNet->IsFloodActive() ? "true" : "false",
                  g_pFloodNet->GetFloodSendRate(),
-                 g_pFloodNet->GetFloodSnapIntervalMs());
+                 g_pFloodNet->GetFloodSnapIntervalMs(),
+                 fxDecals, fxParticles);
         return JSValue(buf);
     };
 #endif

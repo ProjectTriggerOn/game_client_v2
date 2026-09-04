@@ -176,12 +176,14 @@ exit /b 0
     <ClCompile Include="Core\debug_log.cpp" />
     <ClCompile Include="Core\debug_ostream.cpp" />
     <ClCompile Include="Core\debug_text.cpp" />
+    <ClCompile Include="Graphics\decal.cpp" />
     <ClCompile Include="Core\direct3d.cpp" />
     <ClCompile Include="Core\display_manager.cpp" />
     <ClCompile Include="Graphics\fade.cpp" />
     <ClCompile Include="Game\game.cpp" />
     <ClCompile Include="Core\game_window.cpp" />
     <ClCompile Include="Game\grid.cpp" />
+    <ClCompile Include="Game\impact_fx.cpp" />
     <ClCompile Include="Game\infinite_grid.cpp" />
     <ClCompile Include="Core\input_producer.cpp" />
     <ClCompile Include="Core\keyboard.cpp" />
@@ -208,9 +210,11 @@ exit /b 0
     <ClCompile Include="Game\player_cam_tps.cpp" />
     <ClCompile Include="Game\player_fps.cpp" />
     <ClCompile Include="Game\player_state_machine.cpp" />
+    <ClCompile Include="Game\raycast.cpp" />
     <ClCompile Include="Network\remote_player.cpp" />
     <ClCompile Include="Network\remote_player_state_machine.cpp" />
     <ClCompile Include="Graphics\polygon.cpp" />
+    <ClCompile Include="Graphics\particle.cpp" />
     <ClCompile Include="Graphics\sampler.cpp" />
     <ClCompile Include="Game\scene.cpp" />
     <ClCompile Include="Game\scene_ui_test.cpp" />
@@ -223,6 +227,8 @@ exit /b 0
     <ClCompile Include="Graphics\shader_3d.cpp" />
     <ClCompile Include="Graphics\shader_3d_ani.cpp" />
     <ClCompile Include="Graphics\shader_3d_unlit.cpp" />
+    <ClCompile Include="Graphics\shader_billboard.cpp" />
+    <ClCompile Include="Graphics\billboard.cpp" />
     <ClCompile Include="Graphics\shader_field.cpp" />
     <ClCompile Include="Graphics\shader_infinite.cpp" />
     <ClCompile Include="Graphics\sky_dome.cpp" />
@@ -255,6 +261,7 @@ exit /b 0
     <ClInclude Include="Core\debug_imgui.h" />
     <ClInclude Include="Core\debug_log.h" />
     <ClInclude Include="Core\debug_text.h" />
+    <ClInclude Include="Graphics\decal.h" />
     <ClInclude Include="Core\direct3d.h" />
     <ClInclude Include="Core\display_manager.h" />
     <ClInclude Include="Core\exe_path.h" />
@@ -262,6 +269,7 @@ exit /b 0
     <ClInclude Include="Game\game.h" />
     <ClInclude Include="Core\game_window.h" />
     <ClInclude Include="Game\grid.h" />
+    <ClInclude Include="Game\impact_fx.h" />
     <ClInclude Include="Game\infinite_grid.h" />
     <ClInclude Include="Core\input_producer.h" />
     <ClInclude Include="Core\keyboard.h" />
@@ -290,9 +298,11 @@ exit /b 0
     <ClInclude Include="Game\player_cam_tps.h" />
     <ClInclude Include="Game\player_fps.h" />
     <ClInclude Include="Game\player_state_machine.h" />
+    <ClInclude Include="Game\raycast.h" />
     <ClInclude Include="Network\remote_player.h" />
     <ClInclude Include="Network\remote_player_state_machine.h" />
     <ClInclude Include="Graphics\polygon.h" />
+    <ClInclude Include="Graphics\particle.h" />
     <ClInclude Include="Graphics\sampler.h" />
     <ClInclude Include="Game\scene.h" />
     <ClInclude Include="Game\scene_ui_test.h" />
@@ -305,6 +315,8 @@ exit /b 0
     <ClInclude Include="Graphics\shader_3d.h" />
     <ClInclude Include="Graphics\shader_3d_ani.h" />
     <ClInclude Include="Graphics\shader_3d_unlit.h" />
+    <ClInclude Include="Graphics\shader_billboard.h" />
+    <ClInclude Include="Graphics\billboard.h" />
     <ClInclude Include="Graphics\shader_field.h" />
     <ClInclude Include="Graphics\shader_infinite.h" />
     <ClInclude Include="Graphics\sky_dome.h" />
@@ -394,6 +406,18 @@ exit /b 0
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)ui\%(Filename).cso</ObjectFileOutput>
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)ui\%(Filename).cso</ObjectFileOutput>
     </FxCompile>
+    <FxCompile Include="Shaders\shader_pixel_billboard.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
+    </FxCompile>
+    <FxCompile Include="Shaders\shader_vertex_billboard.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="config\config.toml" />
@@ -403,9 +427,11 @@ exit /b 0
   </ItemGroup>
   <ItemGroup>
     <Image Include="resource\texture\black.png" />
+    <Image Include="resource\texture\bullet_hole.png" />
     <Image Include="resource\texture\consolab_ascii_512.png" />
     <Image Include="resource\texture\knight.png" />
     <Image Include="resource\texture\runningman001.png" />
+    <Image Include="resource\texture\sparks.png" />
   </ItemGroup>
   <ItemGroup>
   </ItemGroup>
