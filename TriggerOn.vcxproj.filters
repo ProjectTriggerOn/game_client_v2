@@ -168,6 +168,9 @@
     <ClCompile Include="Graphics\animator.cpp">
       <Filter>Graphics</Filter>
     </ClCompile>
+    <ClCompile Include="Graphics\reticle.cpp">
+      <Filter>Graphics</Filter>
+    </ClCompile>
     <ClCompile Include="Graphics\sky_dome.cpp">
       <Filter>Graphics</Filter>
     </ClCompile>
@@ -333,6 +336,9 @@
       <Filter>Graphics</Filter>
     </ClInclude>
     <ClInclude Include="Graphics\animator.h">
+      <Filter>Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Graphics\reticle.h">
       <Filter>Graphics</Filter>
     </ClInclude>
     <ClInclude Include="Graphics\sky_dome.h">

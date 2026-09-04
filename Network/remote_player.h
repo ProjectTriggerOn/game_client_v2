@@ -153,6 +153,8 @@ private:
 
     // Weapon attachment
     MODEL* m_WeaponModel;
+    MODEL* m_ReticleModel;  // Red-dot quad on the weapon sight, drawn unlit
+    DirectX::XMFLOAT3 m_ReticleCenter;  // its centroid; weapon.reticle_scale scales about this
 };
 
 // Global remote player array (pre-allocated, indexed by playerId)

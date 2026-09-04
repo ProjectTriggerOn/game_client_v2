@@ -13,6 +13,7 @@
 #include <DirectXMath.h>
 #include "collision.h"
 #include "collision_world.h"
+#include "model.h"
 #include "model_ani.h"
 #include "mouse.h"
 #include "player_state_machine.h"
@@ -149,6 +150,8 @@ private:
 	double m_RespawnLockTimer;  // >0 = locked out of gameplay input during the respawn fade
 	MODEL_ANI* m_Model;
 	Animator* m_Animator;
+	MODEL* m_ReticleModel;  // Red-dot quad on the weapon sight, drawn unlit
+	DirectX::XMFLOAT3 m_ReticleCenter;  // its centroid; weapon.reticle_scale scales about this
 	PlayerStateMachine* m_StateMachine;
 
 	//-------------------------------------------------------------------------

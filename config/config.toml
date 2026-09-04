@@ -53,6 +53,15 @@ fov           = 90.0    # FPS camera VERTICAL field of view, in degrees
 max_fps       = 0       # frame cap; 0 = uncapped (only bites when vsync = false)
 
 # =============================================================================
+# Weapon rendering.
+# =============================================================================
+[weapon]
+# Size of the red-dot reticle in the weapon sight, as a multiplier on the
+# authored quad. Everything on the quad outside the dot is transparent and is
+# clipped away, so this scales only the visible dot. Applies live.
+reticle_scale = 2.5
+
+# =============================================================================
 # Generic file logger (single-threaded). See Core/debug_log.h.
 # Each startup creates "<root>/<YYYY-MM-DD_HH-MM-SS>/" and writes one file
 # per category lazily (e.g. jump.log, corr.log, phys.log).
