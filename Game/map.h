@@ -7,6 +7,7 @@
 //=============================================================================
 
 #include <DirectXMath.h>
+#include <cstdint>
 
 // Forward declaration
 class CollisionWorld;
@@ -67,6 +68,20 @@ void Map_UpdatePointLightsNearCamera(const DirectX::XMFLOAT3& cameraPos);
 // accessors below (Map_GetAmbient, Map_GetSkyAsset, etc.) observe it
 // immediately.  Does NOT touch the .map file on disk.
 void Map_SetLoadedData(const mapio::MapData& d);
+
+// Authored spawn points, so an offline session can start where the map says.
+// `team` is 0 for RED and 1 for BLUE (mapio::TEAM_* and PlayerTeam::* agree;
+// map.cpp static_asserts it). Map_GetSpawnCount reports how many
+// the loaded map authored for that team; Map_GetSpawn fills one of them and
+// returns false for an out-of-range index.
+//
+// The authoritative server reads m_MapSpawns straight out of the .map; this
+// pair exists for the client-side MockServer, which otherwise spawns everyone
+// at positions compiled in for default.map's layout — inside a container on
+// any other map.
+int  Map_GetSpawnCount(uint8_t team);
+bool Map_GetSpawn(uint8_t team, int index,
+                  DirectX::XMFLOAT3* outPos, float* outYaw);
 
 // Returns true if the loaded map authored a non-empty environment block.
 // default.map DOES author one (sky + 0.5 ambient via map_convert), so the

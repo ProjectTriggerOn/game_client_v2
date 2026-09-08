@@ -196,6 +196,11 @@ private:
     double   m_FireTimer = 0.0;
     double   m_PlayerRespawnTimer = 0.0;  // counts down while the player IS_DEAD
 
+    // Where the local player starts and respawns. Taken from the loaded map
+    // when it authors enough spawns, otherwise the historical corner spawn.
+    DirectX::XMFLOAT3 m_PlayerSpawnPos = { -7.0f, 0.0f, -7.0f };
+    float             m_PlayerSpawnYaw = 0.0f;
+
     // Recoil (COD model, spec §4.3): server-authoritative pool, mirroring
     // GameServer::PlayerData.recoil. Advanced on shot in ProcessFiring,
     // decayed once per tick, broadcast into m_PlayerState.* for the snapshot.

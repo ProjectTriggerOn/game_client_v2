@@ -8,6 +8,7 @@
 #include "mock_server.h"
 #include "i_network.h"
 #include "debug_log.h"
+#include "map.h"
 #include <cmath>
 
 MockServer::MockServer()
@@ -33,11 +34,22 @@ void MockServer::Initialize(INetwork* pNetwork, CollisionWorld* pCollisionWorld)
     m_ServerTime = 0.0;
     m_CurrentTick = 0;
 
+    // Spawns. A map that authors a real set of spawn points drives them; a map
+    // that only marks one per team (default.map) keeps the compiled-in layout
+    // below, which was tuned for it. Without this the mock session starts at
+    // default.map's corner on every map — on shipment that is 0.8 m from a
+    // container, facing it.
+    const bool useMapSpawns =
+        Map_GetSpawnCount(PlayerTeam::RED)  >= 3 &&
+        Map_GetSpawnCount(PlayerTeam::BLUE) >= 3;
+    if (useMapSpawns)
+        Map_GetSpawn(PlayerTeam::RED, 0, &m_PlayerSpawnPos, &m_PlayerSpawnYaw);
+
     // Initialize player state (match PlayerFps spawn in Game_Initialize)
     m_PlayerState.tickId = 0;
-    m_PlayerState.position = { -7.0f, 0.0f, -7.0f };  // Corner spawn
+    m_PlayerState.position = m_PlayerSpawnPos;
     m_PlayerState.velocity = { 0.0f, 0.0f, 0.0f };
-    m_PlayerState.yaw = 0.0f;
+    m_PlayerState.yaw = m_PlayerSpawnYaw;
     m_PlayerState.pitch = 0.0f;
     m_PlayerState.stateFlags = NetStateFlags::IS_GROUNDED;
     m_PlayerState.health = 200;
@@ -101,14 +113,28 @@ void MockServer::Initialize(INetwork* pNetwork, CollisionWorld* pCollisionWorld)
             phase = static_cast<float>(k);
         }
 
+        float yaw = (team == PlayerTeam::RED) ? 0.0f : 3.14159265f;
+        if (useMapSpawns)
+        {
+            // Walk the team's authored points; the local player already holds
+            // RED index 0, so RED bots start one along. Bots pace 1.5 m either
+            // side of their base and do not collide, so a point near geometry
+            // is cosmetic rather than a trap.
+            const int count = Map_GetSpawnCount(team);
+            const int first = (team == PlayerTeam::RED) ? 1 : 0;
+            Map_GetSpawn(team, first + (i % (count - first > 0 ? count - first : 1)),
+                         &base, &yaw);
+        }
+
         b.team  = team;
         b.base  = base;
         b.phase = phase;
 
         NetPlayerState& s = b.state;
         s.position = base;
-        // RED (-Z side) faces +Z (yaw 0); BLUE (+Z side) faces -Z (yaw pi).
-        s.yaw = (team == PlayerTeam::RED) ? 0.0f : 3.14159265f;
+        // Compiled-in fallback: RED (-Z side) faces +Z (yaw 0); BLUE (+Z side)
+        // faces -Z. A map spawn overrides both above.
+        s.yaw = yaw;
         s.stateFlags = NetStateFlags::IS_GROUNDED;
         s.health = MAX_HEALTH;
         s.hitByPlayerId = 0xFF;
@@ -1204,7 +1230,8 @@ void MockServer::UpdatePlayerRespawn()
 
     m_PlayerRespawnTimer = 0.0;
     m_PlayerState.health = MAX_HEALTH;
-    m_PlayerState.position = { -7.0f, 0.0f, -7.0f };  // corner spawn (matches Initialize)
+    m_PlayerState.position = m_PlayerSpawnPos;   // matches Initialize
+    m_PlayerState.yaw      = m_PlayerSpawnYaw;
     m_PlayerState.velocity = { 0.0f, 0.0f, 0.0f };
     m_PlayerState.stateFlags &= ~(NetStateFlags::IS_DEAD | NetStateFlags::IS_FIRING |
                                   NetStateFlags::IS_RELOADING | NetStateFlags::IS_RELOAD_EMPTY |

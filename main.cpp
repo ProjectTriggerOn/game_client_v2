@@ -234,6 +234,23 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,[[maybe_unused
 		else                             Scene_SetBootScene(SCENE_GAME);
 	}
 
+	// Load the active map once, BEFORE Scene_Initialize: booting straight into
+	// the game scene builds box-brush draw instances inside Game_Initialize, so
+	// the map data must already be the one the user picked. Config key
+	// [network].map names the file under resource/maps/ (no extension); it must
+	// match the server's --map in local/remote mode (checksum handshake).
+	{
+		const std::string mapName =
+			Config::GetInstance().GetString("network", "map", "default");
+		std::string mapPath = "resource/maps/" + mapName + ".map";
+		if (!Map_LoadFromFile(mapPath.c_str()))
+		{
+			OutputDebugStringA(("[MAP] WARNING: failed to load " + mapPath +
+			                    "; falling back to default.map\n").c_str());
+			Map_LoadFromFile("resource/maps/default.map");
+		}
+	}
+
 	Scene_Initialize();
 
 	// ========================================================================
@@ -248,10 +265,6 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,[[maybe_unused
 	static MockNetwork g_MockNetwork;
 	static MockServer g_MockServer;
 	static ENetClientNetwork g_ENetNetwork;
-
-	// Load the active map once, before either network path uses its colliders.
-	if (!Map_LoadFromFile("resource/maps/default.map"))
-		OutputDebugStringA("[MAP] WARNING: failed to load resource/maps/default.map\n");
 
 	if (g_NetworkMode == "local" || g_NetworkMode == "remote")
 	{
