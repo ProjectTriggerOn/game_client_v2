@@ -52,6 +52,7 @@ void PushDamageFlash();
 // queue (not a dirty flag) so multiple kills in one frame all surface.
 void PushScores(int red, int blue);
 void PushMatchTimer(float secondsRemaining);
+void PushMatchPhase(int matchState, float seconds);
 void PushKillFeed(int killerId, int victimId, int killerTeam, int victimTeam);
 void PushScoreboard(const char* json);
 void PushScoreboardVisible(bool visible);

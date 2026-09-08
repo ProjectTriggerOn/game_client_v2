@@ -40,11 +40,17 @@
 #page-result .sb-blue .sb-row{border-left:2px solid var(--ui-blue);background:var(--ui-blue-tint);}
 #page-result .sb-row.sb-me{border-left-color:var(--ui-gold);color:var(--ui-gold);font-weight:600;}
 
-#page-result #result-return{
+#page-result .result-actions{display:flex;gap:16px;}
+
+#page-result .result-actions button{
   font-family:var(--ui-font);font-size:15px;font-weight:600;letter-spacing:3px;
   text-transform:uppercase;padding:12px 34px;color:var(--ui-text);cursor:pointer;
   background:rgba(255,255,255,0.04);border:1px solid rgba(121,220,246,0.5);
   transition:border-color .12s,color .12s,background .12s;
 }
-#page-result #result-return:hover,
-#page-result #result-return:focus{outline:none;border-color:var(--ui-cyan);color:var(--ui-cyan);background:var(--ui-cyan-dim);}
+#page-result .result-actions button:hover,
+#page-result .result-actions button:focus{outline:none;border-color:var(--ui-cyan);color:var(--ui-cyan);background:var(--ui-cyan-dim);}
+
+/* NEXT MATCH is the primary action — RETURN TO TITLE stays the quiet one. */
+#page-result #result-next{border-color:var(--ui-cyan);color:var(--ui-cyan);}
+#page-result #result-return{border-color:var(--ui-divider);color:var(--ui-text-2);}

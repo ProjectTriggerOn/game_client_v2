@@ -7,6 +7,7 @@
 #include "impact_fx.h"
 #include "display_manager.h"
 #include "audio.h"
+#include "i_network.h"   // INetwork::BeginRematch for game.nextMatch
 
 #include <Ultralight/View.h>
 #include <AppCore/JSHelpers.h>
@@ -31,9 +32,23 @@ extern ENetClientNetwork* g_pFloodNet;
 #include "editor_input.h"
 #endif
 
+// Active network backend, owned by main.cpp (mock or ENet). Declared at file
+// scope, not inside the anonymous namespace below: a block-scope `extern` in an
+// internal-linkage namespace would name a different, never-defined variable.
+extern INetwork* g_pNetwork;
+
 namespace {
 
 using namespace ultralight;
+
+// Curtain gate for game.nextMatch (see SceneTransition_Reload). A plain function
+// pointer polling global state, which is the contract scene.h documents. True
+// when the rematch handshake has settled - connected, refused or timed out - so
+// a dead server lifts the curtain on a disconnected client instead of pinning it
+// up until the transition's safety cap.
+bool RematchSettled() {
+    return !g_pNetwork || g_pNetwork->IsRematchSettled();
+}
 
 // View whose JS context the push helpers target. Set in Register (OnDOMReady),
 // so it always points at the current navigation's context.
@@ -218,6 +233,23 @@ void Register(ultralight::View* view) {
         // game is revealed. Game_Initialize sets GameState=PLAY and re-arms the
         // mock session; UIPolicy_Apply derives the HUD page + level.
         SceneTransition_To(SCENE_GAME);
+    };
+
+    game["nextMatch"] = (JSCallback)[](const JSObject&, const JSArgs&) {
+        DebugLog("[UI:bridge] game.nextMatch", "");
+        // Leave the finished match and join a fresh one on the same server.
+        // The handshake is asynchronous (see INetwork::BeginRematch), so the
+        // curtain-up hold is gated on it rather than on a fixed time: the
+        // player never sees a half-connected world, and the frame loop keeps
+        // pumping the window and audio throughout.
+        //
+        // Kicked off HERE rather than at the swap because the world is already
+        // frozen on the result screen - dropping the peer during the cover fade
+        // changes nothing on screen. Scene_Reload's Game_Finalize +
+        // Game_Initialize then rebuilds every client-side match tracker
+        // (scoreboard, kill-feed dedup, audio state) behind the black frame.
+        if (g_pNetwork) g_pNetwork->BeginRematch();
+        SceneTransition_Reload(&RematchSettled);
     };
 
     game["returnToTitle"] = (JSCallback)[](const JSObject&, const JSArgs&) {
@@ -438,6 +470,10 @@ void PushScores(int red, int blue) {
 
 void PushMatchTimer(float secondsRemaining) {
     CallJsFn1("onMatchTimerChanged", (double)secondsRemaining);
+}
+
+void PushMatchPhase(int matchState, float seconds) {
+    CallJsFn2("onMatchPhaseChanged", (double)matchState, (double)seconds);
 }
 
 void PushKillFeed(int killerId, int victimId, int killerTeam, int victimTeam) {

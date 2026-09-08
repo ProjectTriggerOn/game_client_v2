@@ -233,6 +233,16 @@ bool Game_IsGameplayActive()
 	return g_GameState == PLAY;
 }
 
+bool Game_IsMatchFrozen()
+{
+	// The server freezes movement and combat outside MatchState::PLAYING (see
+	// game_server SimulatePhysics). The client has to freeze with it, or local
+	// prediction would walk the player around for the whole countdown and then
+	// snap back on every correction. Before the first snapshot there is nothing
+	// to freeze against, and the mock network never leaves PLAYING.
+	return g_HasSnapshot && g_LastSnapshot.matchState != MatchState::PLAYING;
+}
+
 void Game_Update(double elapsed_time)
 {
 	// ========================================================================
@@ -380,6 +390,10 @@ void Game_Update(double elapsed_time)
 		// Live HUD: team scores + match timer (dirty-flag dedups to 1 call/frame)
 		UI::PushScores(snap.redScore, snap.blueScore);
 		UI::PushMatchTimer(snap.matchTimeRemaining);
+		// Pre-match phase banner. matchTimeRemaining doubles as the COUNTDOWN
+		// clock (see MatchState in net_common.h), so the same value drives both
+		// the timer and the 3-2-1 - the phase is what tells them apart.
+		UI::PushMatchPhase(snap.matchState, snap.matchTimeRemaining);
 
 		// Kill feed: replay new ring entries in (lastShown, latest], clamped to
 		// the ring window so a reset or dropped events can't loop/underflow.
@@ -403,6 +417,19 @@ void Game_Update(double elapsed_time)
 			BuildResultJson(snap, rjson, sizeof(rjson));
 			UI::PushMatchResult(rjson);
 			g_GameState = RESULT;
+
+			// Leave the server's match room now that the round is over. Sitting
+			// on the result screen must NOT count as occupying a slot: if it
+			// did, one player pressing NEXT MATCH would reach MIN_PLAYERS on
+			// their own and yank everyone still reading the scoreboard into the
+			// next round. Leaving here makes the server go idle after a match,
+			// and NEXT MATCH is what rejoins — the first player back waits, the
+			// others join them.
+			//
+			// Safe to do mid-loop: the result payload is already built from this
+			// snapshot, and dropping the queue just ends the drain early. The
+			// mock network no-ops (there is no room to leave).
+			g_pNetwork->LeaveSession();
 		}
 
 		// Cache for audio event derivation (see g_LatestSnapshot above) — this

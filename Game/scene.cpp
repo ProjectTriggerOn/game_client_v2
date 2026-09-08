@@ -14,6 +14,7 @@ namespace
 	scene g_CurrentScene = SCENE_GAME;// 現在のシーン
 	scene g_NextScene = g_CurrentScene; // 次のシーン
 	bool g_BootSceneLocked = false;     // boot scene can no longer change after Scene_Initialize
+	bool g_ReloadPending = false;       // re-enter the current scene (see Scene_Reload)
 }
 
 void Scene_SetBootScene(scene scene)
@@ -136,12 +137,28 @@ void Scene_Refresh()
 		Scene_Finalize();
 		g_CurrentScene = g_NextScene;
 		Scene_Initialize();
+		g_ReloadPending = false;   // a real swap already rebuilt the scene
+	}
+	else if (g_ReloadPending)
+	{
+		g_ReloadPending = false;
+		Scene_Finalize();
+		Scene_Initialize();
 	}
 }
 
 void Scene_Change(scene scene)
 {
 	g_NextScene = scene; // 現在のシーンを更新
+}
+
+void Scene_Reload()
+{
+	// Deferred to Scene_Refresh rather than torn down here: Finalize releases
+	// resources this frame's Scene_Draw still needs (Game_Finalize deletes
+	// g_PlayerFps), and the end-of-frame slot is also where a real swap puts its
+	// heavy Initialize - behind the fully opaque curtain.
+	g_ReloadPending = true;
 }
 
 scene Scene_GetCurrent()
@@ -177,6 +194,7 @@ namespace
 	scene           g_TransTarget   = SCENE_TITLE;
 	double          g_TransTimer    = 0.0;
 	bool          (*g_TransReady)() = nullptr;  // optional load-complete gate (see SceneTransition_To)
+	bool            g_TransReload   = false;    // re-enter the current scene instead of swapping
 
 	// TRANS_FADE_TIME must stay >= the #curtain CSS opacity transition (0.3s in
 	// shared.css) so the curtain is fully opaque before the swap and fully clear
@@ -196,12 +214,24 @@ void SceneTransition_To(scene target, bool (*ready)())
 	if (g_TransPhase != TransitionPhase::Idle) return;  // ignore re-entrant requests
 	g_TransTarget = target;
 	g_TransReady  = ready;   // null => purely time-based hold (synchronous load)
+	g_TransReload = false;
 	g_TransPhase  = TransitionPhase::Covering;
 	g_TransTimer  = 0.0;
 	// Drop any in-flight native fade (e.g. the death/respawn red overlay) so it
 	// can't bleed over the curtain or persist onto the next scene — the curtain
 	// owns the transition visual. Pure native state, no EvaluateScript, so this is
 	// safe to call from the JS bridge callback that invokes SceneTransition_To.
+	Fade_Reset();
+}
+
+void SceneTransition_Reload(bool (*ready)())
+{
+	if (g_TransPhase != TransitionPhase::Idle) return;  // ignore re-entrant requests
+	g_TransTarget = Scene_GetCurrent();   // unused on this path; kept consistent
+	g_TransReady  = ready;
+	g_TransReload = true;
+	g_TransPhase  = TransitionPhase::Covering;
+	g_TransTimer  = 0.0;
 	Fade_Reset();
 }
 
@@ -228,7 +258,10 @@ void SceneTransition_Update(double elapsed_time)
 		// frame) runs the heavy init while the screen is black.
 		if (g_TransTimer >= TRANS_FADE_TIME)
 		{
-			Scene_Change(g_TransTarget);
+			if (g_TransReload)
+				Scene_Reload();
+			else
+				Scene_Change(g_TransTarget);
 			g_TransPhase = TransitionPhase::Loading;
 			g_TransTimer = 0.0;
 		}

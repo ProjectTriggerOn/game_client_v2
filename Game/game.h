@@ -40,6 +40,12 @@ bool Game_WantsUICursor();
 // InputProducer (zero input otherwise) and the HUD data push.
 bool Game_IsGameplayActive();
 
+// True while the server has the world frozen for a non-live match phase
+// (waiting for players, pre-match countdown, or the result screen). Consumed by
+// InputProducer, which sends neutral movement/buttons so client-side prediction
+// stays in step with a server that is ignoring them.
+bool Game_IsMatchFrozen();
+
 // Correction debug info
 const char* Game_GetCorrectionMode();
 float Game_GetCorrectionError();

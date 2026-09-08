@@ -33,6 +33,22 @@
 #page-hud .hud-score-sep{color:var(--ui-text-dim);margin:0 14px;}
 #page-hud .hud-match-timer{margin-top:4px;font-size:18px;color:var(--ui-text-2);letter-spacing:2px;}
 
+/* Pre-match phase banner — centred, above the crosshair so it never sits on it */
+#page-hud .hud-phase{
+  position:absolute;left:0;right:0;top:26%;
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+  text-shadow:0 2px 12px rgba(0,0,0,0.7);
+}
+#page-hud .hud-phase.hidden{display:none;}
+#page-hud .hud-phase-label{
+  font-family:var(--ui-font);font-size:20px;font-weight:600;letter-spacing:6px;
+  text-transform:uppercase;color:var(--ui-text-2);
+}
+#page-hud .hud-phase-count{
+  font-family:var(--ui-mono);font-size:88px;line-height:1;color:var(--ui-cyan);
+}
+#page-hud .hud-phase-count:empty{display:none;}
+
 /* Kill feed — top-right */
 #page-hud .hud-killfeed{
   position:absolute;right:24px;top:72px;display:flex;flex-direction:column;gap:3px;

@@ -25,6 +25,10 @@ void PushDamageFlash();
 // Scoring pushes (same fresh-lookup contract as above).
 void PushScores(int red, int blue);
 void PushMatchTimer(float secondsRemaining);
+// Pre-match phase banner → window.onMatchPhaseChanged(matchState, seconds).
+// matchState is a MatchState:: value; seconds is that phase's clock (the
+// COUNTDOWN's 3..0, and otherwise just the match timer).
+void PushMatchPhase(int matchState, float seconds);
 void PushKillFeed(int killerId, int victimId, int killerTeam, int victimTeam);
 void PushScoreboard(const char* json);
 void PushScoreboardVisible(bool visible);

@@ -167,9 +167,14 @@ void InputProducer::SampleInput()
     // Also neutralize input while a masked scene transition is up (loading
     // curtain): after the swap the scene is SCENE_GAME / PLAY, so without this the
     // player would move/fire behind the black curtain.
-    if (!Game_IsGameplayActive() || Game_IsPlayerInputLocked() || SceneTransition_IsActive())
+    // Game_IsMatchFrozen covers the non-live match phases (waiting for players,
+    // the pre-match countdown, the result screen): the server ignores movement
+    // and fire there, so predicting them locally would only produce three
+    // seconds of rubber-banding.
+    if (!Game_IsGameplayActive() || Game_IsPlayerInputLocked() ||
+        SceneTransition_IsActive() || Game_IsMatchFrozen())
     {
-        m_JumpPending = false;  // drop sticky jump while paused / locked / transitioning
+        m_JumpPending = false;  // drop sticky jump while paused / locked / frozen / transitioning
         return;
     }
 

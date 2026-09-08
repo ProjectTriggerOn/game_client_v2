@@ -29,6 +29,14 @@
     <div class="hud-match-timer">--:--</div>
 </div>
 
+<!-- Pre-match phase banner: "waiting for players", then the 3-2-1 countdown.
+     Driven by window.onMatchPhaseChanged; hidden outright while the match is
+     live, so it costs nothing during normal play. -->
+<div class="hud-phase hidden">
+    <div class="hud-phase-label"></div>
+    <div class="hud-phase-count"></div>
+</div>
+
 <!-- Kill feed: transient rows prepended by onKillFeed, auto-removed after a few s -->
 <div class="hud-killfeed"></div>
 
