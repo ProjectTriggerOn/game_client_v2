@@ -4,7 +4,14 @@
 // (same discipline as net_common.h; no wire version negotiation exists).
 // Pure functions, no state, no I/O. Angles in radians unless Deg suffix.
 // Deterministic: pattern idx = (fireCounter-1) % PATTERN_LEN; no RNG —
-// server and client independently compute the same trajectory.
+// server and client independently compute the same trajectory. Hash01 is
+// integer-only and bit-exact everywhere; punch/bloom/spread are +-*/ and
+// agree exactly. The ONE exception is RecoilConeOffset's std::sin/std::cos:
+// MSVC's CRT and glibc differ by up to 1 ULP, measured at 4.7e-10 rad
+// (2.7e-8 deg) over a 60-shot x 2-team x 2-ADS x 3-moveFactor sweep. That is
+// ~10 orders of magnitude under the 1.8 deg cone, so it cannot flip a hit
+// outside a measure-zero boundary — but "identical" here means "to 1 ULP of
+// the platform libm", not bitwise.
 // punch = visual-only (decays to zero, never touches player yaw/pitch);
 // shotKick = tiny real component; bloom = spread growth (main control).
 //=============================================================================
