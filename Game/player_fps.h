@@ -93,11 +93,16 @@ public:
 	//-------------------------------------------------------------------------
 	uint32_t GetClientTick() const { return m_CurrentClientTick; }
 
-	// Recoil accessors: spread = current aim-cone half-angle (rad), consumed by
-	// the native crosshair. The camera punch lives in the player_cam_fps
-	// accumulator (PlayerCamFps_GetPunch) — the crosshair reads it from there.
-	float GetSpreadRadians() const;
+	// Recoil accessors consumed by the native crosshair.
 	bool IsADS() const;
+	// Horizontal velocity for RecoilMath::MoveFactorFromVelocity — the crosshair
+	// needs the same movement term the server feeds RecoilSpreadRadians.
+	const DirectX::XMFLOAT3& GetVelocity() const { return m_Velocity; }
+	// The crosshair reads the recoil pool directly (Crosshair::GapTargetPixels),
+	// NOT PlayerCamFps_GetPunch: the camera stores punch+shotKick and shotKick
+	// must not reach the gap. Pair it with GetTeam() — the gap depends on the
+	// shooter's WeaponSpec.
+	const RecoilMath::RecoilState& GetRecoilState() const { return m_Recoil; }
 
 	// Hitmarker state for the native 2D pass.
 	float GetHitmarkerAlpha() const { return m_HitmarkerAlpha; }
@@ -175,10 +180,14 @@ private:
 	bool m_WasHit = false;
 	// Recoil (COD model): client-side prediction, advanced on ConsumeRound,
 	// decayed per frame HERE (RecoilAdvance, same exp(-decayHz*dt) the server
-	// ticks with) and mirrored into the camera punch accumulator (PlayerCamFps_*
-	// follows the pool's deltas + its own same-rate decay), reconciled against
-	// the snapshot in ApplyServerCorrection. punch NEVER touches camera yaw/pitch.
+	// ticks with) and reconciled against the snapshot in ApplyServerCorrection.
+	// This pool is the ONLY integrator — the camera merely stores what
+	// PushRecoilToCamera hands it. punch NEVER touches camera yaw/pitch.
 	RecoilMath::RecoilState m_Recoil{};
+	// Push m_Recoil's absolute view offset to the camera. Called after every
+	// mutation of m_Recoil (fire, per-frame decay, reconcile) — the one place
+	// the rendered view is derived from the pool.
+	void PushRecoilToCamera();
 	// Frame-accumulated monotonic clock (s) driving the recoil decay-suspend
 	// window (spec §5.1 COD burst ramp): ConsumeRound stamps m_Recoil.lastFireTime
 	// with this, and the per-frame pool decay resumes only once m_NowSec is ≥

@@ -255,6 +255,69 @@ int main()
         CHECK(raw > capRad + 1e-4f, "raw HIP moving + bloom exceeds the cap (clamp matters)");
     }
 
+    //-------------------------------------------------------------------------
+    // 15. SHOTKICK_MAX_DEG cap: shotKick never decays, so without a bound it
+    //     grows all life (RED 0.05°/shot → 10° after 200 rounds). It must
+    //     still accumulate normally below the cap.
+    //-------------------------------------------------------------------------
+    {
+        const float capRad = RecoilConfig::SHOTKICK_MAX_DEG * kDegToRad;
+        const float perShot =
+            RecoilConfig::SpecForTeam(PlayerTeam::RED).realKickPitchDeg * kDegToRad;
+
+        // Below the cap: plain accumulation, one shot at a time.
+        RecoilState few;
+        for (uint16_t s = 1; s <= 10; ++s)
+            RecoilAdvance(few, PlayerTeam::RED, s, false, true, 0.0f, 0.0);
+        CHECK(Near(few.shotKickPitch, perShot * 10.0f, 1e-5f),
+              "shotKick accumulates linearly below the cap");
+        CHECK(few.shotKickPitch < capRad, "10 rounds stay under SHOTKICK_MAX_DEG");
+
+        // Far past the cap: pinned, never exceeded.
+        RecoilState many;
+        for (uint16_t s = 1; s <= 400; ++s)
+            RecoilAdvance(many, PlayerTeam::RED, s, false, true, 0.0f, 0.0);
+        CHECK(many.shotKickPitch <= capRad + 1e-6f,
+              "shotKick capped at SHOTKICK_MAX_DEG");
+        CHECK(Near(many.shotKickPitch, capRad, 1e-4f),
+              "400-round life sits AT the shotKick cap");
+
+        // The cap must be load-bearing: uncapped growth would blow past it.
+        CHECK(perShot * 400.0f > capRad, "uncapped shotKick would exceed the cap");
+
+        // Decay must never touch it — that is the whole point of shotKick.
+        const float before = many.shotKickPitch;
+        RecoilAdvance(many, PlayerTeam::RED, 400, false, false, 1.0f, 100.0);
+        CHECK(Near(many.shotKickPitch, before, 1e-6f),
+              "shotKick still does not decay once capped");
+    }
+
+    //-------------------------------------------------------------------------
+    // 16. MoveFactorFromVelocity: the shared 0..1 movement term both sides feed
+    //     into RecoilSpreadRadians. Derived from NetPlayerState::velocity, the
+    //     reconciled quantity, so client and server agree on the cone.
+    //-------------------------------------------------------------------------
+    {
+        CHECK(Near(MoveFactorFromVelocity(0.0f, 0.0f), 0.0f, 1e-5f),
+              "standing still -> moveFactor 0");
+        CHECK(Near(MoveFactorFromVelocity(PhysicsConfig::MAX_RUN_SPEED, 0.0f), 1.0f, 1e-5f),
+              "full sprint -> moveFactor 1");
+        CHECK(Near(MoveFactorFromVelocity(0.0f, PhysicsConfig::MAX_WALK_SPEED),
+                   PhysicsConfig::MAX_WALK_SPEED / PhysicsConfig::MAX_RUN_SPEED, 1e-5f),
+              "walking -> moveFactor = walk/run ratio");
+        // Diagonal: magnitude, not per-axis.
+        const float d = PhysicsConfig::MAX_RUN_SPEED * 0.70710678f;
+        CHECK(Near(MoveFactorFromVelocity(d, d), 1.0f, 1e-4f),
+              "diagonal at run speed -> moveFactor 1 (magnitude, not axis)");
+        // Air-strafe can exceed run speed (AIR_STRAFE_SPEED_MULT) — must clamp.
+        CHECK(Near(MoveFactorFromVelocity(PhysicsConfig::MAX_RUN_SPEED * 2.0f, 0.0f),
+                   1.0f, 1e-5f),
+              "over-speed clamps to 1");
+        // Vertical motion must not count: jumping is not "moving" for spread.
+        CHECK(Near(MoveFactorFromVelocity(0.0f, 0.0f), 0.0f, 1e-5f),
+              "horizontal only (y is not a parameter)");
+    }
+
     if (g_fail == 0) std::printf("test_recoil_math: ALL PASS\n");
     else             std::printf("test_recoil_math: %d FAILURES\n", g_fail);
     return g_fail == 0 ? 0 : 1;

@@ -19,6 +19,7 @@
 #include "player_cam_tps.h"
 #include "player_cam_fps.h"
 #include "player_fps.h"
+#include "crosshair_gap.h"
 #include "i_network.h"
 #include "impact_fx.h"
 #include "mock_server.h"
@@ -652,13 +653,7 @@ void Game_Draw()
 		const float cx = sw * 0.5f;
 		const float cy = sh * 0.5f;
 		constexpr float TH = 2.0f;                  // line thickness (px)
-		float dP = 0.0f, dY = 0.0f;
-		PlayerCamFps_GetPunch(dP, dY);
-		// rad -> px: tuned so bloomMax (1.5° ≈ 0.026 rad) lands ~24px at 1080p.
-		constexpr float PX_PER_RAD = 900.0f;
-		const float spreadPx = g_PlayerFps->GetSpreadRadians() * PX_PER_RAD;
-		const float punchPx  = fabsf(dP) * (PX_PER_RAD * 2.5f);  // punch opens wider
-		const bool  ads      = g_PlayerFps->IsADS();
+		const bool  ads = g_PlayerFps->IsADS();
 
 		// ADS blend (spec §6.1: no arm-length pop on the ADS transition).
 		// Game_Draw has no frame dt (its signature takes no time), so the
@@ -671,23 +666,26 @@ void Game_Draw()
 		s_adsBlend += (adsTarget - s_adsBlend) * 0.2f;
 		const float arm = 10.0f + (6.0f - 10.0f) * s_adsBlend;   // 10 → 6 px
 
-		// Inner gap eases toward its target (base + spread + punch). The
+		// Inner gap eases toward its target (base + spread + decaying punch;
+		// see Game/crosshair_gap.h for what does and does not feed it). The
 		// spread's ADS/HIP difference is a HARD switch inside
-		// GetSpreadRadians (1.2° → 0.2° base cone); smoothing the gap absorbs
-		// that pop instead of the crosshair snapping open/closed. The gap is
-		// draw-layer state, so this also dampens spread jitter between frames.
-		static float s_gap = 4.0f;
-		const float gapTarget = 4.0f + spreadPx + punchPx;
+		// RecoilSpreadRadians (1.2° → 0.2° base cone); smoothing the gap
+		// absorbs that pop instead of the crosshair snapping open/closed. The
+		// gap is draw-layer state, so this also dampens spread jitter between
+		// frames.
+		static float s_gap = Crosshair::GAP_BASE_PX;
+		// Movement term from the player's own velocity, via the same shared
+		// helper the server feeds RecoilSpreadRadians — the gap must show the
+		// cone the server will actually use, not a standing approximation.
+		const DirectX::XMFLOAT3& vel = g_PlayerFps->GetVelocity();
+		const float moveFactor = RecoilMath::MoveFactorFromVelocity(vel.x, vel.z);
+		const float gapTarget = Crosshair::GapTargetPixels(
+			g_PlayerFps->GetRecoilState(), g_PlayerFps->GetTeam(), ads, moveFactor);
 		s_gap += (gapTarget - s_gap) * 0.2f;
-		// Visual cap applied AFTER smoothing — the punch pulse alone is ~470px
-		// at the 12° PUNCH_MAX (0.21 rad × 2250px/rad), which shoves the arms
-		// off-screen. Truncating a punch pulse at the cap is accepted: the
-		// visual bound wins, the crosshair never leaves the screen area
-		// (user ruling 2026-09-02). The eased state itself is pinned so a
-		// recovery eases down from the visible 36px instead of stalling there
-		// while a hidden higher value decays.
-		constexpr float GAP_MAX = 36.0f;
-		if (s_gap > GAP_MAX) s_gap = GAP_MAX;
+		// Cap applied AFTER smoothing, to the eased state itself, so a recovery
+		// eases down from the visible cap instead of stalling there while a
+		// hidden higher value decays.
+		s_gap = Crosshair::ClampGap(s_gap);
 		const float gapClamped = s_gap;
 
 		const XMFLOAT4 BLACK = { 0.0f, 0.0f, 0.0f, 0.55f };
