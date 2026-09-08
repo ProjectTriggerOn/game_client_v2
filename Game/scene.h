@@ -23,6 +23,12 @@ enum scene : std::uint8_t
 
 void Scene_Change(scene scene);
 
+// Re-enter the CURRENT scene: Scene_Refresh runs Finalize+Initialize on it at
+// end of frame, exactly as it would for a real swap. Scene_Change cannot express
+// this - it compares current against next and a same-scene request is a no-op.
+// Used by the result screen's NEXT MATCH, which rebuilds the game scene in place.
+void Scene_Reload();
+
 scene Scene_GetCurrent();
 
 // Call before Scene_Initialize (after main.cpp reads config) to set the boot
@@ -51,6 +57,12 @@ void Restart_Game();
 // to std::function if per-transition captured state is ever needed.
 //-----------------------------------------------------------------------------
 void SceneTransition_To(scene target, bool (*ready)() = nullptr);
+
+// Same masked transition, but re-entering the current scene instead of swapping
+// (see Scene_Reload). `ready` matters far more here than for SceneTransition_To:
+// the caller is expected to have started something asynchronous - a rematch
+// handshake, say - and the curtain must stay up until it settles.
+void SceneTransition_Reload(bool (*ready)() = nullptr);
 
 // Advance the transition state machine; call once per frame from the main loop.
 void SceneTransition_Update(double elapsed_time);

@@ -52,6 +52,12 @@ public:
     uint32_t GetPacketLoss() const override;
     bool IsConnected() const override { return m_IsConnected; }
 
+    // Rematch (see INetwork). Non-blocking: BeginRematch only kicks off the
+    // handshake, PollEvents completes it, IsRematchSettled reports when the
+    // caller may stop waiting - on success OR on give-up.
+    void BeginRematch() override;
+    bool IsRematchSettled() const override { return !m_Rematching; }
+
     //-------------------------------------------------------------------------
     // ENet-specific
     //-------------------------------------------------------------------------
@@ -93,6 +99,12 @@ private:
 
     // MAP_INFO handshake: checksum of the locally loaded map (0 = don't verify)
     uint32_t m_ExpectedMapChecksum = 0;
+
+    // Rematch handshake in flight. m_RematchDeadlineMs is an enet_time_get()
+    // stamp; PollEvents gives up past it so a dead server cannot pin the
+    // caller's loading curtain up forever.
+    bool     m_Rematching = false;
+    uint32_t m_RematchDeadlineMs = 0;
 
 #if defined(_DEBUG)
     // Flood debug mode state (Debug builds only).

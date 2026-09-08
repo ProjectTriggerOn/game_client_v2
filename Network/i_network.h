@@ -41,4 +41,15 @@ public:
     virtual uint32_t GetRTT() const { return 0; }
     virtual uint32_t GetPacketLoss() const { return 0; }
     virtual bool IsConnected() const { return true; }
+
+    //-------------------------------------------------------------------------
+    // Rematch: leave the finished session and join a fresh one WITHOUT blocking
+    // the frame - the caller hides the gap behind the loading curtain and polls
+    // IsRematchSettled to know when to lift it. ENet drops its peer and starts a
+    // new handshake; the mock network has no session to rejoin, so it settles
+    // immediately and the client-side reset in Game_Initialize is the whole
+    // rematch.
+    //-------------------------------------------------------------------------
+    virtual void BeginRematch() {}
+    virtual bool IsRematchSettled() const { return true; }
 };

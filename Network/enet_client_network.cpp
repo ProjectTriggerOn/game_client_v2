@@ -7,10 +7,19 @@
 // WinSock2.h must come before Windows.h to avoid winsock.h conflict
 #include <WinSock2.h>
 #include <enet/enet.h>
+#include <enet/time.h>   // ENET_TIME_GREATER_EQUAL (not pulled in by enet.h)
 #include "enet_client_network.h"
 #include "net_packet.h"
 #include <cstring>
 #include <cstdio>
+#include <queue>
+
+namespace {
+// Budget for a rematch handshake before we give up and let the caller carry on
+// disconnected. Matches Initialize()'s blocking wait so both paths fail over on
+// the same timescale.
+constexpr uint32_t REMATCH_TIMEOUT_MS = 5000;
+} // namespace
 
 ENetClientNetwork::ENetClientNetwork()
     : m_pClient(nullptr)
@@ -112,6 +121,7 @@ void ENetClientNetwork::Finalize()
 
     m_pServerPeer = nullptr;
     m_IsConnected = false;
+    m_Rematching = false;
 
     if (m_pClient)
     {
@@ -136,11 +146,16 @@ void ENetClientNetwork::PollEvents()
         {
         case ENET_EVENT_TYPE_CONNECT:
             m_IsConnected = true;
+            m_Rematching = false;   // handshake completed; curtain may lift
             break;
 
         case ENET_EVENT_TYPE_DISCONNECT:
             m_IsConnected = false;
             m_pServerPeer = nullptr;
+            // ENet also reports a connection ATTEMPT that timed out this way,
+            // so a failed rematch settles here rather than waiting out the
+            // deadline below.
+            m_Rematching = false;
             break;
 
         case ENET_EVENT_TYPE_RECEIVE:
@@ -184,6 +199,69 @@ void ENetClientNetwork::PollEvents()
             break;
         }
     }
+
+    // Give up on a handshake that never produced either event (server gone
+    // dark). Settling here lets the caller's loading curtain lift on a
+    // disconnected-but-responsive client instead of hanging on the safety cap.
+    if (m_Rematching && ENET_TIME_GREATER_EQUAL(enet_time_get(), m_RematchDeadlineMs))
+    {
+        if (m_pServerPeer)
+        {
+            enet_peer_reset(m_pServerPeer);
+            m_pServerPeer = nullptr;
+        }
+        m_Rematching = false;
+        printf("[NET] rematch handshake timed out after %ums\n", REMATCH_TIMEOUT_MS);
+    }
+}
+
+//-----------------------------------------------------------------------------
+// BeginRematch - leave this session and start joining a fresh one, non-blocking
+//
+// Initialize()'s handshake blocks the caller for up to 5 seconds. That is fine
+// once at boot, but not mid-session: the frame loop still has to pump the
+// window, audio and the loading curtain that is hiding this. So this only KICKS
+// OFF the handshake - PollEvents completes it and IsRematchSettled reports when
+// the wait is over.
+//
+// The host is reused rather than torn down: it was created with one outgoing
+// peer slot, and freeing the old peer releases that slot for the new connect.
+// enet_initialize/deinitialize stay paired with Initialize/Finalize.
+//-----------------------------------------------------------------------------
+void ENetClientNetwork::BeginRematch()
+{
+    if (!m_pClient) return;   // never initialized (mock mode keeps the no-op)
+
+    if (m_pServerPeer)
+    {
+        // disconnect_now sends the notice and frees the peer slot in one call
+        // with no wait for an ack - the whole point here. That notice is a
+        // single unacknowledged packet, so if it is lost the server keeps a
+        // ghost player until its own peer timeout reaps it.
+        enet_peer_disconnect_now(m_pServerPeer, 0);
+        m_pServerPeer = nullptr;
+    }
+    m_IsConnected = false;
+
+    // Drop snapshots left from the finished session: they carry the old
+    // playerId and the frozen ENDED match, and the game would consume them as
+    // if they described the new one.
+    {
+        std::lock_guard<std::mutex> lock(m_SnapshotMutex);
+        std::queue<Snapshot> empty;
+        m_SnapshotQueue.swap(empty);
+    }
+
+    ENetAddress address;
+    enet_address_set_host(&address, m_ServerHost.c_str());
+    address.port = m_ServerPort;
+
+    m_pServerPeer = enet_host_connect(m_pClient, &address, 2, 0);
+    m_Rematching = (m_pServerPeer != nullptr);
+    m_RematchDeadlineMs = enet_time_get() + REMATCH_TIMEOUT_MS;
+
+    m_TotalInputsSent = 0;
+    m_TotalSnapshotsReceived = 0;
 }
 
 //-----------------------------------------------------------------------------

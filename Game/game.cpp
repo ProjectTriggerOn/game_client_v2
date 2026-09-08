@@ -232,6 +232,16 @@ bool Game_IsGameplayActive()
 	return g_GameState == PLAY;
 }
 
+bool Game_IsMatchFrozen()
+{
+	// The server freezes movement and combat outside MatchState::PLAYING (see
+	// game_server SimulatePhysics). The client has to freeze with it, or local
+	// prediction would walk the player around for the whole countdown and then
+	// snap back on every correction. Before the first snapshot there is nothing
+	// to freeze against, and the mock network never leaves PLAYING.
+	return g_HasSnapshot && g_LastSnapshot.matchState != MatchState::PLAYING;
+}
+
 void Game_Update(double elapsed_time)
 {
 	// ========================================================================
@@ -379,6 +389,10 @@ void Game_Update(double elapsed_time)
 		// Live HUD: team scores + match timer (dirty-flag dedups to 1 call/frame)
 		UI::PushScores(snap.redScore, snap.blueScore);
 		UI::PushMatchTimer(snap.matchTimeRemaining);
+		// Pre-match phase banner. matchTimeRemaining doubles as the COUNTDOWN
+		// clock (see MatchState in net_common.h), so the same value drives both
+		// the timer and the 3-2-1 - the phase is what tells them apart.
+		UI::PushMatchPhase(snap.matchState, snap.matchTimeRemaining);
 
 		// Kill feed: replay new ring entries in (lastShown, latest], clamped to
 		// the ring window so a reset or dropped events can't loop/underflow.
@@ -402,6 +416,16 @@ void Game_Update(double elapsed_time)
 			BuildResultJson(snap, rjson, sizeof(rjson));
 			UI::PushMatchResult(rjson);
 			g_GameState = RESULT;
+		}
+		// ...and back out of it. The server rearms a finished match on its own
+		// once the room drops below MatchConfig::MIN_PLAYERS, so a player who
+		// just sits on the result screen while the OTHER one leaves for a
+		// rematch would be stranded there while a new match ran without them.
+		// Only PLAY is restored: PAUSE/SETTING are the player's own state and
+		// must not be stolen by an incoming snapshot.
+		else if (snap.matchState != MatchState::ENDED && g_GameState == RESULT)
+		{
+			g_GameState = PLAY;
 		}
 
 		// Cache for audio event derivation (see g_LatestSnapshot above) — this

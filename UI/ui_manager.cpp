@@ -138,6 +138,7 @@ struct PendingHud {
     bool ammoDirty   = false; int ammo = 0, ammoReserve = 0;
     bool scoresDirty = false; int red = 0, blue = 0;
     bool timerDirty  = false; float matchTime = 0.0f;
+    bool phaseDirty  = false; int matchState = 0; float phaseSeconds = 0.0f;
     bool sbVisDirty  = false; bool sbVisible = false;
     bool sbDataDirty = false; std::string sbJson;
     bool resultDirty = false; std::string resultJson;
@@ -309,6 +310,10 @@ void Render() {
         UI::Bridge::PushMatchTimer(g_pendingHud.matchTime);
         g_pendingHud.timerDirty = false;
     }
+    if (g_pendingHud.phaseDirty) {
+        UI::Bridge::PushMatchPhase(g_pendingHud.matchState, g_pendingHud.phaseSeconds);
+        g_pendingHud.phaseDirty = false;
+    }
     if (g_pendingHud.sbVisDirty) {
         UI::Bridge::PushScoreboardVisible(g_pendingHud.sbVisible);
         g_pendingHud.sbVisDirty = false;
@@ -415,6 +420,11 @@ void PushScores(int red, int blue) {
 void PushMatchTimer(float secondsRemaining) {
     g_pendingHud.matchTime = secondsRemaining;
     g_pendingHud.timerDirty = true;
+}
+void PushMatchPhase(int matchState, float seconds) {
+    g_pendingHud.matchState = matchState;
+    g_pendingHud.phaseSeconds = seconds;
+    g_pendingHud.phaseDirty = true;
 }
 void PushKillFeed(int killerId, int victimId, int killerTeam, int victimTeam) {
     g_pendingKills.push_back({ killerId, victimId, killerTeam, victimTeam });

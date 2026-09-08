@@ -6,8 +6,9 @@
 //
 // onMatchResult is global (not gated on onEnter) so the C++ push that arrives
 // just before the page is shown still populates the (hidden) DOM. The Return
-// button only changes scene via the existing game.returnToTitle verb; the next
-// game entry re-arms a fresh match (MockServer::ResetSession).
+// buttons only change scene via the existing game.returnToTitle / game.nextMatch
+// verbs; the next game entry re-arms a fresh match (MockServer::ResetSession in
+// mock mode, a real reconnect in ENet mode).
 
 (function () {
     function rosterHtml(arr) {
@@ -45,6 +46,11 @@
 
     document.getElementById('page-result')?.addEventListener('click', (e) => {
         if (e.target.closest('#result-return')) window.game?.returnToTitle?.();
+        // NEXT MATCH: leave this match and join a fresh one on the same server
+        // (C++ game.nextMatch — reconnect behind the loading curtain, then
+        // rebuild the game scene). No page change here; the curtain and
+        // UIPolicy_Apply own what is shown next.
+        else if (e.target.closest('#result-next')) window.game?.nextMatch?.();
     });
 
     window.PageResult = {

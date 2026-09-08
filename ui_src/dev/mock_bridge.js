@@ -99,6 +99,12 @@
             console.log('[mock] game.returnToTitle');
             window.Router?.show?.('title');
         },
+        nextMatch() {
+            // Real bridge reconnects to the server behind the loading curtain
+            // and rebuilds the game scene; here the page swap is the whole of it.
+            console.log('[mock] game.nextMatch');
+            window.Router?.show?.('hud');
+        },
         getConfig(key) {
             return key in config ? config[key] : null;
         },

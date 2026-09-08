@@ -42,6 +42,41 @@
         setText('#page-hud .hud-match-timer', m + ':' + (s < 10 ? '0' + s : s));
     };
 
+    // C++ → JS: UI::PushMatchPhase(matchState, seconds)
+    //
+    // matchState mirrors the MatchState:: values in net_common.h. Only PLAYING
+    // is live; the rest are frozen phases the server holds the world in, and
+    // `seconds` is whichever clock that phase is running (the countdown's 3..0
+    // during COUNTDOWN). ENDED is deliberately not banner-worthy — the result
+    // page takes over the screen for it.
+    const MATCH_PLAYING = 0, MATCH_WAITING = 2, MATCH_COUNTDOWN = 3;
+
+    window.onMatchPhaseChanged = function (matchState, seconds) {
+        const root = document.querySelector('#page-hud .hud-phase');
+        if (!root) return;
+
+        const label = root.querySelector('.hud-phase-label');
+        const count = root.querySelector('.hud-phase-count');
+
+        if (matchState === MATCH_WAITING) {
+            if (label) label.textContent = 'WAITING FOR PLAYERS';
+            if (count) count.textContent = '';
+            root.classList.remove('hidden');
+        } else if (matchState === MATCH_COUNTDOWN) {
+            if (label) label.textContent = 'MATCH STARTS IN';
+            // Ceil, so a clock of exactly 3.0 reads "3" and the last fractional
+            // slice still reads "1" rather than flashing a 0.
+            if (count) count.textContent = Math.max(1, Math.ceil(seconds));
+            root.classList.remove('hidden');
+        } else {
+            root.classList.add('hidden');
+        }
+
+        // The match timer shares its wire field with the countdown clock, so
+        // blank it outside PLAYING rather than showing 0:03 as a match length.
+        if (matchState !== MATCH_PLAYING) setText('#page-hud .hud-match-timer', '--:--');
+    };
+
     // C++ → JS: UI::PushKillFeed(killerId, victimId, killerTeam, victimTeam)
     window.onKillFeed = function (killerId, victimId, killerTeam, victimTeam) {
         const feed = document.querySelector('#page-hud .hud-killfeed');
