@@ -12,8 +12,11 @@
 #include "map.h"
 #include "map_io.h"
 #include "collision_world.h"
+#include "net_common.h"
 #include "cube.h"
 #include "mesh_field.h"
+#include "model.h"
+#include "model_catalog.h"
 #include "texture.h"
 #include "shader_3d.h"
 #include "light.h"
@@ -21,14 +24,37 @@
 #include "debug_ostream.h"
 #include <DirectXMath.h>
 #include <algorithm>
+#include <string>
 #include <vector>
 #include <cstring>
 
 using namespace DirectX;
 
 namespace {
-	struct BoxInstance { XMFLOAT3 position; XMFLOAT3 scale; };
+	struct BoxInstance {
+		XMFLOAT3 position;
+		XMFLOAT3 scale;
+		uint32_t textureId = 0;
+	};
+
+	// A placed FBX prop from the map's visual section. The MODEL* itself lives
+	// in the ModelCatalog cache (keyed by asset path); this struct only holds
+	// the placement + the asset name string the cache is queried with.
+	struct PropInstance {
+		std::string asset;
+		XMFLOAT3    pos;
+		XMFLOAT3    rot;    // euler radians, XMMatrixRotationRollPitchYaw order
+		XMFLOAT3    scale;
+	};
+
 	std::vector<BoxInstance> g_Boxes;
+	std::vector<PropInstance> g_Props;
+
+	// Box-brush texture palette, indexed by MapModelRef::textureId. Index 0 is
+	// the historical default (stone), so maps authored before the palette
+	// existed render exactly as before; an out-of-range id, or a slot whose
+	// file failed to load, falls back to it. See Map_Initialize for the slots.
+	std::vector<int> g_BoxTexPalette;
 
 	int            g_CubeTexId = -1;
 	mapio::MapData g_LoadedMap;
@@ -90,6 +116,12 @@ namespace {
 			const mapio::MapLight* l = candidates[i];
 			const XMFLOAT3 pos{ l->pos[0], l->pos[1], l->pos[2] };
 			const XMFLOAT3 col{ l->color[0], l->color[1], l->color[2] };
+			// NOTE: MapLight::intensity means different things per light type.
+			// Map_GetDirectionalLight premultiplies a directional light's colour by
+			// it, but here it is the point light's RANGE in metres, and the colour
+			// goes through unscaled. Authoring a point light "1.0 warm white,
+			// intensity 1.1" therefore asks for a full-brightness lamp with a 1.1 m
+			// radius, which washes a small map out. Dim the colour itself.
 			Light_SetPointLightWorldByCount(i, pos, l->intensity, col);
 		}
 	}
@@ -163,6 +195,38 @@ bool Map_GetDirectionalLight(DirectX::XMFLOAT3* outDir, DirectX::XMFLOAT3* outCo
 	return false;
 }
 
+//-----------------------------------------------------------------------------
+// Authored spawn points (see map.h). Kept in map order so callers that hand
+// out successive indices spread across the team's points.
+//-----------------------------------------------------------------------------
+// map.h documents `team` as 0 = RED / 1 = BLUE so callers need not include
+// map_io.h just for two constants; pin that down rather than leave it to a
+// coincidence between the wire format and the gameplay enum.
+static_assert(mapio::TEAM_RED  == PlayerTeam::RED,  "team id mismatch");
+static_assert(mapio::TEAM_BLUE == PlayerTeam::BLUE, "team id mismatch");
+
+int Map_GetSpawnCount(uint8_t team) {
+	EnsureLoaded();
+	int n = 0;
+	for (const auto& s : g_LoadedMap.spawns)
+		if (s.team == team) n++;
+	return n;
+}
+
+bool Map_GetSpawn(uint8_t team, int index,
+                  DirectX::XMFLOAT3* outPos, float* outYaw) {
+	EnsureLoaded();
+	if (index < 0) return false;
+	for (const auto& s : g_LoadedMap.spawns) {
+		if (s.team != team) continue;
+		if (index-- > 0) continue;
+		if (outPos) *outPos = XMFLOAT3(s.x, s.y, s.z);
+		if (outYaw) *outYaw = s.yaw;
+		return true;
+	}
+	return false;
+}
+
 bool Map_HasEnvironment() {
 	EnsureLoaded();
 	// A map with no authored env carries an all-zero MapEnv block. Rather
@@ -184,21 +248,57 @@ bool Map_HasEnvironment() {
 //-----------------------------------------------------------------------------
 void Map_Initialize() {
 	g_CubeTexId = Texture_LoadFromFile(L"resource/texture/stone_001.jpg");
+
+	// Box-brush texture palette. Slot 0 is the historical default (stone), so
+	// maps authored before the palette existed render exactly as before; an
+	// out-of-range id or a slot that failed to load falls back to it.
+	// Shipment draws its containers, crates and walls as FBX props, so the
+	// only brush texture it needs is the yard's concrete.
+	struct TexEntry { const wchar_t* path; };
+	const TexEntry kPalette[] = {
+		{ L"resource/texture/ground_concrete.png" },   // 1
+	};
+	g_BoxTexPalette.clear();
+	g_BoxTexPalette.push_back(g_CubeTexId);            // 0 => stone (legacy default)
+	for (const auto& t : kPalette)
+		g_BoxTexPalette.push_back(Texture_LoadFromFile(t.path));
+
 	EnsureLoaded();
 
 	g_Boxes.clear();
+	g_Props.clear();
 	for (const auto& m : g_LoadedMap.models) {
-		// Box brushes only in this phase; FBX props ("asset" != "__box__")
-		// are placed by the editor plans (M2+).
-		if (std::strncmp(m.asset, "__box__", sizeof("__box__")) != 0) continue;
+		if (std::strncmp(m.asset, "__box__", sizeof("__box__")) != 0) {
+			// FBX prop: record the instance; the MODEL* resolves lazily in
+			// Map_Draw via ModelCatalog (first draw of an asset pays its load).
+			// Failed loads stay in the list as nullptr and are skipped per
+			// frame — cheap, and keeps Map_Finalize/Initialize symmetric.
+			g_Props.push_back({ m.asset,
+			                    { m.pos[0], m.pos[1], m.pos[2] },
+			                    { m.rotEuler[0], m.rotEuler[1], m.rotEuler[2] },
+			                    { m.scale[0], m.scale[1], m.scale[2] } });
+			continue;
+		}
 		g_Boxes.push_back({ { m.pos[0], m.pos[1], m.pos[2] },
-		                    { m.scale[0], m.scale[1], m.scale[2] } });
+		                    { m.scale[0], m.scale[1], m.scale[2] },
+		                    m.textureId });
 	}
+
+	// The catalog scans resource/model once and lazy-loads FBXs on demand —
+	// the same cache the editor uses. Safe to call repeatedly; Finalize is
+	// editor-owned so the runtime never releases the cache mid-session.
+	ModelCatalog_Init("resource/model");
 
 	// Push map lights into the lighting pipeline. Directional lights are
 	// intentionally ignored for now — they will be folded into the
 	// LightEnvironment once the MapEnv path lands in a later rework step.
 	Map_UploadPointLights({ 0.0f, 0.0f, 0.0f });
+
+	const size_t propCount = g_Props.size();
+	if (propCount > 0) {
+		hal::dout << "Map_Initialize() : " << propCount << " FBX props queued"
+		          << std::endl;
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -206,19 +306,43 @@ void Map_Initialize() {
 //-----------------------------------------------------------------------------
 void Map_Finalize() {
 	g_Boxes.clear();
+	g_Props.clear();
 }
 
 //-----------------------------------------------------------------------------
-// Draw — ground + all box brushes (scale honored; unit boxes match the old grid)
+// Draw — ground + box brushes + FBX props (scale honored; unit boxes match
+// the old grid)
 //-----------------------------------------------------------------------------
 void Map_Draw() {
+	// NOTE: MeshField_Draw marks its matrix parameter [[maybe_unused]] and
+	// builds its own at y = 0, so this -1 never takes effect and the debug
+	// grid lands on the play plane. default.map uses that grid as its floor,
+	// so it is left alone; a map that authors its own ground has to raise the
+	// slab clear of y = 0 or the two co-planar surfaces z-fight.
 	XMMATRIX mtxW = XMMatrixTranslation(0.0f, -1.0f, 0.0f);
 	MeshField_Draw(mtxW);
 
 	for (const auto& b : g_Boxes) {
 		mtxW = XMMatrixScaling(b.scale.x, b.scale.y, b.scale.z)
 		     * XMMatrixTranslation(b.position.x, b.position.y, b.position.z);
-		Cube_Draw(g_CubeTexId, mtxW);
+		// Palette lookup with stone fallback: unknown/out-of-range ids and
+		// slots that failed to load both render as the legacy default.
+		int texId = g_CubeTexId;
+		if (b.textureId < g_BoxTexPalette.size() && g_BoxTexPalette[b.textureId] >= 0)
+			texId = g_BoxTexPalette[b.textureId];
+		Cube_Draw(texId, mtxW);
+	}
+
+	// FBX props. ModelCatalog_Get caches per asset name and returns nullptr
+	// for unknown/failed loads (cached, so the failure cost is one attempt) —
+	// skip those silently: a propless prop slot beats a crash.
+	for (const auto& p : g_Props) {
+		MODEL* model = ModelCatalog_Get(p.asset.c_str());
+		if (!model) continue;
+		mtxW = XMMatrixScaling(p.scale.x, p.scale.y, p.scale.z)
+		     * XMMatrixRotationRollPitchYaw(p.rot.x, p.rot.y, p.rot.z)
+		     * XMMatrixTranslation(p.pos.x, p.pos.y, p.pos.z);
+		ModelDraw(model, mtxW);
 	}
 }
 

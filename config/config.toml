@@ -9,6 +9,11 @@
 #   remote — ENet connection to remote server
 mode = "mock"
 
+# Map loaded at startup (resource/maps/<name>). Must match the server's
+# --map file in local/remote mode: the connect handshake compares collision
+# checksums and rejects mismatches.
+map = "shipment"
+
 server_port = 7777
 
 # Server addresses per mode
