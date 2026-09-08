@@ -235,12 +235,20 @@ bool Game_IsGameplayActive()
 
 bool Game_IsMatchFrozen()
 {
-	// The server freezes movement and combat outside MatchState::PLAYING (see
-	// game_server SimulatePhysics). The client has to freeze with it, or local
-	// prediction would walk the player around for the whole countdown and then
-	// snap back on every correction. Before the first snapshot there is nothing
-	// to freeze against, and the mock network never leaves PLAYING.
-	return g_HasSnapshot && g_LastSnapshot.matchState != MatchState::PLAYING;
+	// Mirror of the server's world freeze (game_server IsWorldFrozen): COUNTDOWN
+	// pins everyone at their spawn and ENDED holds the final positions, so the
+	// client has to freeze with it or local prediction would walk the player
+	// around for the whole countdown and then snap back on every correction.
+	//
+	// WAITING is deliberately NOT frozen — it is a warm-up the server simulates
+	// normally, and freezing it here would leave a lone player unable to move
+	// while the server happily accepted the input.
+	//
+	// Before the first snapshot there is nothing to freeze against, and the mock
+	// network never leaves PLAYING.
+	return g_HasSnapshot &&
+	       (g_LastSnapshot.matchState == MatchState::COUNTDOWN ||
+	        g_LastSnapshot.matchState == MatchState::ENDED);
 }
 
 void Game_Update(double elapsed_time)

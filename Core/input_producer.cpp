@@ -167,10 +167,11 @@ void InputProducer::SampleInput()
     // Also neutralize input while a masked scene transition is up (loading
     // curtain): after the swap the scene is SCENE_GAME / PLAY, so without this the
     // player would move/fire behind the black curtain.
-    // Game_IsMatchFrozen covers the non-live match phases (waiting for players,
-    // the pre-match countdown, the result screen): the server ignores movement
-    // and fire there, so predicting them locally would only produce three
-    // seconds of rubber-banding.
+    // Game_IsMatchFrozen covers the phases where the server has the world
+    // frozen (the pre-match countdown and the result screen): it ignores
+    // movement and fire there, so predicting them locally would only produce
+    // five seconds of rubber-banding. Waiting for players is NOT one of them —
+    // that phase is a warm-up and runs normally on both sides.
     if (!Game_IsGameplayActive() || Game_IsPlayerInputLocked() ||
         SceneTransition_IsActive() || Game_IsMatchFrozen())
     {
