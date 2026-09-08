@@ -52,9 +52,11 @@ public:
     uint32_t GetPacketLoss() const override;
     bool IsConnected() const override { return m_IsConnected; }
 
-    // Rematch (see INetwork). Non-blocking: BeginRematch only kicks off the
-    // handshake, PollEvents completes it, IsRematchSettled reports when the
+    // Match-room membership (see INetwork). Non-blocking: LeaveSession drops the
+    // peer without waiting for an ack, BeginRematch only kicks off the new
+    // handshake, PollEvents completes it, and IsRematchSettled reports when the
     // caller may stop waiting - on success OR on give-up.
+    void LeaveSession() override;
     void BeginRematch() override;
     bool IsRematchSettled() const override { return !m_Rematching; }
 

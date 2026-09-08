@@ -43,13 +43,19 @@ public:
     virtual bool IsConnected() const { return true; }
 
     //-------------------------------------------------------------------------
-    // Rematch: leave the finished session and join a fresh one WITHOUT blocking
-    // the frame - the caller hides the gap behind the loading curtain and polls
-    // IsRematchSettled to know when to lift it. ENet drops its peer and starts a
-    // new handshake; the mock network has no session to rejoin, so it settles
-    // immediately and the client-side reset in Game_Initialize is the whole
-    // rematch.
+    // Match-room membership. A finished match leaves the client on the result
+    // screen, and being ON that screen must not count as occupying the server's
+    // room - otherwise one player pressing NEXT MATCH reaches the minimum
+    // player count on their own and drags everyone still reading the scoreboard
+    // into the next round. So the client LEAVES when the match ends, and
+    // rejoining is what the button does.
+    //
+    // Both are non-blocking: the caller hides the gap behind the loading curtain
+    // and polls IsRematchSettled to know when to lift it. The mock network has
+    // no session to leave or rejoin, so it no-ops and settles immediately - the
+    // client-side reset in Game_Initialize is the whole rematch there.
     //-------------------------------------------------------------------------
+    virtual void LeaveSession() {}
     virtual void BeginRematch() {}
     virtual bool IsRematchSettled() const { return true; }
 };

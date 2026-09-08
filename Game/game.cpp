@@ -416,16 +416,19 @@ void Game_Update(double elapsed_time)
 			BuildResultJson(snap, rjson, sizeof(rjson));
 			UI::PushMatchResult(rjson);
 			g_GameState = RESULT;
-		}
-		// ...and back out of it. The server rearms a finished match on its own
-		// once the room drops below MatchConfig::MIN_PLAYERS, so a player who
-		// just sits on the result screen while the OTHER one leaves for a
-		// rematch would be stranded there while a new match ran without them.
-		// Only PLAY is restored: PAUSE/SETTING are the player's own state and
-		// must not be stolen by an incoming snapshot.
-		else if (snap.matchState != MatchState::ENDED && g_GameState == RESULT)
-		{
-			g_GameState = PLAY;
+
+			// Leave the server's match room now that the round is over. Sitting
+			// on the result screen must NOT count as occupying a slot: if it
+			// did, one player pressing NEXT MATCH would reach MIN_PLAYERS on
+			// their own and yank everyone still reading the scoreboard into the
+			// next round. Leaving here makes the server go idle after a match,
+			// and NEXT MATCH is what rejoins — the first player back waits, the
+			// others join them.
+			//
+			// Safe to do mid-loop: the result payload is already built from this
+			// snapshot, and dropping the queue just ends the drain early. The
+			// mock network no-ops (there is no room to leave).
+			g_pNetwork->LeaveSession();
 		}
 
 		// Cache for audio event derivation (see g_LatestSnapshot above) — this
