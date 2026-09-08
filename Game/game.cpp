@@ -674,8 +674,13 @@ void Game_Draw()
 		// gap is draw-layer state, so this also dampens spread jitter between
 		// frames.
 		static float s_gap = Crosshair::GAP_BASE_PX;
+		// Movement term from the player's own velocity, via the same shared
+		// helper the server feeds RecoilSpreadRadians — the gap must show the
+		// cone the server will actually use, not a standing approximation.
+		const DirectX::XMFLOAT3& vel = g_PlayerFps->GetVelocity();
+		const float moveFactor = RecoilMath::MoveFactorFromVelocity(vel.x, vel.z);
 		const float gapTarget = Crosshair::GapTargetPixels(
-			g_PlayerFps->GetRecoilState(), g_PlayerFps->GetTeam(), ads);
+			g_PlayerFps->GetRecoilState(), g_PlayerFps->GetTeam(), ads, moveFactor);
 		s_gap += (gapTarget - s_gap) * 0.2f;
 		// Cap applied AFTER smoothing, to the eased state itself, so a recovery
 		// eases down from the visible cap instead of stalling there while a

@@ -60,6 +60,27 @@ inline float PunchEnvelope(uint16_t burstIdx)
 }
 
 //-----------------------------------------------------------------------------
+// MoveFactorFromVelocity — the 0..1 movement term RecoilSpreadRadians takes.
+// Horizontal speed only: jumping is not "moving" for spread purposes, and the
+// vertical component would otherwise make a jump widen the cone.
+//
+// Derived from NetPlayerState::velocity — the reconciled, broadcast quantity —
+// so the client's crosshair and the server's ray agree on the cone. Feeding
+// this from two independently-computed speeds would reintroduce exactly the
+// client/server divergence the punch pool was collapsed to avoid.
+//
+// Air-strafe is allowed above MAX_RUN_SPEED (AIR_STRAFE_SPEED_MULT), so the
+// ratio has to be clamped rather than assumed in range.
+//-----------------------------------------------------------------------------
+inline float MoveFactorFromVelocity(float velX, float velZ)
+{
+    const float speed = std::sqrt(velX * velX + velZ * velZ);
+    const float f = speed / PhysicsConfig::MAX_RUN_SPEED;
+    if (f < 0.0f) return 0.0f;
+    return f > 1.0f ? 1.0f : f;
+}
+
+//-----------------------------------------------------------------------------
 // RecoilSpreadRadians — current aim-cone half-angle for a shot.
 //   moveFactor: 0 = still, 1 = full run. Movement multiplies the BASE
 //   (HIP ×1.5, ADS ×1.3 per spec §1.1); bloom is added unscaled.
@@ -103,8 +124,8 @@ inline void RecoilConeOffset(float spreadRad, uint16_t fireCounter,
 // RecoilAdvance — integrate one recoil step.
 //   newlyFired: a shot resolved on this call → apply per-shot punch/kick/bloom
 //     and record rs.lastFireTime = nowSec. Punch pitch is hard-capped at
-//     RecoilConfig::PUNCH_MAX_DEG (yaw is a zigzag alternation — naturally
-//     bounded, not capped).
+//     RecoilConfig::PUNCH_MAX_DEG and shotKick pitch at SHOTKICK_MAX_DEG (yaw
+//     is a zigzag alternation — naturally bounded, not capped).
 //   nowSec: caller's absolute clock (s). Punch & bloom decay runs ONLY when
 //     nowSec - rs.lastFireTime >= RecoilConfig::FIRE_SUSPEND_DECAY_S — i.e.
 //     after the trigger has been released for 0.25s. While a burst is landing
@@ -132,6 +153,10 @@ inline void RecoilAdvance(RecoilState& rs, uint8_t teamId, uint16_t fireCounter,
         rs.shotKickPitch += w.realKickPitchDeg * kDegToRad;
         rs.bloomDeg       = std::fmin(rs.bloomDeg + w.bloomPerShotDeg, w.bloomMaxDeg);
         rs.punchPitch     = std::fmin(rs.punchPitch, RecoilConfig::PUNCH_MAX_DEG * kDegToRad);
+        // shotKick never decays and resets only on death, so it needs a cap of
+        // its own — the decay below can't bring it back down.
+        rs.shotKickPitch  = std::fmin(rs.shotKickPitch,
+                                      RecoilConfig::SHOTKICK_MAX_DEG * kDegToRad);
     }
     if (nowSec - rs.lastFireTime >= RecoilConfig::FIRE_SUSPEND_DECAY_S)
     {

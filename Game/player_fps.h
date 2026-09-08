@@ -93,10 +93,11 @@ public:
 	//-------------------------------------------------------------------------
 	uint32_t GetClientTick() const { return m_CurrentClientTick; }
 
-	// Recoil accessors: spread = current aim-cone half-angle (rad), consumed by
-	// the native crosshair.
-	float GetSpreadRadians() const;
+	// Recoil accessors consumed by the native crosshair.
 	bool IsADS() const;
+	// Horizontal velocity for RecoilMath::MoveFactorFromVelocity — the crosshair
+	// needs the same movement term the server feeds RecoilSpreadRadians.
+	const DirectX::XMFLOAT3& GetVelocity() const { return m_Velocity; }
 	// The crosshair reads the recoil pool directly (Crosshair::GapTargetPixels),
 	// NOT PlayerCamFps_GetPunch: the camera stores punch+shotKick and shotKick
 	// must not reach the gap. Pair it with GetTeam() — the gap depends on the

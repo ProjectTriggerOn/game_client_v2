@@ -395,8 +395,11 @@ void MockServer::SimulatePhysics()
     // ========================================================================
     // MOVEMENT PARAMETERS (CS:GO / Valorant style)
     // ========================================================================
-    constexpr float MAX_WALK_SPEED = 5.0f;    // Walking speed
-    constexpr float MAX_RUN_SPEED  = 8.0f;    // Sprinting speed
+    // From PhysicsConfig (net_common.h) — shared with the client's prediction
+    // and the real server, and the divisor for the recoil spread's movement
+    // term, so a local copy here could desync the cone.
+    constexpr float MAX_WALK_SPEED = PhysicsConfig::MAX_WALK_SPEED;
+    constexpr float MAX_RUN_SPEED  = PhysicsConfig::MAX_RUN_SPEED;
     constexpr float GROUND_ACCEL   = 50.0f;   // High = snappy ground control
     constexpr float AIR_ACCEL      = 2.0f;    // Low = limited air control
     constexpr float GRAVITY        = 20.0f;   // Heavy, quick jumps
@@ -765,8 +768,13 @@ void MockServer::ProcessFiring()
     // Same formula as GameServer::ProcessFiring (DirectionFromYawPitch).
     float dPitch = 0.0f, dYaw = 0.0f;
     RecoilMath::RecoilTotalOffsets(m_PlayerRecoil, dPitch, dYaw);
+    // Movement widens the cone (spec §1.1: HIP ×1.5, ADS ×1.3). Derived from
+    // the authoritative velocity, which is also what the client's crosshair
+    // reads back from the snapshot — both sides land on the same cone.
+    const float moveFactor = RecoilMath::MoveFactorFromVelocity(
+        m_PlayerState.velocity.x, m_PlayerState.velocity.z);
     const float spread = RecoilMath::RecoilSpreadRadians(
-        LOCAL_PLAYER_TEAM, adsShot, m_PlayerRecoil.bloomDeg, 0.0f);
+        LOCAL_PLAYER_TEAM, adsShot, m_PlayerRecoil.bloomDeg, moveFactor);
     float coneDP = 0.0f, coneDY = 0.0f;
     RecoilMath::RecoilConeOffset(spread, m_PlayerState.fireCounter, coneDP, coneDY);
     const float aimYaw   = m_PlayerState.yaw + dYaw + coneDY;

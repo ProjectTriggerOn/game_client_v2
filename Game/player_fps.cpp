@@ -1119,12 +1119,6 @@ DirectX::XMFLOAT3 PlayerFps::GetEyePosition() const
 	return eyePos;
 }
 
-float PlayerFps::GetSpreadRadians() const
-{
-	const bool ads = IsADS();
-	return RecoilMath::RecoilSpreadRadians(m_TeamId, ads, m_Recoil.bloomDeg, 0.0f);
-}
-
 bool PlayerFps::IsADS() const
 {
 	const WeaponState ws = m_StateMachine->GetWeaponState();
@@ -1264,8 +1258,11 @@ void PlayerFps::ApplyPhysicsTick(float worldInputX, float worldInputZ, uint32_t 
 	// ========================================================================
 	// CS:GO / Valorant Style Movement Parameters (match server)
 	// ========================================================================
-	constexpr float MAX_WALK_SPEED = 5.0f;
-	constexpr float MAX_RUN_SPEED  = 8.0f;
+	// Speeds come from PhysicsConfig (net_common.h): the server and the mock
+	// run the same numbers, and RecoilMath::MoveFactorFromVelocity divides by
+	// MAX_RUN_SPEED, so a local copy here could desync the spread cone.
+	constexpr float MAX_WALK_SPEED = PhysicsConfig::MAX_WALK_SPEED;
+	constexpr float MAX_RUN_SPEED  = PhysicsConfig::MAX_RUN_SPEED;
 	constexpr float GROUND_ACCEL   = 50.0f;
 	constexpr float AIR_ACCEL      = 2.0f;
 	constexpr float GRAVITY        = 20.0f;

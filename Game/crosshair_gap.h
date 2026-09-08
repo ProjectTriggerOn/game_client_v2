@@ -31,11 +31,14 @@ constexpr float GAP_MAX_PX = 36.0f;
 // than taking a pre-summed offset from the camera) is the point: the camera
 // stores punch+shotKick, and shotKick must never reach the gap.
 //-----------------------------------------------------------------------------
+//   moveFactor: RecoilMath::MoveFactorFromVelocity(vx, vz) — the same 0..1
+//     term the server feeds RecoilSpreadRadians, so the gap shows the real
+//     cone rather than a stationary approximation of it.
 inline float GapTargetPixels(const RecoilMath::RecoilState& rs,
-                             uint8_t teamId, bool ads)
+                             uint8_t teamId, bool ads, float moveFactor)
 {
     const float spreadRad =
-        RecoilMath::RecoilSpreadRadians(teamId, ads, rs.bloomDeg, 0.0f);
+        RecoilMath::RecoilSpreadRadians(teamId, ads, rs.bloomDeg, moveFactor);
     // DECAYING punch only. shotKick is a permanent aim offset the camera
     // already follows, so it carries no hit uncertainty; summing it in pinned
     // the gap at GAP_MAX from the first magazine onward (~59px of shotKick
