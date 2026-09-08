@@ -169,7 +169,7 @@ On **Debug** builds the UI is read straight from `ui_src/`, and a file watcher h
 
 ## Tests
 
-`Game/tests/` holds standalone test programs for the engine-independent logic: map I/O, decals, particles, raycasting, recoil math, and the audio catalog / snapshot-diff event derivation. They are deliberately **not** part of `TriggerOn.vcxproj` — each defines its own `main` and compiles directly with `cl` from a VS developer prompt, e.g.
+`Game/tests/` holds standalone test programs for the engine-independent logic: map I/O, decals, particles, raycasting, recoil math, the rendered-view/recoil-pool sync contract, the dynamic crosshair gap, and the audio catalog / snapshot-diff event derivation. They are deliberately **not** part of `TriggerOn.vcxproj` — each defines its own `main` and compiles directly with `cl` from a VS developer prompt, e.g.
 
 ```
 cl /nologo /std:c++17 /EHsc /W4 /DPARTICLE_TEST_BUILD /I . /I Graphics Game	ests	est_particle.cpp Graphicsparticle.cpp /Fe:_test_particle.exe
