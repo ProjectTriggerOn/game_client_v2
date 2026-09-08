@@ -1,7 +1,6 @@
 //=============================================================================
 // model_catalog.cpp
 //=============================================================================
-#ifdef EDITOR_ENABLED
 #include "model_catalog.h"
 #include <string>
 #include <vector>
@@ -37,7 +36,11 @@ MODEL* ModelCatalog_Get(const char* assetName) {
     std::string key = assetName;
     auto it = g_Cache.find(key);
     if (it != g_Cache.end()) return it->second;
-    MODEL* m = ModelLoad(key.c_str(), 1.0f);   // nullptr on failure is cached to avoid re-tries
+    // Map and editor assets are the ones whose node transform carries their
+    // real units and orientation, so this is the call site that bakes it.
+    // nullptr on failure is cached to avoid re-tries.
+    MODEL* m = ModelLoad(key.c_str(), 1.0f, /*isBlender*/ false,
+                         /*bakeNodeTransforms*/ true);
     g_Cache[key] = m;
     return m;
 }
@@ -47,5 +50,3 @@ void ModelCatalog_Finalize() {
     g_Cache.clear();
     g_Names.clear();
 }
-
-#endif // EDITOR_ENABLED

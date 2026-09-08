@@ -1,4 +1,6 @@
 #include <cassert>
+#include <cfloat>
+#include <vector>
 #include "direct3d.h"
 #include "texture.h"
 #include "model.h"
@@ -34,11 +36,35 @@ namespace
 			return XMFLOAT3(src.x, src.y, src.z);
 		return XMFLOAT3(src.x, -src.z, src.y);
 	}
+
+	// Assimp keeps an FBX's axis and unit conversion in the node hierarchy, not
+	// in the mesh data: a centimetre, Z-up asset arrives as untouched vertices
+	// plus a node transform that rotates and scales them. ModelDraw iterates
+	// meshes and never walks nodes, so ModelLoad bakes each mesh's accumulated
+	// node transform into its vertices. Without it the Low Poly Shooter Pack
+	// environment props render lying on their back at 1/100 scale (measured:
+	// SM_Lamp_Construction_001 spans 195 units along Z, not Y).
+	// Weapons and reticles carry identity node transforms, so for them this is
+	// a no-op. A mesh shared by several nodes keeps the last node's transform;
+	// none of the project's assets instance a mesh that way.
+	void CollectMeshTransforms(const aiNode* node, const aiMatrix4x4& parent,
+	                           std::vector<aiMatrix4x4>& out)
+	{
+		const aiMatrix4x4 world = parent * node->mTransformation;
+		for (unsigned int i = 0; i < node->mNumMeshes; i++)
+		{
+			const unsigned int meshIndex = node->mMeshes[i];
+			if (meshIndex < out.size()) out[meshIndex] = world;
+		}
+		for (unsigned int c = 0; c < node->mNumChildren; c++)
+			CollectMeshTransforms(node->mChildren[c], world, out);
+	}
 }
 
 
 
-MODEL* ModelLoad(const char* FileName, float scale, bool isBlender)
+MODEL* ModelLoad(const char* FileName, float scale, bool isBlender,
+                 bool bakeNodeTransforms)
 {
 	MODEL* model = new MODEL;
 
@@ -48,10 +74,30 @@ MODEL* ModelLoad(const char* FileName, float scale, bool isBlender)
 	// static_cast: aiProcess_GenBoundingBoxes == 0x80000000 sets the sign bit, so the
 	// OR'd enum expression is a negative int; cast to unsigned for the flags param (C4245).
 	model->AiScene = aiImportFile(FileName, static_cast<unsigned int>(aiProcessPreset_TargetRealtime_MaxQuality | aiProcess_ConvertToLeftHanded | aiProcess_GenBoundingBoxes));
-	assert(model->AiScene);
+
+	// Runtime .map props resolve through ModelCatalog_Get, which must survive a
+	// missing/corrupt FBX (a shipped map can reference an asset the install
+	// lacks). Debug asserts; Release returns nullptr so the caller skips the
+	// prop instead of crashing on the null AiScene below.
+	if (!model->AiScene) {
+		assert(false && "ModelLoad: aiImportFile failed");
+		delete model;
+		return nullptr;
+	}
 
 	model->VertexBuffer = new ID3D11Buffer * [model->AiScene->mNumMeshes];
 	model->IndexBuffer = new ID3D11Buffer * [model->AiScene->mNumMeshes];
+
+	// See CollectMeshTransforms: the FBX's axis/unit conversion lives in the
+	// node hierarchy, which ModelDraw never walks. Callers that opt in get it
+	// folded into the vertices; the rest keep identity, which is the behaviour
+	// every asset predating the map system was authored against.
+	std::vector<aiMatrix4x4> meshTransform(model->AiScene->mNumMeshes);
+	if (bakeNodeTransforms)
+		CollectMeshTransforms(model->AiScene->mRootNode, aiMatrix4x4(), meshTransform);
+
+	aiVector3D bakedMin( FLT_MAX,  FLT_MAX,  FLT_MAX);
+	aiVector3D bakedMax(-FLT_MAX, -FLT_MAX, -FLT_MAX);
 
 
 	for (unsigned int m = 0; m < model->AiScene->mNumMeshes; m++)
@@ -62,14 +108,35 @@ MODEL* ModelLoad(const char* FileName, float scale, bool isBlender)
 		{
 			Vertex3D* vertex = new Vertex3D[mesh->mNumVertices];
 
+			// Neither channel is guaranteed. aiProcess_SortByPType can hand back a
+			// sub-mesh with no UV set, and an asset may ship without normals; both
+			// used to be dereferenced blind, which turned a missing UV channel into
+			// an access violation the moment a map referenced such a model.
+			const aiVector3D* uv0     = mesh->mTextureCoords[0];
+			const aiVector3D* normals = mesh->mNormals;
+
 			for (unsigned int v = 0; v < mesh->mNumVertices; v++)
 			{
-				XMFLOAT3 pos = ConvertPosition(mesh->mVertices[v], isBlender);
+				XMFLOAT3 pos = ConvertPosition(meshTransform[m] * mesh->mVertices[v], isBlender);
 				vertex[v].position = XMFLOAT3(pos.x * scale, pos.y * scale, pos.z * scale);
-				XMFLOAT3 normal = ConvertNormal(mesh->mNormals[v], isBlender);
+				// Rotation/scale part only. The node transforms in this project are
+				// rotation plus uniform scale, so re-normalising is equivalent to the
+				// inverse-transpose a non-uniform scale would require.
+				aiVector3D rawNormal = normals ? aiMatrix3x3(meshTransform[m]) * normals[v]
+				                               : aiVector3D(0.0f, 1.0f, 0.0f);
+				if (rawNormal.SquareLength() > 0.0f) rawNormal.Normalize();
+				XMFLOAT3 normal = ConvertNormal(rawNormal, isBlender);
 				vertex[v].normal = normal;
-				vertex[v].uv = XMFLOAT2(mesh->mTextureCoords[0][v].x, mesh->mTextureCoords[0][v].y);
+				vertex[v].uv = uv0 ? XMFLOAT2(uv0[v].x, uv0[v].y) : XMFLOAT2(0.0f, 0.0f);
 				vertex[v].color = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+
+				const XMFLOAT3& bp = vertex[v].position;
+				if (bp.x < bakedMin.x) bakedMin.x = bp.x;
+				if (bp.y < bakedMin.y) bakedMin.y = bp.y;
+				if (bp.z < bakedMin.z) bakedMin.z = bp.z;
+				if (bp.x > bakedMax.x) bakedMax.x = bp.x;
+				if (bp.y > bakedMax.y) bakedMax.y = bp.y;
+				if (bp.z > bakedMax.z) bakedMax.z = bp.z;
 			}
 
 			D3D11_BUFFER_DESC bd;
@@ -132,6 +199,12 @@ MODEL* ModelLoad(const char* FileName, float scale, bool isBlender)
 		}
 
 	}
+
+	// A model with no vertices leaves the sentinels untouched; collapse it to
+	// an empty box rather than handing ModelGetAABB an inverted one.
+	if (bakedMin.x > bakedMax.x) { bakedMin = aiVector3D(0.0f, 0.0f, 0.0f); bakedMax = bakedMin; }
+	model->LocalMin = XMFLOAT3(bakedMin.x, bakedMin.y, bakedMin.z);
+	model->LocalMax = XMFLOAT3(bakedMax.x, bakedMax.y, bakedMax.z);
 
 	g_TextureWhite = Texture_LoadFromFile(L"resource/texture/white.png");
 
@@ -211,14 +284,25 @@ MODEL* ModelLoad(const char* FileName, float scale, bool isBlender)
 			-1,
 			pWideFileName,
 			len);
-		CreateWICTextureFromFile(
+		texture = nullptr;
+		resource = nullptr;
+		const HRESULT hr = CreateWICTextureFromFile(
 			Direct3D_GetDevice(),
 			Direct3D_GetDeviceContext(),
 			pWideFileName,
 			&resource,
 			&texture);
 		delete[] pWideFileName;
-		assert(texture);
+		// A map may reference an asset whose sidecar texture is missing. Debug
+		// asserts; Release must not cache the uninitialised pointer the failed
+		// call leaves behind — ModelDraw would bind it. Skipping the entry makes
+		// the mesh fall back to the white texture plus its material colour.
+		if (FAILED(hr) || !texture)
+		{
+			assert(false && "ModelLoad: sidecar texture failed to load");
+			if (resource) resource->Release();
+			continue;
+		}
 		resource->Release();// リソースは不要なので解放
 		model->Texture[filename.C_Str()] = texture;
 
@@ -341,24 +425,17 @@ void ModelDrawUnlit(MODEL* model, const DirectX::XMMATRIX& mtxW)
 
 AABB ModelGetAABB(MODEL* model, const DirectX::XMFLOAT3& position)
 {
+	// MODEL::LocalMin/Max, not aiMesh::mAABB: ModelLoad bakes the node
+	// transform, the load-time scale and the axis swap into the vertices it
+	// uploads, none of which mAABB knows about. Reading mAABB here used to
+	// hand the editor a collider in the raw mesh's frame — for a centimetre,
+	// Z-up prop that is both the wrong size and the wrong axis.
 	AABB aabb;
-	aiVector3D min = model->AiScene->mMeshes[0]->mAABB.mMin;
-	aiVector3D max = model->AiScene->mMeshes[0]->mAABB.mMax;
-	for (unsigned int m = 1; m < model->AiScene->mNumMeshes; m++)
-	{
-		aiMesh* mesh = model->AiScene->mMeshes[m];
-		if (min.x > mesh->mAABB.mMin.x) min.x = mesh->mAABB.mMin.x;
-		if (min.y > mesh->mAABB.mMin.y) min.y = mesh->mAABB.mMin.y;
-		if (min.z > mesh->mAABB.mMin.z) min.z = mesh->mAABB.mMin.z;
-		if (max.x < mesh->mAABB.mMax.x) max.x = mesh->mAABB.mMax.x;
-		if (max.y < mesh->mAABB.mMax.y) max.y = mesh->mAABB.mMax.y;
-		if (max.z < mesh->mAABB.mMax.z) max.z = mesh->mAABB.mMax.z;
-	}
-	aabb.min.x = min.x + position.x;
-	aabb.min.y = min.y + position.y;
-	aabb.min.z = min.z + position.z;
-	aabb.max.x = max.x + position.x;
-	aabb.max.y = max.y + position.y;
-	aabb.max.z = max.z + position.z;
+	aabb.min.x = model->LocalMin.x + position.x;
+	aabb.min.y = model->LocalMin.y + position.y;
+	aabb.min.z = model->LocalMin.z + position.z;
+	aabb.max.x = model->LocalMax.x + position.x;
+	aabb.max.y = model->LocalMax.y + position.y;
+	aabb.max.z = model->LocalMax.z + position.z;
 	return aabb;
 }
