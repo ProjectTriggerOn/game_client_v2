@@ -15,6 +15,9 @@
 #include "shader_3d_ani.h"
 #include "../UI/ui_manager.h"   // UI::PushDamageFlash (spec §6.3)
 
+#include <cassert>
+#include <cmath>
+
 using namespace DirectX;
 
 PlayerFps::PlayerFps()
@@ -201,21 +204,38 @@ void PlayerFps::ConsumeRound()
 	// ---- Recoil prediction (COD model, spec §5.1) ------------------------
 	// Same pure table as the server: fireCounter was just incremented, so
 	// (fireCounter-1) is this shot's pattern index. dt=0 — the per-frame
-	// decay below owns recovery. AddPunch feeds the RENDERED offset only.
+	// decay in Update owns recovery. The push makes this shot's kick visible
+	// in the same frame (Update's own push already ran earlier in the frame).
 	{
 		const bool ads = IsADS();
-		// Per-shot increment: RecoilAdvance returns the new integrated pool;
-		// the camera punch accumulator only receives THIS shot's delta, so the
-		// rendered offset converges like the server's (spec §5.1).
-		float preDp = 0.0f, preDy = 0.0f;
-		RecoilMath::RecoilTotalOffsets(m_Recoil, preDp, preDy);
 		RecoilMath::RecoilAdvance(m_Recoil, m_TeamId,
 		                          static_cast<uint16_t>(m_FireCounter & 0xFFFFu),
 		                          ads, /*newlyFired=*/true, /*dt=*/0.0f, m_NowSec);
-		float dp = 0.0f, dy = 0.0f;
-		RecoilMath::RecoilTotalOffsets(m_Recoil, dp, dy);
-		PlayerCamFps_AddPunch(dp - preDp, dy - preDy);   // increment only
+		PushRecoilToCamera();
 	}
+}
+
+//-----------------------------------------------------------------------------
+// PushRecoilToCamera — hand the camera the pool's absolute view offset.
+// The single point where the rendered view is derived from the recoil pool,
+// so the rendered angles and the server's ray direction cannot diverge
+// (spec §2 WYSIWYG; both use RecoilTotalOffsets on the same state).
+//-----------------------------------------------------------------------------
+void PlayerFps::PushRecoilToCamera()
+{
+	float dp = 0.0f, dy = 0.0f;
+	RecoilMath::RecoilTotalOffsets(m_Recoil, dp, dy);
+	PlayerCamFps_SetPunch(dp, dy);
+
+#if defined(_DEBUG)
+	// Guard the invariant on the REAL wiring, which the standalone unit tests
+	// cannot reach (they exercise recoil_math.h, not this call graph). Trips if
+	// a new mutation site of m_Recoil ever lands without a push here.
+	float gp = 0.0f, gy = 0.0f;
+	PlayerCamFps_GetPunch(gp, gy);
+	assert(fabsf(gp - dp) < 1e-5f && fabsf(gy - dy) < 1e-5f &&
+	       "rendered punch diverged from the recoil pool");
+#endif
 }
 
 void PlayerFps::Update(double elapsed_time)
@@ -226,29 +246,21 @@ void PlayerFps::Update(double elapsed_time)
 	// nowSec at/after the pool-decay call above it.
 	m_NowSec += elapsed_time;
 
-	// Recoil punch decay at frame rate (fps-independent exponential). The
-	// camera punch accumulator keeps its OWN recovery — it is a pure delta-sync
-	// follower of the pool below (AddPunch is called only on fire/reconcile, so
-	// the pool's per-frame negative delta is never fed to it). Same
-	// exp(-decayHz*dt) rate as the pool (both read the shooter's WeaponSpec
-	// decayHz), so the rendered view tracks the pool exactly. While the trigger
-	// is down (a shot within the last FIRE_SUSPEND_DECAY_S) the camera does NOT
-	// decay either — a burst keeps climbing like COD; recovery starts only once
-	// the pool's decay gate below clears.
-	if (m_NowSec - m_Recoil.lastFireTime >= RecoilConfig::FIRE_SUSPEND_DECAY_S)
-		PlayerCamFps_DecayPunch(RecoilConfig::SpecForTeam(m_TeamId).decayHz, frameDt);
-
 	// Recoil pool decay at frame rate — SAME exponential formula the server
 	// ticks with (spec §5.1/§5.2: one truth source). The exp(-decayHz*dt)
 	// recovery is applied ONLY when nowSec is at least FIRE_SUSPEND_DECAY_S past
 	// the last shot (see RecoilAdvance) — punch/bloom accumulate for a whole
-	// burst, then return to zero once the trigger is released. Previously the
-	// pool shrank between shots and punch plateaued ~5° after a few rounds; the
-	// camera punch follows via its own gated decay + the reconcile delta.
+	// burst, then return to zero once the trigger is released.
+	//
+	// The pool is the ONLY integrator: the camera stores whatever we push at
+	// the end of this step. It must not run a decay of its own — the pool
+	// deliberately never decays shotKick, so a camera that decayed its own
+	// total sank below the server's aim line (see player_cam_fps.h).
 	RecoilMath::RecoilAdvance(m_Recoil, m_TeamId,
 	                          static_cast<uint16_t>(m_FireCounter & 0xFFFFu),
 	                          /*ads=*/false, /*newlyFired=*/false,
 	                          frameDt, m_NowSec);
+	PushRecoilToCamera();
 
 	// Hitmarker fade (~140ms linear, spec §6.2 — bolder marker, longer read).
 	constexpr float HITMARKER_LIFE = 0.14f;
@@ -708,11 +720,6 @@ void PlayerFps::ApplyServerCorrection(const NetPlayerState& serverState)
 	// fireCounter regression (server behind us) resets the pool — those
 	// shots never happened server-side.
 	{
-		// Snapshot the pool offsets BEFORE any correction so the visual punch
-		// accumulator can be synced by delta at the end (spec §5.2).
-		float preDp = 0.0f, preDy = 0.0f;
-		RecoilMath::RecoilTotalOffsets(m_Recoil, preDp, preDy);
-
 		const uint16_t serverFire = serverState.fireCounter;
 		const uint16_t myFire = static_cast<uint16_t>(m_FireCounter & 0xFFFFu);
 		if (serverFire != myFire &&
@@ -737,12 +744,9 @@ void PlayerFps::ApplyServerCorrection(const NetPlayerState& serverState)
 		}
 		m_Recoil.shotKickPitch = serverState.shotKickPitch;  // authoritative acc.
 
-		// Sync the visual punch accumulator with the reconciled pool: hard reset
-		// must be visible to the camera immediately, or a stale punch lingers
-		// until the next shot (spec §5.2).
-		float postDp = 0.0f, postDy = 0.0f;
-		RecoilMath::RecoilTotalOffsets(m_Recoil, postDp, postDy);
-		PlayerCamFps_AddPunch(postDp - preDp, postDy - preDy);
+		// Push the reconciled pool to the camera: a hard reset must be visible
+		// immediately, or a stale punch lingers until the next shot (spec §5.2).
+		PushRecoilToCamera();
 	}
 
 	// Capture mode at entry — used for MODE_CHANGE log at the end of this function.

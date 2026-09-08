@@ -38,9 +38,10 @@ namespace
 	// Mouse sensitivity
 	float g_Sensitivity = 0.002f;
 
-	// Recoil punch (COD model): VISUAL camera offset, decays to zero. Never
-	// written into g_cameraYaw/g_cameraPitch — the player's aim stays pure;
-	// punch is added when building the front vector and the view matrix.
+	// Recoil punch (COD model): VISUAL camera offset, pushed here every frame
+	// from the recoil pool (PlayerCamFps_SetPunch). Never written into
+	// g_cameraYaw/g_cameraPitch — the player's aim stays pure; punch is added
+	// when building the front vector and the view matrix.
 	float g_punchPitch = 0.0f;
 	float g_punchYaw   = 0.0f;
 
@@ -197,17 +198,12 @@ float PlayerCamFps_GetRawPitch()
 	return g_cameraPitch;
 }
 
-void PlayerCamFps_AddPunch(float dPitch, float dYaw)
+void PlayerCamFps_SetPunch(float punchPitch, float punchYaw)
 {
-	g_punchPitch += dPitch;
-	g_punchYaw += dYaw;
-}
-
-void PlayerCamFps_DecayPunch(float decayHz, float dt)
-{
-	const float k = expf(-decayHz * dt);   // matches the shooter's WeaponSpec decayHz
-	g_punchPitch *= k;
-	g_punchYaw *= k;
+	// Pure store — the recoil pool is the single truth source and owns both
+	// the accumulate and the decay (see player_cam_fps.h).
+	g_punchPitch = punchPitch;
+	g_punchYaw   = punchYaw;
 }
 
 void PlayerCamFps_GetPunch(float& punchPitch, float& punchYaw)
