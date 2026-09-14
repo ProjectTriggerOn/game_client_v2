@@ -111,6 +111,18 @@ ambient = 0.5
 | `local` | ENet UDP to `127.0.0.1` | Yes (local) |
 | `remote` | ENet UDP to `remote_host` | Yes (remote) |
 
+In `local` / `remote` the ENet host comes up at launch but **does not connect**.
+Joining the server's match room is a deliberate act — PLAY from the title, NEXT
+MATCH from the result screen — and leaving the game hands the place back. The
+server counts joined players, not connected peers, so someone reading the title
+menu neither occupies a slot nor helps a match reach its minimum player count.
+The join is a short handshake (connect → verify the map's collision checksum
+against the server's `MAP_INFO` → `JOIN_REQUEST` → the server's first snapshot)
+and the loading curtain is held until it settles, so the first frame of gameplay
+has an authoritative world to draw. A join that never settles times out after
+5 s and drops the player back on a disconnected client rather than hanging —
+pressing PLAY again retries.
+
 ## Runtime Files
 
 Unzipped artifact layout:
@@ -169,7 +181,7 @@ On **Debug** builds the UI is read straight from `ui_src/`, and a file watcher h
 
 ## Tests
 
-`Game/tests/` holds standalone test programs for the engine-independent logic: map I/O, decals, particles, raycasting, recoil math, the rendered-view/recoil-pool sync contract, the dynamic crosshair gap, and the audio catalog / snapshot-diff event derivation. They are deliberately **not** part of `TriggerOn.vcxproj` — each defines its own `main` and compiles directly with `cl` from a VS developer prompt, e.g.
+`Game/tests/` holds standalone test programs for the engine-independent logic: map I/O, decals, particles, raycasting, recoil math, the rendered-view/recoil-pool sync contract, the dynamic crosshair gap, the audio catalog / snapshot-diff event derivation, and the connect/join session handshake. They are deliberately **not** part of `TriggerOn.vcxproj` — each defines its own `main` and compiles directly with `cl` from a VS developer prompt, e.g.
 
 ```
 cl /nologo /std:c++17 /EHsc /W4 /DPARTICLE_TEST_BUILD /I . /I Graphics Game	ests	est_particle.cpp Graphicsparticle.cpp /Fe:_test_particle.exe
@@ -177,6 +189,18 @@ _test_particle.exe
 ```
 
 The exact command line for each test is in the comment at the top of its file.
+
+`test_session_join` is the one exception to "engine-independent": it drives the
+real `ENetClientNetwork` against a running `game_server` and checks the half of
+the protocol the server's own suite cannot — that launching the process joins
+nothing, that `BeginJoinSession` settles only once the server has answered with
+a snapshot, that the undrained snapshot backlog stays bounded, and that leaving
+gives the slot back. Start a server first and point it there:
+
+```
+game_server --port=7905 --map=shipment.map
+_test_session_join.exe --host <server> --port 7905
+```
 
 ## Project Structure
 

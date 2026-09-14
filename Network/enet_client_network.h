@@ -53,12 +53,22 @@ public:
     bool IsConnected() const override { return m_IsConnected; }
 
     // Match-room membership (see INetwork). Non-blocking: LeaveSession drops the
-    // peer without waiting for an ack, BeginRematch only kicks off the new
-    // handshake, PollEvents completes it, and IsRematchSettled reports when the
-    // caller may stop waiting - on success OR on give-up.
+    // peer without waiting for an ack, BeginJoinSession only kicks off the
+    // handshake, PollEvents drives it, and IsJoinSettled reports when the caller
+    // may lift its loading curtain - on success OR on give-up.
     void LeaveSession() override;
-    void BeginRematch() override;
-    bool IsRematchSettled() const override { return !m_Rematching; }
+    void BeginJoinSession() override;
+    bool IsJoinSettled() const override { return m_JoinPhase == JoinPhase::Idle; }
+
+    // Hard ceiling on the undrained snapshot backlog. Only Game_Update drains
+    // this, and it runs only in the game scene, so any other scene accumulates
+    // forever - the title screen used to bank ~2400 snapshots (1.8 MB) a
+    // minute and replay the lot in the single frame after PLAY, marching the
+    // player through a match that had already finished. 2s of slack is far more
+    // than a frame loop that is keeping up ever needs; past that the oldest is
+    // dropped, because a snapshot is a complete world state and the newest is
+    // the only one that matters.
+    static constexpr size_t MAX_QUEUED_SNAPSHOTS = 64;   // 2s @ 32Hz
 
     //-------------------------------------------------------------------------
     // ENet-specific
@@ -84,6 +94,24 @@ public:
 #endif
 
 private:
+    // Ask the server for a seat in the match. Sent once the map check passes,
+    // never at connect time (see PacketType::JOIN_REQUEST).
+    void SendJoinRequest();
+
+    // How far a join attempt has got. Joining is not one round trip: the
+    // transport handshake, then the map check (MAP_INFO carries the server's
+    // collision checksum - a client on the wrong map must drop out BEFORE it
+    // takes a slot in the room), then JOIN_REQUEST, and finally the server's
+    // first snapshot, which is its answer. The curtain waits for that answer,
+    // not merely for a UDP peer, so gameplay never starts against an empty
+    // world.
+    enum class JoinPhase : uint8_t {
+        Idle,          // nothing in flight - settled
+        Connecting,    // waiting for the ENet CONNECT event
+        VerifyingMap,  // connected; waiting for MAP_INFO
+        AwaitingWorld, // JOIN_REQUEST sent; waiting for the first snapshot
+    };
+
     ENetHost* m_pClient;
     ENetPeer* m_pServerPeer;
 
@@ -102,11 +130,12 @@ private:
     // MAP_INFO handshake: checksum of the locally loaded map (0 = don't verify)
     uint32_t m_ExpectedMapChecksum = 0;
 
-    // Rematch handshake in flight. m_RematchDeadlineMs is an enet_time_get()
-    // stamp; PollEvents gives up past it so a dead server cannot pin the
-    // caller's loading curtain up forever.
-    bool     m_Rematching = false;
-    uint32_t m_RematchDeadlineMs = 0;
+    // Join handshake in flight. m_JoinDeadlineMs is an enet_time_get() stamp;
+    // PollEvents gives up past it so a dead server cannot pin the caller's
+    // loading curtain up forever - it settles disconnected instead, and the
+    // player can simply press PLAY again.
+    JoinPhase m_JoinPhase = JoinPhase::Idle;
+    uint32_t  m_JoinDeadlineMs = 0;
 
 #if defined(_DEBUG)
     // Flood debug mode state (Debug builds only).

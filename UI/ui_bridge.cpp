@@ -7,7 +7,7 @@
 #include "impact_fx.h"
 #include "display_manager.h"
 #include "audio.h"
-#include "i_network.h"   // INetwork::BeginRematch for game.nextMatch
+#include "i_network.h"   // INetwork::BeginJoinSession for game.startLocalGame / nextMatch
 
 #include <Ultralight/View.h>
 #include <AppCore/JSHelpers.h>
@@ -41,13 +41,14 @@ namespace {
 
 using namespace ultralight;
 
-// Curtain gate for game.nextMatch (see SceneTransition_Reload). A plain function
-// pointer polling global state, which is the contract scene.h documents. True
-// when the rematch handshake has settled - connected, refused or timed out - so
-// a dead server lifts the curtain on a disconnected client instead of pinning it
-// up until the transition's safety cap.
-bool RematchSettled() {
-    return !g_pNetwork || g_pNetwork->IsRematchSettled();
+// Curtain gate for every way into the world - game.startLocalGame and
+// game.nextMatch (see SceneTransition_To / _Reload). A plain function pointer
+// polling global state, which is the contract scene.h documents. True when the
+// join handshake has settled - seated, refused or timed out - so a dead server
+// lifts the curtain on a disconnected client instead of pinning it up until the
+// transition's safety cap.
+bool JoinSettled() {
+    return !g_pNetwork || g_pNetwork->IsJoinSettled();
 }
 
 // View whose JS context the push helpers target. Set in Register (OnDOMReady),
@@ -228,17 +229,26 @@ void Register(ultralight::View* view) {
 
     game["startLocalGame"] = (JSCallback)[](const JSObject&, const JSArgs&) {
         DebugLog("[UI:bridge] game.startLocalGame", "");
+        // THIS is where the player enters the match, not process start. The
+        // client holds an ENet host from boot but no session: the server counts
+        // peers that have joined, so a person reading the title menu is not a
+        // player and cannot make a match start without them.
+        //
         // Masked transition: the loading curtain covers the screen, the swap to
         // SCENE_GAME (and its heavy Game_Initialize) happens while black, then the
-        // game is revealed. Game_Initialize sets GameState=PLAY and re-arms the
-        // mock session; UIPolicy_Apply derives the HUD page + level.
-        SceneTransition_To(SCENE_GAME);
+        // game is revealed - held until the join settles so the first frame of
+        // gameplay has an authoritative world rather than an empty one.
+        // Game_Initialize sets GameState=PLAY and re-arms the mock session;
+        // UIPolicy_Apply derives the HUD page + level. The mock network has no
+        // room to join, so it no-ops and settles immediately.
+        if (g_pNetwork) g_pNetwork->BeginJoinSession();
+        SceneTransition_To(SCENE_GAME, &JoinSettled);
     };
 
     game["nextMatch"] = (JSCallback)[](const JSObject&, const JSArgs&) {
         DebugLog("[UI:bridge] game.nextMatch", "");
         // Leave the finished match and join a fresh one on the same server.
-        // The handshake is asynchronous (see INetwork::BeginRematch), so the
+        // The handshake is asynchronous (see INetwork::BeginJoinSession), so the
         // curtain-up hold is gated on it rather than on a fixed time: the
         // player never sees a half-connected world, and the frame loop keeps
         // pumping the window and audio throughout.
@@ -248,15 +258,20 @@ void Register(ultralight::View* view) {
         // changes nothing on screen. Scene_Reload's Game_Finalize +
         // Game_Initialize then rebuilds every client-side match tracker
         // (scoreboard, kill-feed dedup, audio state) behind the black frame.
-        if (g_pNetwork) g_pNetwork->BeginRematch();
-        SceneTransition_Reload(&RematchSettled);
+        if (g_pNetwork) g_pNetwork->BeginJoinSession();
+        SceneTransition_Reload(&JoinSettled);
     };
 
     game["returnToTitle"] = (JSCallback)[](const JSObject&, const JSArgs&) {
         DebugLog("[UI:bridge] game.returnToTitle", "");
+        // Give the seat back on the way out. Sitting on the title screen must
+        // not hold a place in the room: a player who quits to the menu would
+        // otherwise still count toward MatchConfig::MIN_PLAYERS and keep a
+        // match running - or start one - for people who are not there.
+        // LeaveSession is non-blocking and no-ops on the mock network.
+        if (g_pNetwork) g_pNetwork->LeaveSession();
         // Same masked transition back to the title; UIPolicy_Apply restores the
         // title page + Interactive once revealed.
-        // TODO(lobby): network teardown when leaving a live game.
         SceneTransition_To(SCENE_TITLE);
     };
 

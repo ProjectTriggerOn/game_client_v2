@@ -43,19 +43,23 @@ public:
     virtual bool IsConnected() const { return true; }
 
     //-------------------------------------------------------------------------
-    // Match-room membership. A finished match leaves the client on the result
-    // screen, and being ON that screen must not count as occupying the server's
-    // room - otherwise one player pressing NEXT MATCH reaches the minimum
-    // player count on their own and drags everyone still reading the scoreboard
-    // into the next round. So the client LEAVES when the match ends, and
-    // rejoining is what the button does.
+    // Match-room membership - separate from the transport connection on
+    // purpose. A client holds its peer for the life of the process, but a
+    // person on the title screen or the result screen is not playing, and must
+    // not occupy a place in the server's room: if they did, two clients left on
+    // a menu would reach the minimum player count between them and run a match
+    // with nobody in the world, and one player pressing NEXT MATCH would drag
+    // everyone still reading the scoreboard into the next round.
+    //
+    // So the client joins when the player enters the game (PLAY / NEXT MATCH)
+    // and leaves when they go back to a menu or the match ends.
     //
     // Both are non-blocking: the caller hides the gap behind the loading curtain
-    // and polls IsRematchSettled to know when to lift it. The mock network has
-    // no session to leave or rejoin, so it no-ops and settles immediately - the
+    // and polls IsJoinSettled to know when to lift it. The mock network has no
+    // room to join or leave, so it no-ops and settles immediately - the
     // client-side reset in Game_Initialize is the whole rematch there.
     //-------------------------------------------------------------------------
     virtual void LeaveSession() {}
-    virtual void BeginRematch() {}
-    virtual bool IsRematchSettled() const { return true; }
+    virtual void BeginJoinSession() {}
+    virtual bool IsJoinSettled() const { return true; }
 };
