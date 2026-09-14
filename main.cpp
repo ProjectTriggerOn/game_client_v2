@@ -275,7 +275,17 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,[[maybe_unused
 		uint16_t serverPort = static_cast<uint16_t>(Config::GetInstance().ServerPort());
 
 		g_ENetNetwork.SetServerAddress(serverHost.c_str(), serverPort);
+		// Brings the ENet host up WITHOUT connecting. Joining the server's match
+		// room is a deliberate act (PLAY / NEXT MATCH -> BeginJoinSession), not a
+		// side effect of launching the game: the boot scene is normally the title
+		// menu, and a person reading it is not a player. Connecting here used to
+		// make the server count them as one — two clients left on the title
+		// screen reached the minimum player count between them and ran a full
+		// 60-second match on an empty map.
 		g_ENetNetwork.Initialize();
+		// Must be set before any join: the checksum in the server's MAP_INFO is
+		// checked against this, and a mismatch drops the peer BEFORE it asks for
+		// a seat.
 		g_ENetNetwork.SetExpectedMapChecksum(Map_GetCollisionChecksum());
 		g_pNetwork = &g_ENetNetwork;
 #if defined(_DEBUG)
@@ -301,6 +311,15 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,[[maybe_unused
 		g_MockServer.Initialize(&g_MockNetwork, Game_GetCollisionWorld());
 		g_pNetwork = &g_MockNetwork;
 		g_pMockServer = &g_MockServer;
+	}
+
+	// Booting straight into the game scene (config [debug].start_scene = "game")
+	// skips the title menu, and with it the PLAY button that would normally join.
+	// Do it here so that path lands in a real match instead of an empty world.
+	// The handshake completes in the frame loop's PollEvents like any other.
+	if (Scene_GetCurrent() == SCENE_GAME && g_pNetwork)
+	{
+		g_pNetwork->BeginJoinSession();
 	}
 
 	// Initialize Input Producer (Client-side input sampling)
