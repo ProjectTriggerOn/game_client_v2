@@ -107,7 +107,7 @@ ambient = 0.5
 
 | Mode | Description | Server required |
 |------|-------------|-----------------|
-| `mock` | In-process mock server, no real networking | No |
+| `mock` | In-process mock server — the game is fully playable offline | No |
 | `local` | ENet UDP to `127.0.0.1` | Yes (local) |
 | `remote` | ENet UDP to `remote_host` | Yes (remote) |
 
@@ -122,6 +122,49 @@ snapshot) and the loading screen is held until it settles, so the first frame of
 gameplay has an authoritative world to draw. A join that never settles times out
 after 5 s and leaves the player on a disconnected client rather than hanging —
 pressing PLAY again retries.
+
+#### `mock` — the offline server
+
+`mock` is not a stub that feeds the HUD canned numbers. `MockServer` is a second
+implementation of the authoritative server living in the client process, behind
+the same `INetwork` interface the ENet path uses: same 32 Hz accumulator tick,
+same `InputCmd` in and `Snapshot` out, same `recoil_math.h`. `MockNetwork` is the
+transport — two mutex-guarded queues where the ENet client has a socket. Nothing
+above the interface knows which one it is talking to, so prediction,
+reconciliation, interpolation, the HUD, the kill feed and the snapshot-diff audio
+derivation all run for real with no server and no network.
+
+It simulates:
+
+- the local player server-side — movement, collision against the loaded map,
+  gravity and jump, hitscan fire with RPM gating, reload, ammo, death and a 2 s
+  respawn;
+- nine bots (`MAX_PLAYERS - 1`), split RED/BLUE, each a full combat entity: they
+  pace, they are shootable, they burst-fire (0.5 s on, 1.5 s off, at 600 RPM),
+  they auto-reload when the magazine empties, and they die and respawn;
+- lag compensation for shots at them, against a 64-tick (2 s) position ring per
+  bot, rewound to the client's `viewTick` plus its sub-tick fraction and guarded
+  against interpolating across a respawn teleport;
+- scoring end to end — K/D, team score, the kill-feed ring, and the score/time
+  limits that end the match and latch a winning team;
+- spawns read from the loaded map when it authors enough of them, falling back
+  to the compiled-in layout otherwise.
+
+What it deliberately is not:
+
+| | `mock` | a real server |
+|---|---|---|
+| Match flow | starts in `PLAYING` | `WAITING` → `COUNTDOWN` → `PLAYING` → `ENDED` |
+| Joining | no handshake; PLAY drops straight into a live round | connect → map check → `JOIN_REQUEST` → first snapshot |
+| Minimum players | none | `MatchConfig::MIN_PLAYERS` |
+| Network | in-process queues: no latency, loss, reordering or rate limiting | UDP, and everything that comes with it |
+| Map check | none needed — one process, one map | `MAP_INFO` collision checksum |
+| Bot aim | bots fire straight along their spawn facing; the RED/BLUE layout is what produces crossfire | real opponents aim |
+| Local player | always RED, always id 0 | assigned by the server |
+
+So `mock` exercises the client's simulation and presentation layers completely
+and its *networking* not at all. Correction-under-latency behaviour only shows up
+in `local` / `remote`.
 
 ## Runtime Files
 
