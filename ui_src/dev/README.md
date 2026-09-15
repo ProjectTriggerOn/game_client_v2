@@ -1,70 +1,122 @@
-# UI 浏览器开发流程
+<p align="center">
+  English | <a href="./README_JP.md">日本語</a> | <a href="./README_CN.md">中文</a>
+</p>
 
-`ui_src/` 是 SPA 风格的 web 工程，可以**完全脱离游戏**在浏览器里迭代。
+# Browser UI Development
 
-## 文件分工
+`ui_src/` is a plain single-page app — no build step, no framework — so the whole
+in-game UI can be iterated in a browser with the game unbuilt and no server
+running. `dev.html` is the browser entry point: it loads a stand-in for the C++
+bridge before anything else, so pages that call `game.*` behave the way they do
+in the game.
 
-| 文件 | 用途 | 加载场景 |
-|------|------|---------|
-| `index.html` | 生产入口，被 Ultralight 加载 | 游戏运行时 |
-| `dev.html` | 浏览器入口，加 mock bridge + dev overlay | 本地浏览器开发 |
-| `dev/mock_bridge.js` | mock `window.game.*` API + 浮层 + 快捷键 | 仅被 `dev.html` 加载 |
+## The three files that differ
 
-## 怎么跑
+| File | Role | Loaded by |
+|------|------|-----------|
+| `index.html` | production entry point | Ultralight, inside the game |
+| `dev.html` | browser entry point — mock bridge, dev overlay | a browser |
+| `dev/mock_bridge.js` | stands in for `window.game.*`; also draws the overlay and binds its shortcuts | `dev.html` only |
 
-**推荐：VS Code Live Server**
+Everything else is the same code in both: `router.js`, `shared.css`, `flood.js`,
+and every page under `pages/`.
 
-1. VS Code 装 `Live Server` 扩展（作者 Ritwick Dey）
-2. 在 `ui_src/dev.html` 上右键 → "Open with Live Server"
-3. 浏览器自动开 `http://127.0.0.1:5500/.../dev.html`
-4. 改任何 `.html` / `.css` / `.js` → 浏览器自动 reload
+## Running it
 
-**或：Python http.server**
+**VS Code Live Server (recommended)**
+
+1. Install the *Live Server* extension (Ritwick Dey).
+2. Right-click `ui_src/dev.html` → **Open with Live Server**.
+3. The browser opens `http://127.0.0.1:5500/.../dev.html`, and any edit to an
+   `.html` / `.css` / `.js` file reloads it.
+
+**Or any static server**
 
 ```bash
 cd game_client/ui_src
 python -m http.server 8000
-# 浏览器访问 http://127.0.0.1:8000/dev.html
+# http://127.0.0.1:8000/dev.html
 ```
 
-## ⚠️ 不要直接双击 dev.html
+### Do not open `dev.html` from the file system
 
-`file://` 协议下 fetch 受 CORS 限制，`router.js` 加载 `pages/*.html` 会全部失败、屏幕空白。**必须**走 HTTP 服务器（Live Server 自带 / Python http.server / 其它任意）。
+Under `file://`, `fetch('pages/…')` is blocked by CORS, so every page-markup load
+in `router.js` fails and the screen stays blank. It has to be served over HTTP.
 
-## 调试操作
+## Keep `dev.html`'s page divs in sync with `index.html`
 
-| 操作 | 效果 |
-|------|------|
-| `F1` | 切到 HUD 页（对齐 main.cpp 里临时的 F1 调试键） |
-| `F2` | 切到 TITLE 页 |
-| 右上角 overlay 按钮 | 鼠标点击切页 |
-| `game.setConfig(...)` + `game.saveConfig()` 在控制台调 | 写入 `localStorage`，浏览器刷新后还在 |
+`router.js` has a `PAGES` map, and at startup it fetches each page's markup and
+assigns it into `#page-<name>`. A name in `PAGES` with no matching div is not a
+missing page — `el(name).innerHTML` throws on `null`, the `Promise.all` rejects,
+`init()`'s `catch` swallows it, and `Router.show()` never runs. Every page keeps
+its `hidden` class and the harness comes up **blank**, with one
+`[Router] init failed: TypeError` in the console and nothing else to go on.
 
-## Mock 出来的 API
+This is not hypothetical: `result` joined `PAGES` when the scoring system landed,
+`dev.html` was not updated with it, and the browser harness was dead from that
+commit until it was noticed. **When you add a page, add its div to both files.**
 
-`mock_bridge.js` 覆盖了 `docs/ultralight_integration.md` §8.1 列的全部 `game.*`：
+## What the mock covers
 
-- `setState` / `quit` / `startLocalGame` / `returnToTitle`
-- `getConfig` / `setConfig` / `saveConfig` —— 用 `localStorage` 持久化
-- `getPlayerList` / `getVersion` / `log`
+`dev/mock_bridge.js` implements these `game.*` verbs:
 
-C++ → JS 推送（`window.onHealthChanged` 等）暂未模拟。Slice D 接入真实数据推送时再加定时器驱动。
+- **Navigation** — `setState`, `startLocalGame`, `returnToTitle`, `nextMatch`,
+  `quit`, `getBootPage`
+- **Config** — `getConfig`, `setConfig`, `saveConfig`, persisted to
+  `localStorage` so it survives a reload
+- **Display settings** — `getDisplayInfo` (with a fake monitor list),
+  `applyDisplaySettings`, `confirmDisplaySettings`, `revertDisplaySettings`,
+  including the 15-second auto-revert countdown
+- **Misc** — `getPlayerList`, `getVersion`, `log`
 
-## 跟游戏环境的差异
+## What it does not
 
-| 项 | 浏览器 | 游戏 |
-|----|--------|------|
-| 字体 | 系统字体 | Ultralight FreeType + 内嵌 TTF |
-| 字体渲染 | 浏览器引擎 | WebKit + FreeType |
-| 性能特征 | V8 / SpiderMonkey | JavaScriptCore（WebKit 自带） |
-| DPI | 浏览器自己处理 | 物理像素，看 docs §6.4 |
-| `console.log` 输出 | 浏览器 DevTools | VS 输出窗口（`[UI:console]` 前缀，由 ui_manager.cpp 的 `UIViewListener::OnAddConsoleMessage` 经 OutputDebugString 转发）；引擎日志另在 `logs/ultralight.log` |
+| Not mocked | What you see in the browser |
+|------------|-----------------------------|
+| `resume`, `openSettings`, `backToPause` | the pause menu's RESUME and SETTINGS buttons do nothing — page JS calls them as `window.game?.resume?.()`, so this is a silent no-op, not an error |
+| `uiClick` | no UI click sound (there is no audio engine here anyway) |
+| `setFloodDebug`, `getFloodStats` | the flood panel is markup to style, nothing more; `flood.js` feature-checks every bridge call |
 
-**意味着**：浏览器调出的视觉效果**和游戏不会 100% 一致**。最终验收必须在游戏里跑一遍。但 80% 的"布局对不对、颜色顺不顺、动效卡不卡"在浏览器里能直接判断。
+The **push direction** is thinner still. In the game, C++ calls
+`window.onHealthChanged`, `onAmmoChanged`, `onScoresChanged`, `onKillFeed`,
+`onMatchTimerChanged`, `onMatchPhaseChanged`, `onScoreboardVisible`,
+`onScoreboardData` and `onMatchResult` as the match runs. None of them fire here
+— only `onDisplayRevertTick`, which the mock drives from its revert countdown. So
+the HUD and the result screen show their static markup. Call them by hand from
+the console to check a state:
 
-## 不要在浏览器里依赖的特性
+```js
+onHealthChanged(35)
+onMatchPhaseChanged(1, 4.2)      // COUNTDOWN with 4.2s left
+```
 
-- `position: fixed` 在 Ultralight 里行为一致，但避免依赖 `visualViewport` API
-- `requestAnimationFrame` 在 Ultralight 里被 `Renderer::Update` 节流，浏览器没有这个限制
-- WebGL / Canvas 2D —— Ultralight 1.4 不支持
-- WebSocket / fetch 真实 HTTP —— 游戏里没人提供后端
+## Dev overlay
+
+Top-right corner: the current page name plus a button per page. `F1` shows the
+HUD, `F2` the title — these are the overlay's own keys and exist only here (in
+the game, F1 toggles the collision debug view).
+
+## Where the browser differs from the game
+
+| | Browser | Game |
+|---|---|---|
+| Fonts | whatever the system has | FreeType + the TTFs under `ui_src/fonts/` |
+| Text rendering | the browser's engine | WebKit + FreeType |
+| JS engine | V8 / SpiderMonkey | JavaScriptCore (Ultralight's own) |
+| DPI | handled by the browser | physical pixels; the device scale is set by `UI::Initialize` |
+| `console.log` | DevTools | forwarded through `UIViewListener::OnAddConsoleMessage` in `ui_manager.cpp` to `OutputDebugString` with a `[UI:console]` prefix, so it lands in the VS Output window; the engine's own log is `logs/ultralight.log` |
+
+So the rendering will not match exactly. What the browser is good for is layout,
+colour, spacing and animation timing — most of the work — and none of that needs
+a five-minute game build to check. Final sign-off still happens in the game.
+
+## Do not build on these
+
+- **WebGL** — Ultralight does not provide it.
+- **`requestAnimationFrame`** — the game throttles it to `Renderer::Update`; a
+  browser does not.
+- **`visualViewport`** — behaves differently; avoid depending on it.
+- **Real network I/O** — `fetch` and WebSocket have no backend in the game.
+
+Anything beyond plain DOM and CSS is worth confirming in the game before a page
+comes to depend on it.

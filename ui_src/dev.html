@@ -5,6 +5,13 @@
   The only difference from index.html is that dev/mock_bridge.js loads first,
   stubbing out the game.* API in the browser and adding a dev overlay.
 
+  KEEP THE PAGE DIVS IN SYNC WITH index.html. router.js injects markup into
+  #page-<name> for every entry in its PAGES map, and a missing div is not a
+  missing page — `el(name).innerHTML` throws, Promise.all rejects, init()'s
+  catch swallows it, and Router.show() never runs. The whole harness comes up
+  blank with one [Router] init failed line in the console. That is exactly what
+  happened when the result page was added and this file was not updated.
+
   How to open (VS Code Live Server extension recommended):
     1. Install the "Live Server" extension in VS Code
     2. Right-click this file → "Open with Live Server"
@@ -18,6 +25,8 @@
   NEVER double-click dev.html directly — under the file:// protocol,
   fetch('pages/...') is rejected by CORS, every page-markup load in router.js
   fails, and the screen stays blank.
+
+  See dev/README.md.
 -->
 <html>
 <head>
@@ -28,6 +37,9 @@
     <link rel="stylesheet" href="pages/settings.css">
     <link rel="stylesheet" href="pages/game/hud.css">
     <link rel="stylesheet" href="pages/game/pause.css">
+    <link rel="stylesheet" href="pages/game/result.css">
+    <link rel="stylesheet" href="pages/editor.css">
+    <link rel="stylesheet" href="flood.css">
     <style>
         /* No 3D scene underneath in the browser — dark grey backdrop makes
            the transparent UI visible */
@@ -39,6 +51,36 @@
     <div id="page-settings" class="page hidden overlay"></div>
     <div id="page-hud"      class="page hidden"></div>
     <div id="page-pause"    class="page hidden overlay"></div>
+    <div id="page-result"   class="page hidden overlay"></div>
+    <div id="page-editor"   class="page hidden"></div>
+
+    <!-- Loading curtain (see index.html). C++ drives it through UI::SetCurtain;
+         in the browser it is here so the transition overlay can be styled, and
+         Curtain.show() / Curtain.hide() can be called from the console. -->
+    <div id="curtain">
+        <div class="curtain-spinner"></div>
+        <div class="curtain-label">LOADING</div>
+    </div>
+
+    <!-- Flood debug panel (see index.html). Every bridge call in flood.js is
+         feature-checked, and the mock bridge implements neither setFloodDebug
+         nor getFloodStats, so here the panel is markup to style, nothing more. -->
+    <div id="flood-panel" class="hidden">
+        <h3>FLOOD DEBUG (F8)</h3>
+        <div class="row"><label><input type="checkbox" id="flood-on"> flood on</label></div>
+        <div class="row"><span>rate</span>
+            <input type="range" id="flood-rate" min="60" max="100000" step="60" value="2000">
+            <span id="flood-rate-val">2000</span>/s</div>
+        <div class="row"><span>mode</span>
+            <select id="flood-mode">
+                <option value="0">valid (L1/L3)</option>
+                <option value="1">junk (L3)</option>
+                <option value="2">oversized (L2)</option>
+            </select></div>
+        <div id="flood-readout">send 0/s   snap 0ms</div>
+        <div class="hint">fx = bullet holes / live particles</div>
+        <div class="hint">flood runs in background; F8 to close &amp; observe</div>
+    </div>
 
     <!-- The mock bridge must load before router.js and the page JS so they
          can call game.* from the moment they start without throwing -->
@@ -48,6 +90,11 @@
     <script src="pages/settings.js"></script>
     <script src="pages/game/hud.js"></script>
     <script src="pages/game/pause.js"></script>
+    <script src="pages/game/result.js"></script>
+    <script src="pages/editor.js"></script>
+
+    <script src="flood.js"></script>
+
     <script src="router.js"></script>
 </body>
 </html>
