@@ -76,13 +76,11 @@ void PlayerCamFps_Initialize()
 		//               [](const ConfigValue& v) { g_Fov = XMConvertToRadians((float)v.AsFloat()); });
 	}
 
-	// Debug-only, like the sibling overlays in main.cpp and camera.cpp. The one consumer,
-	// PlayerCamFps_Debug, runs only under game.cpp's isDebugCollision, which Release
-	// defines as constexpr false — so this was built and destroyed undrawn on every
-	// game-scene entry. The "if (!g_DebugText) return;" in PlayerCamFps_Debug is what
-	// keeps it a safe no-op now; don't remove it.
-#if defined(_DEBUG) || defined(DEBUG)
-
+	// Built in every configuration: its one consumer, PlayerCamFps_Debug, runs
+	// under game.cpp's isDebugCollision, and that is now a runtime toggle in
+	// Release as well as Debug (F1). Nothing is drawn until the key is pressed.
+	// The "if (!g_DebugText) return;" in PlayerCamFps_Debug still guards the
+	// case where construction failed — don't remove it.
 	g_DebugText = new hal::DebugText(Direct3D_GetDevice(), Direct3D_GetDeviceContext(),
 		L"resource/texture/consolab_ascii_512.png",
 		Direct3D_GetBackBufferWidth(), Direct3D_GetBackBufferHeight(),
@@ -90,8 +88,6 @@ void PlayerCamFps_Initialize()
 		0, 0,
 		0.0f, 16.0f
 	);
-
-#endif // _DEBUG || DEBUG
 }
 
 void PlayerCamFps_Finalize()
@@ -253,19 +249,25 @@ void PlayerCamFps_Debug(const PlayerFps& pf)
 	std::stringstream ss;
 
 	// ---- Network Quality ----
+	// Fields are grouped several to a line throughout this overlay. The screen
+	// holds 33 lines at this font size, and the local player's own readout used
+	// to spend 31 of them before reaching the remote list — so in a full lobby
+	// the remotes, which are the thing this overlay exists to diagnose, sat
+	// entirely below the bottom edge. A line fits about 120 characters and these
+	// fields are short, so the room was there all along, sideways.
 	ss << "=== Network ===\n";
 	if (g_pNetwork)
 	{
-		ss << "Connected: " << (g_pNetwork->IsConnected() ? "YES" : "NO") << "\n";
-		ss << "RTT: " << g_pNetwork->GetRTT() << "ms\n";
 		// ENet packetLoss is fixed-point (value / 65536 = fraction)
 		float lossPercent = g_pNetwork->GetPacketLoss() * 100.0f / 65536.0f;
-		ss << "PacketLoss: " << std::fixed << std::setprecision(1) << lossPercent << "%\n";
-		ss << "InputsSent: " << g_pNetwork->GetTotalInputsSent() << "\n";
-		ss << "SnapQueue: " << g_pNetwork->GetSnapshotQueueSize() << "\n";
+		ss << "Connected: " << (g_pNetwork->IsConnected() ? "YES" : "NO")
+		   << "   RTT: " << g_pNetwork->GetRTT() << "ms"
+		   << "   PacketLoss: " << std::fixed << std::setprecision(1) << lossPercent << "%\n";
+		ss << "InputsSent: " << g_pNetwork->GetTotalInputsSent()
+		   << "   SnapQueue: " << g_pNetwork->GetSnapshotQueueSize() << "\n";
 	}
-	ss << "SnapRate: " << g_NetDebugInfo.snapshotsPerSecond << "/s (expect 32)\n";
-	ss << "TickDelta: " << g_NetDebugInfo.tickDelta << " (expect 1)\n";
+	ss << "SnapRate: " << g_NetDebugInfo.snapshotsPerSecond << "/s (expect 32)"
+	   << "   TickDelta: " << g_NetDebugInfo.tickDelta << " (expect 1)\n";
 
 	// ---- Lag compensation (what we report in InputCmd.viewTick) ----
 	{
@@ -293,71 +295,52 @@ void PlayerCamFps_Debug(const PlayerFps& pf)
 	ss << "\n=== Server (32Hz) ===\n";
 	if (g_NetDebugInfo.hasData)
 	{
-		ss << "ServerTick: " << g_NetDebugInfo.lastServerTick << "\n";
-		ss << "ServerTime: " << std::fixed << std::setprecision(1)
-		   << g_NetDebugInfo.lastServerTime << "s\n";
-
 		const NetPlayerState& srvState = g_NetDebugInfo.lastServerState;
-		ss << "ServerPos: " << std::fixed << std::setprecision(1)
+		ss << "Tick: " << g_NetDebugInfo.lastServerTick
+		   << "   Time: " << std::fixed << std::setprecision(1) << g_NetDebugInfo.lastServerTime << "s"
+		   << "   Pos: " << std::setprecision(1)
 		   << srvState.position.x << ", "
 		   << srvState.position.y << ", "
 		   << srvState.position.z << "\n";
 	}
 	else
 	{
-		ss << "Server: NO DATA\n";
+		ss << "NO DATA\n";
 	}
 
 	// ---- Correction ----
-	ss << "\n=== Correction ===\n";
-	ss << "Mode: " << Game_GetCorrectionMode() << "\n";
-	ss << "Error: " << std::fixed << std::setprecision(3) << Game_GetCorrectionError() << "m\n";
+	ss << "\n=== Correction ===  Mode: " << Game_GetCorrectionMode()
+	   << "   Error: " << std::fixed << std::setprecision(3) << Game_GetCorrectionError() << "m\n";
 
 	// ---- Input ----
-	ss << "\n=== Input (C->S) ===\n";
 	extern InputProducer* g_pInputProducer;
+	ss << "=== Input (C->S) ===";
 	if (g_pInputProducer)
 	{
 		const InputCmd& cmd = g_pInputProducer->GetLastInputCmd();
-		ss << "MoveAxis: " << std::fixed << std::setprecision(1)
-		   << cmd.moveAxisX << ", " << cmd.moveAxisY << "\n";
-		ss << "Buttons: ";
+		ss << "  MoveAxis: " << std::fixed << std::setprecision(1)
+		   << cmd.moveAxisX << ", " << cmd.moveAxisY << "   Buttons: ";
 		if (cmd.buttons & InputButtons::FIRE) ss << "FIRE ";
 		if (cmd.buttons & InputButtons::ADS) ss << "ADS ";
 		if (cmd.buttons & InputButtons::JUMP) ss << "JUMP ";
 		if (cmd.buttons & InputButtons::SPRINT) ss << "SPRINT ";
 		if (cmd.buttons == InputButtons::NONE) ss << "NONE";
-		ss << "\n";
 	}
+	ss << "\n";
 
 	// ---- Player ----
 	ss << "\n=== Player ===\n";
-	ss << "Team: " << (pf.GetTeam() == PlayerTeam::RED ? "RED" : "BLUE") << "\n";
-	ss << "Health: " << (int)pf.GetHealth() << "/200" << (pf.IsDead() ? " [DEAD]" : "") << "\n";
-	ss << "PlayerState: " << pf.GetPlayerState() << "\n";
-	ss << "WeaponState: " << pf.GetWeaponState() << "\n";
-	ss << "FireCounter: " << pf.GetFireCounter() << " (Srv: " << g_NetDebugInfo.lastServerState.fireCounter << ")\n";
-
-	// ---- Remote Players ----
-	extern RemotePlayer g_RemotePlayers[];
-	extern bool g_RemotePlayerActive[];
-	for (int rpi = 0; rpi < MAX_PLAYERS; rpi++)
-	{
-		if (!g_RemotePlayerActive[rpi] || !g_RemotePlayers[rpi].IsActive()) continue;
-		RemotePlayer& rp = g_RemotePlayers[rpi];
-		ss << "\n=== RemotePlayer[" << rpi << "] ===\n";
-		ss << "Team: " << (rp.GetTeam() == PlayerTeam::RED ? "RED" : "BLUE") << "\n";
-		ss << "SyncMode: " << rp.GetSyncMode();
-		if (rp.IsStuck()) ss << " [STUCK!]";
-		ss << "\n";
-		ss << "Buffer: " << rp.GetBufferSize() << " snapshots\n";
-		ss << "LerpT: " << std::fixed << std::setprecision(3) << rp.GetLerpFactor() << "\n";
-		ss << "InterpDelay: " << std::fixed << std::setprecision(1) << (rp.GetInterpolationDelay() * 1000.0) << "ms\n";
-	}
+	ss << "Team: " << (pf.GetTeam() == PlayerTeam::RED ? "RED" : "BLUE")
+	   << "   Health: " << (int)pf.GetHealth() << "/200" << (pf.IsDead() ? " [DEAD]" : "")
+	   << "   " << pf.GetPlayerState() << " / " << pf.GetWeaponState()
+	   << "   FireCounter: " << pf.GetFireCounter() << " (Srv: " << g_NetDebugInfo.lastServerState.fireCounter << ")\n";
 
 	// Audio readout: voice pressure is the first thing to go wrong once a
 	// firefight gets busy, and the last-derivation event count shows the
-	// snapshot derivation working — or storming — at a glance.
+	// snapshot derivation working — or storming — at a glance. Sits with the
+	// local player because that is what it describes: the listener IS the local
+	// player, and the remote-player blocks below are a variable-length list that
+	// would otherwise push these two lines off the bottom in a full lobby.
 	ss << "AUDIO " << (Audio_IsAvailable() ? "on" : "SILENT")
 	   << " voices=" << Audio_ActiveVoiceCount()
 	   << " events=" << Game_LastAudioEventCount() << "\n";
@@ -368,6 +351,36 @@ void PlayerCamFps_Debug(const PlayerFps& pf)
 	ss << "AUDIO listener pos=(" << std::fixed << std::setprecision(2)
 	   << g_CameraPosition.x << "," << g_CameraPosition.y << "," << g_CameraPosition.z
 	   << ") front=(" << g_CameraFront.x << "," << g_CameraFront.y << "," << g_CameraFront.z << ")\n";
+
+	// ---- Remote Players ----
+	// One line each, not a six-line block each. The overlay has room for about
+	// 33 lines at this font size; a full lobby is nine remotes, and at seven
+	// lines apiece they needed 63 — so every one of them fell off the bottom of
+	// the screen and the block showed nothing at all. Nothing is dropped here,
+	// only abbreviated: the fields are short numbers and there is far more
+	// horizontal room than vertical.
+	extern RemotePlayer g_RemotePlayers[];
+	extern bool g_RemotePlayerActive[];
+	int activeRemotes = 0;
+	for (int rpi = 0; rpi < MAX_PLAYERS; rpi++)
+		if (g_RemotePlayerActive[rpi] && g_RemotePlayers[rpi].IsActive()) activeRemotes++;
+
+	ss << "\n=== Remotes (" << activeRemotes << ") ===\n";
+	for (int rpi = 0; rpi < MAX_PLAYERS; rpi++)
+	{
+		if (!g_RemotePlayerActive[rpi] || !g_RemotePlayers[rpi].IsActive()) continue;
+		RemotePlayer& rp = g_RemotePlayers[rpi];
+		// SyncMode is padded so the columns after it line up — the modes are
+		// 4 to 6 characters (WAIT / SNAP / INIT / INTERP / EXTRAP / NODATA).
+		ss << "[" << rpi << "] "
+		   << (rp.GetTeam() == PlayerTeam::RED ? "RED " : "BLU ")
+		   << std::left << std::setw(6) << rp.GetSyncMode() << std::right
+		   << " buf=" << rp.GetBufferSize()
+		   << " t=" << std::fixed << std::setprecision(2) << rp.GetLerpFactor()
+		   << " d=" << std::setprecision(0) << (rp.GetInterpolationDelay() * 1000.0) << "ms";
+		if (rp.IsStuck()) ss << " STUCK";
+		ss << "\n";
+	}
 
 	g_DebugText->SetText(ss.str().c_str());
 	g_DebugText->Draw();

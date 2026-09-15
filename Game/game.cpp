@@ -49,12 +49,18 @@ namespace{
 	MODEL* g_pModel = nullptr;
 	MODEL_ANI* g_pModel0 = nullptr;
 	int g_OverlayTexId = -1;  // white texture; reused to draw the native crosshair
-#if defined(_DEBUG)
-	bool isDebugCam = false;
+	// The F1 overlay ships in Release too: it is how anyone running the build
+	// can see the netcode working — RTT, snapshot rate, the correction mode and
+	// error, how far the server rewinds for a shot, and every remote player's
+	// interpolation state. None of it is a cheat surface (it only reports what
+	// the client was already told) and it costs nothing until toggled on.
 	bool isDebugCollision = false;
+#if defined(_DEBUG)
+	// The free-fly camera stays Debug-only — it detaches the view from the
+	// player the server is simulating, which is a different kind of thing.
+	bool isDebugCam = false;
 #else
 	constexpr bool isDebugCam = false;
-	constexpr bool isDebugCollision = false;
 #endif
 	PlayerFps* g_PlayerFps;
 	GameState g_GameState;
@@ -291,9 +297,9 @@ void Game_Update(double elapsed_time)
 
 	if (gameplayActive)
 	{
+		if (KeyLogger_IsTrigger(KK_F1)) isDebugCollision = !isDebugCollision;
 #if defined(_DEBUG)
 		if (KeyLogger_IsTrigger(KK_C))  isDebugCam = !isDebugCam;
-		if (KeyLogger_IsTrigger(KK_F1)) isDebugCollision = !isDebugCollision;
 #endif
 
 		g_PlayerFps->Update(elapsed_time);
@@ -617,7 +623,7 @@ void Game_Draw()
 	ImpactFx_SetCamera(mtxView);
 	ImpactFx_Draw();
 
-	// Debug draw: collision shapes (F3 toggle)
+	// Debug draw: collision shapes + the debug text overlay (F1 toggle)
 	if (isDebugCollision)
 	{
 		// Disable depth test so outlines are visible through map objects

@@ -560,11 +560,11 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE,[[maybe_unused
 	}
 	g_pNetwork = nullptr;
 
-#if defined(_DEBUG) || defined(DEBUG)
-
+	// Paired with the unconditional Collision_DebugInitialize above. It used to
+	// be Debug-only, which left the wireframe device resources un-released in
+	// Release — harmless at process exit, but now that F1 draws them there too
+	// the asymmetry has no excuse.
 	Collision_DebugFinalize();
-
-#endif
 
 	Cube_Finalize();
 
