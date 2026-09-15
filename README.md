@@ -166,6 +166,79 @@ So `mock` exercises the client's simulation and presentation layers completely
 and its *networking* not at all. Correction-under-latency behaviour only shows up
 in `local` / `remote`.
 
+## Controls
+
+### Gameplay
+
+| Input | Action |
+|-------|--------|
+| `W` `A` `S` `D` | Move |
+| Mouse | Look |
+| `Space` | Jump |
+| `Left Shift` (hold) | Sprint |
+| Left mouse (hold) | Fire (full-auto) |
+| Right mouse (hold) | Aim down sights |
+| `R` | Reload |
+| `E` | Inspect weapon |
+| `Tab` (hold) | Scoreboard |
+| `Esc` | Pause menu |
+| `F1` | Netcode overlay — see below |
+
+### Menus
+
+| Input | Action |
+|-------|--------|
+| Left mouse | Confirm |
+| `Esc` | Paused: resume · Settings: back |
+
+### Level editor (`[debug].start_scene = "editor"`, Debug builds only)
+
+| Input | Action |
+|-------|--------|
+| `Left Alt` + mouse drag | Orbit (left) · pan (middle) · dolly (right) |
+| Mouse wheel | Dolly (no `Alt` needed) |
+| `Q` `W` `E` `R` | Select · Move · Rotate · Scale tool |
+| `B` | Drop a 1×1×1 box brush at the cursor's ground hit, grid-snapped |
+| `N` | Drop the current catalog model at the cursor and seed its collider |
+| `[` `]` | Previous / next model in the catalog |
+| `Left Ctrl` (hold) | Invert grid snapping |
+| `F` | Frame the selection |
+| `A` | Frame the whole map |
+| `Delete` | Delete the selection |
+| `Ctrl` + `Z` / `Y` | Undo / redo |
+| `F9` / `F10` | Save / reload the `.map` |
+
+### UI sandbox (`[debug].start_scene = "ui_test"`)
+
+`F5` title · `F6` HUD · `F7` pause · `F8` settings.
+
+### The F1 netcode overlay
+
+**F1** during gameplay toggles a diagnostic overlay, in shipped builds as well as
+Debug ones — it is the quickest way to see the netcode actually working rather
+than take a README's word for it. It draws collision wireframes (the local
+capsule green, remote capsules red, world AABBs blue for ground and orange for
+walls, and the shot ray yellow) over a text readout of:
+
+- **Network** — connected, RTT, packet loss, inputs sent, the undrained snapshot
+  queue, snapshot rate against the expected 32/s, and the gap between
+  consecutive server ticks;
+- **LagComp** — which tick the client is viewing and how far behind now that is,
+  in ticks and milliseconds: exactly how far back the server rewinds hitboxes
+  for this client's shots;
+- **Server** — the authoritative tick, time and position, to compare against the
+  predicted one;
+- **Correction** — the reconciliation mode (`OK` / `SOFT` / `RESIM` / `SNAP`) and
+  the current position error in metres;
+- **Input** — the movement axes and button bitfield last sent upstream;
+- **Player** — team, health, player and weapon state, and the local fire counter
+  beside the server's, which is where a desynced shot prediction shows up first;
+- **Audio** — backend state, live voice count, events derived from the last
+  snapshot diff, and the listener pose feeding the spatialiser;
+- **Remotes** — one line per remote player: team, interpolation mode
+  (`INTERP` / `EXTRAP` / `WAIT` / `SNAP` / `NODATA`, plus `STUCK` when it has
+  stalled), buffered snapshot count, lerp factor and interpolation delay.
+
 ## Runtime Files
 
 Unzipped artifact layout:
