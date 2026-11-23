@@ -1,5 +1,6 @@
 // test_editor_input.cpp — standalone unit test for the pure half of editor_input.h.
-// Build/run: see the plan's Step 2 (VsDevCmd + cl, wrapped in a .bat).
+// Build+run from the repo root in a VS developer prompt:
+//   cl /nologo /std:c++17 /EHsc /W4 /I Game Game\tests\test_editor_input.cpp /Fe:_test_editor_input.exe && _test_editor_input.exe
 #include "../editor_input.h"
 
 #include <cstdio>

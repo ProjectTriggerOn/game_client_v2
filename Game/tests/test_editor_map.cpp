@@ -1,7 +1,8 @@
 //=============================================================================
 // test_editor_map.cpp — standalone round-trip test for EditorMap <-> .map.
-// NOT part of TriggerOn.vcxproj (defines its own main). Build+run from repo root:
-//   cmd /c "\"...\VsDevCmd.bat\" -arch=x64 -no_logo && cd /d D:\work_place\TriggerOn\game_client && cl /nologo /std:c++17 /EHsc /W4 /I Game Game\editor_map.cpp Game\tests\test_editor_map.cpp /Fe:_test_editor_map.exe && _test_editor_map.exe"
+// NOT part of TriggerOn.vcxproj (defines its own main). Build+run from the repo
+// root in a VS developer prompt:
+//   cl /nologo /std:c++17 /EHsc /W4 /DEDITOR_ENABLED /I Game Game\editor_map.cpp Game\tests\test_editor_map.cpp /Fe:_test_editor_map.exe && _test_editor_map.exe
 //=============================================================================
 #define _CRT_SECURE_NO_WARNINGS
 #include "editor_map.h"
