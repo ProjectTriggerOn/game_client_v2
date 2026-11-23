@@ -6,6 +6,8 @@
 
 Direct3D 11 / Win32 ベースのマルチプレイヤー FPS ゲームクライアント。ゲーム内 UI（メニュー・HUD・設定）は HTML/CSS/JS で記述し、[Ultralight](https://ultralig.ht/) で描画しています。
 
+サーバーは [game_server](https://github.com/ProjectTriggerOn/game_server) です。通信プロトコルを共有しているため、両方を揃えてリリースしています。
+
 ## 主な機能
 
 - **Direct3D 11** による描画（ライティング、アンリット、スケルタルアニメーション対応 HLSL シェーダー）
