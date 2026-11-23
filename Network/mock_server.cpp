@@ -69,7 +69,7 @@ void MockServer::Initialize(INetwork* pNetwork, CollisionWorld* pCollisionWorld)
     m_LastShotResult = LastShotResult::MISS;
     m_LastShotSeqMod = 0;
 
-    // Recoil pool reset (spec §7): shotKick never decays, so a fresh round
+    // Recoil pool reset: shotKick never decays, so a fresh round
     // must start from a clean pool — mirrors GameServer's respawn reset.
     m_PlayerRecoil = RecoilMath::RecoilState{};
 
@@ -247,7 +247,7 @@ void MockServer::Tick()
     if (playing && (m_PlayerState.stateFlags & NetStateFlags::IS_DEAD) == 0)
         ProcessFiring();
 
-    // 4b. Recoil decay + broadcast (spec §4.3) — mirror of GameServer's
+    // 4b. Recoil decay + broadcast — mirror of GameServer's
     // per-tick decay: one tick's worth of punch/bloom recovery with the same
     // exponential factor the client uses per frame. Runs AFTER ProcessFiring,
     // so a shot fired this tick gets its punch applied and then one tick of
@@ -773,7 +773,7 @@ void MockServer::ProcessFiring()
         m_PlayerState.stateFlags |= NetStateFlags::IS_RELOAD_EMPTY;
     }
 
-    // Advance recoil for THIS shot (spec §4.3) — mirror of
+    // Advance recoil for THIS shot — mirror of
     // GameServer::ProcessFiring 3a/3b. fireCounter was already incremented,
     // so (fireCounter-1) indexes the shot just taken. dt=0: per-tick decay
     // is Tick()'s job (runs right after, before the broadcast).
@@ -788,13 +788,13 @@ void MockServer::ProcessFiring()
         m_PlayerState.position.z
     };
 
-    // Ray direction from yaw/pitch — WYSIWYG (spec §2): bullets follow the
+    // Ray direction from yaw/pitch — WYSIWYG: bullets follow the
     // punched view the client renders, plus this shot's deterministic
     // bloom-cone offset (fireCounter is the seed; no RNG on either side).
     // Same formula as GameServer::ProcessFiring (DirectionFromYawPitch).
     float dPitch = 0.0f, dYaw = 0.0f;
     RecoilMath::RecoilTotalOffsets(m_PlayerRecoil, dPitch, dYaw);
-    // Movement widens the cone (spec §1.1: HIP ×1.5, ADS ×1.3). Derived from
+    // Movement widens the cone (HIP ×1.5, ADS ×1.3). Derived from
     // the authoritative velocity, which is also what the client's crosshair
     // reads back from the snapshot — both sides land on the same cone.
     const float moveFactor = RecoilMath::MoveFactorFromVelocity(
@@ -892,8 +892,8 @@ void MockServer::ProcessFiring()
         DamageBot(hitBot, RED_DAMAGE, /*killerId=*/0);  // local player = id 0
     }
 
-    // Record the shot result for the local player's snapshot (hitmarker,
-    // spec §6.2) — mirrors GameServer::ProcessFiring's tail. HIT_PLAYER /
+    // Record the shot result for the local player's snapshot (hitmarker)
+    // — mirrors GameServer::ProcessFiring's tail. HIT_PLAYER /
     // HIT_KILL were already written in the hit branch above; here we only
     // stamp MISS on a clean whiff, so the kill marker is never clobbered.
     // seqMod dedups the cross-tick persistent result on the client.
@@ -1254,7 +1254,7 @@ void MockServer::UpdatePlayerRespawn()
     // respawn branch) so no stale hit marker fires after revival.
     m_LastShotResult = LastShotResult::MISS;
     m_LastShotSeqMod = 0;
-    // Recoil pool reset (spec §7): shotKick never decays, so a pre-death
+    // Recoil pool reset: shotKick never decays, so a pre-death
     // accumulation must not permanently skew the WYSIWYG ray direction after
     // revival — mirrors GameServer's respawn reset.
     m_PlayerRecoil = RecoilMath::RecoilState{};
@@ -1339,7 +1339,7 @@ void MockServer::BroadcastSnapshot()
     snapshot.localPlayer = m_PlayerState;
     snapshot.localPlayerId = 0;
     snapshot.localPlayerTeam = LOCAL_PLAYER_TEAM;
-    // Recoil shot result (hitmarker, spec §6.2): the RECIPIENT's own latest
+    // Recoil shot result (hitmarker): the RECIPIENT's own latest
     // shot. Mirrors GameServer::BroadcastSnapshots — only the local player's
     // result is signaled, exactly what the hitmarker needs.
     snapshot.lastShotResult = m_LastShotResult;

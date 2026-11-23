@@ -1,5 +1,5 @@
 //=============================================================================
-// editor_gizmo.cpp — manipulators (spec §3.4, §8.2).
+// editor_gizmo.cpp — manipulators.
 //=============================================================================
 #ifdef EDITOR_ENABLED
 #include "editor_gizmo.h"

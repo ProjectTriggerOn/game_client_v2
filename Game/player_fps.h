@@ -57,7 +57,7 @@ public:
 	// Server Reconciliation (Prediction + Correction)
 	//-------------------------------------------------------------------------
 	void ApplyServerCorrection(const NetPlayerState& serverState);
-	// Hitmarker latch (spec §6.2): consumes the snapshot's lastShot* pair (see
+	// Hitmarker latch: consumes the snapshot's lastShot* pair (see
 	// ApplyLastShot in the .cpp). Called by game.cpp right after the correction.
 	void ApplyLastShot(const Snapshot& snap);
 
@@ -161,7 +161,7 @@ private:
 	double m_WeaponRPM;
 	double m_FireTimer;
 	int m_FireCounter;
-	// Hitmarker (spec §6.2): latched from the snapshot's lastShot* pair.
+	// Hitmarker: latched from the snapshot's lastShot* pair.
 	// Dedup by shot seq — the server's result is cross-tick persistent, so
 	// only the FIRST snapshot carrying a new seqMod fires the marker; later
 	// snapshots of the same result are ignored. Alpha decays at frame rate;
@@ -174,7 +174,7 @@ private:
 	// re-fire a hit until the seq wrapped).
 	bool    m_HasLatchedShot    = false;
 	uint8_t m_LastLatchedShotSeq = 0;   // dedup: seqMod of the last latched shot
-	// Damage-vignette rising-edge latch (spec §6.3): remembers the previous
+	// Damage-vignette rising-edge latch: remembers the previous
 	// snapshot's hitByPlayerId so only the 0xFF -> attacker-id transition fires
 	// the HUD flash; the falling edge just clears the latch (no animation).
 	bool m_WasHit = false;
@@ -189,7 +189,7 @@ private:
 	// the rendered view is derived from the pool.
 	void PushRecoilToCamera();
 	// Frame-accumulated monotonic clock (s) driving the recoil decay-suspend
-	// window (spec §5.1 COD burst ramp): ConsumeRound stamps m_Recoil.lastFireTime
+	// window (COD burst ramp): ConsumeRound stamps m_Recoil.lastFireTime
 	// with this, and the per-frame pool decay resumes only once m_NowSec is ≥
 	// FIRE_SUSPEND_DECAY_S past it. Frame time on purpose — NOT the snapshot/
 	// tick (reconciliation) domain.

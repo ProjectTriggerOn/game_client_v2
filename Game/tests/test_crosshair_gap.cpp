@@ -1,4 +1,4 @@
-// Standalone unit test for the dynamic crosshair inner gap (spec §6.1).
+// Standalone unit test for the dynamic crosshair inner gap.
 // Build: cl /std:c++17 /EHsc /I . Game\tests\test_crosshair_gap.cpp
 //
 // The gap is driven by Game_Draw from the shooter's recoil pool plus the

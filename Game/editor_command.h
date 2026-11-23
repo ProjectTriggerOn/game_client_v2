@@ -1,6 +1,6 @@
 #pragma once
 //=============================================================================
-// editor_command.h — undoable edit commands + LIFO stack (spec §3.5, §8.2).
+// editor_command.h — undoable edit commands + LIFO stack.
 // Index-based commands are valid under strict LIFO undo/redo (see plan notes).
 //=============================================================================
 #include <memory>

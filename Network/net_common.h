@@ -84,7 +84,7 @@ struct NetPlayerState {
   uint16_t kills;                  // Score: kills by this player
   uint16_t deaths;                 // Score: times this player died
   uint8_t  pad[2];                 // pad to 4-byte alignment (legacy 56-byte tail)
-  // ---- Recoil (COD model, spec §1.1) — appended after the legacy tail so
+  // ---- Recoil (COD model) — appended after the legacy tail so
   // every pre-existing wire offset is untouched (fireCounter stays @46,
   // deaths @52). Visual punch decays to zero; shotKick is the tiny real
   // trajectory component. Server-side integrated, broadcast here; client
@@ -180,7 +180,7 @@ constexpr uint8_t HIT_KILL   = 3;
 } // namespace LastShotResult
 
 //-----------------------------------------------------------------------------
-// RecoilConfig — COD-model recoil (spec §1.1). MIRRORED in both repos, must
+// RecoilConfig — COD-model recoil. MIRRORED in both repos, must
 // stay in sync. fireCounter is the only determinism source: pattern index =
 // (fireCounter-1) % PATTERN_LEN; no RNG. Punch is VISUAL (decays to zero);
 // shotKick is the tiny real trajectory component; bloom (spread growth) is
@@ -198,7 +198,7 @@ constexpr uint16_t PATTERN_LEN = 30;              // one mag; idx = (fireCounter
   constexpr float PUNCH_MAX_DEG = 12.0f;
   // Total aim-cone half-angle cap (deg) applied AFTER base×moveMult + bloom.
   // A full-auto dump must spread, but never beyond this — keeps spray
-  // controllable (user ruling 2026-09-02).
+  // controllable.
   constexpr float SPREAD_MAX_DEG = 1.8f;
   // Hard cap on accumulated REAL kick (deg). shotKick never decays and resets
   // only on death, so without a bound it grows for the whole life (RED

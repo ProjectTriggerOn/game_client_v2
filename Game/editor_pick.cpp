@@ -1,5 +1,5 @@
 //=============================================================================
-// editor_pick.cpp — screen<->world math (spec §3.3, §8.2).
+// editor_pick.cpp — screen<->world math.
 //=============================================================================
 #ifdef EDITOR_ENABLED
 #include "editor_pick.h"

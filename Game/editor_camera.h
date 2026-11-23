@@ -1,6 +1,6 @@
 #pragma once
 //=============================================================================
-// editor_camera.h — Maya-style orbit camera for SCENE_EDITOR (spec §8.1).
+// editor_camera.h — Maya-style orbit camera for SCENE_EDITOR.
 // State: pivot P, distance d, yaw, pitch. eye = P + dir(yaw,pitch)*d, looks at P.
 // Pure camera ops; the editor controller reads input and calls these.
 //=============================================================================

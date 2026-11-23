@@ -1,5 +1,5 @@
 //=============================================================================
-// editor_camera.cpp — orbit camera (spec §8.1).
+// editor_camera.cpp — orbit camera.
 //=============================================================================
 #ifdef EDITOR_ENABLED
 #include "editor_camera.h"

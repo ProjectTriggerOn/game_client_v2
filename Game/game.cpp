@@ -696,7 +696,7 @@ void Game_Draw()
 		constexpr float TH = 2.0f;                  // line thickness (px)
 		const bool  ads = g_PlayerFps->IsADS();
 
-		// ADS blend (spec §6.1: no arm-length pop on the ADS transition).
+		// ADS blend: no arm-length pop on the ADS transition.
 		// Game_Draw has no frame dt (its signature takes no time), so the
 		// blend converges with a fixed exponential factor — ~90% in 10 frames
 		// (≈80ms at 75Hz), frame-rate dependent but imperceptibly so. IsADS()

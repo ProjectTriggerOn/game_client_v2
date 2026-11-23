@@ -1,6 +1,6 @@
 #pragma once
 //=============================================================================
-// model_catalog.h — scan + lazy-load + cache FBX models by asset name (spec §3.2).
+// model_catalog.h — scan + lazy-load + cache FBX models by asset name.
 // Shared by the editor palette (M4) and runtime .map model resolution.
 //=============================================================================
 #include "model.h"

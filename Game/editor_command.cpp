@@ -3,7 +3,7 @@
 //=============================================================================
 #ifdef EDITOR_ENABLED
 // Includes editor_command.h -> editor_map.h -> map_io.h (std::fopen); silence
-// C4996 (promoted to error by /sdl), per the plan's global constraints.
+// C4996, which /sdl promotes to an error.
 #define _CRT_SECURE_NO_WARNINGS
 
 #include "editor_command.h"

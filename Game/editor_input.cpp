@@ -24,7 +24,7 @@ void EditorInput_BeginFrame()
     const int h = (int)Direct3D_GetBackBufferHeight();
 
     // *UI accessors: the editor runs in absolute/UI mouse mode, so the MODE_GAME
-    // slot is frozen (see the plan's Global Constraints).
+    // slot is frozen.
     const int x = MSLogger_GetXUI();
     const int y = MSLogger_GetYUI();
 

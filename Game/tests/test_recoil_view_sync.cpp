@@ -4,7 +4,7 @@
 // runs and asserts the contract on it.
 // Build: cl /std:c++17 /EHsc /I . Game\tests\test_recoil_view_sync.cpp
 //
-// THE CONTRACT (player_cam_fps.h:32-42, spec §2 WYSIWYG):
+// THE CONTRACT (player_cam_fps.h:32-42, the WYSIWYG contract):
 //   The rendered camera offset MUST equal RecoilTotalOffsets(pool) at every
 //   frame, because the server ray-casts through exactly those offsets
 //   (game_server.cpp:754, mock_server.cpp:767). Any divergence means bullets

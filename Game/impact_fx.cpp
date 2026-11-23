@@ -14,7 +14,7 @@ using namespace DirectX;
 
 namespace
 {
-	// Spark burst settings (tweakable constants, spec §3.7).
+	// Spark burst settings (tweakable constants).
 	constexpr int   SPARKS_PER_HIT = 12;
 	constexpr float SPARK_SPEED_MIN = 1.5f;
 	constexpr float SPARK_SPEED_MAX = 6.0f;

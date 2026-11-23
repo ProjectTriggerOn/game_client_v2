@@ -1,6 +1,6 @@
 #pragma once
 //=============================================================================
-// editor_gizmo.h — translate/rotate/scale manipulators (spec §3.4, §8.2).
+// editor_gizmo.h — translate/rotate/scale manipulators.
 // Screen-space axis picking + plane-projected dragging. Draws with debug lines.
 //=============================================================================
 #include <DirectXMath.h>
