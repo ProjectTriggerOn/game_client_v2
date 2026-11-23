@@ -116,7 +116,7 @@ constexpr double RELOAD_OUT_OF_AMMO_DURATION = 2.7000; // index 9 (reload_out_of
 //-----------------------------------------------------------------------------
 namespace MatchConfig {
 constexpr uint16_t SCORE_LIMIT    = 10;      // first team to this many kills wins
-constexpr float    MATCH_DURATION = 60.0f;  // seconds (5:00) time limit
+constexpr float    MATCH_DURATION = 60.0f;  // seconds (1:00) time limit
 // Match flow: a match never runs on an empty or solo server. It arms only once
 // MIN_PLAYERS are connected, holds a frozen COUNTDOWN, and only then goes live.
 constexpr size_t   MIN_PLAYERS        = 2;
