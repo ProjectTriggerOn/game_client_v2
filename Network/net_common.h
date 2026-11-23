@@ -35,7 +35,7 @@ constexpr uint32_t SPRINT = 1 << 5;
 // Server will simulate movement based on these inputs.
 //-----------------------------------------------------------------------------
 struct InputCmd {
-  uint32_t tickId;  // Target server tick for this command
+  uint32_t tickId;  // Client sim tick this was built on (server-tick domain once synced)
   float moveAxisX;  // Horizontal movement: -1.0 (A) to 1.0 (D)
   float moveAxisY;  // Forward movement: -1.0 (S) to 1.0 (W)
   float yaw;        // Camera horizontal angle (radians)

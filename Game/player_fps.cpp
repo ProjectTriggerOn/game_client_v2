@@ -810,8 +810,11 @@ void PlayerFps::ApplyServerCorrection(const NetPlayerState& serverState)
 	// RESIM: Re-simulate when error exceeds threshold
 	// HARD: Teleport for true divergence (collision bug, respawn, teleport)
 	// Use lower threshold if already correcting to avoid flickering between OK/RESIM
-	const bool wasCorrect = (m_CorrectionMode == nullptr || strcmp(m_CorrectionMode, "OK") == 0);
-	const float RESIM_THRESHOLD = wasCorrect ? 0.25f : 0.1f;  // Higher to enter, lower to stay
+	// Hysteresis: entering a correction takes 0.25 m of error, staying in one
+	// only 0.10 m, so an error hovering near a single threshold cannot flip
+	// between correcting and not correcting every snapshot.
+	const bool wasSettled = (m_CorrectionMode == nullptr || strcmp(m_CorrectionMode, "OK") == 0);
+	const float RESIM_THRESHOLD = wasSettled ? 0.25f : 0.1f;  // Higher to enter, lower to stay
 	constexpr float HARD_SNAP_THRESHOLD = 4.0f;                // Full teleport
 
 	// Calculate error between predicted and server position
@@ -927,7 +930,7 @@ void PlayerFps::ApplyServerCorrection(const NetPlayerState& serverState)
 	else
 	{
 		// ===== NO CORRECTION =====
-		// Prediction is accurate (<0.1m error)
+		// Prediction is within RESIM_THRESHOLD of the server
 		m_CorrectionMode = "OK";
 	}
 
