@@ -49,17 +49,17 @@ namespace hal
 		m_TextureHeight = texture2d_desc.Height;
 
 		if (!m_LineSpacing) {
-			m_LineSpacing = m_TextureHeight / 16.0f; // 16�������̍�����1�s�̍����Ƃ���
+			m_LineSpacing = m_TextureHeight / 16.0f; // The font texture is a 16x16 grid: one cell high is one line
 		}
 
 		if (!m_CharacterSpacing) {
-			m_CharacterSpacing = m_TextureWidth / 16.0f; // 16�������̕���1�����̕��Ƃ���
+			m_CharacterSpacing = m_TextureWidth / 16.0f; // One cell wide is one character
 		}
 
 		m_TextLines.emplace_back();
 
 		if (!m_pBlendState) {
-			// �u�����h�X�e�[�g�ݒ�
+			// Blend state
 			D3D11_BLEND_DESC blend_desc{};
 			blend_desc.RenderTarget[0].BlendEnable = TRUE;
 			blend_desc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
@@ -74,29 +74,29 @@ namespace hal
 		}
 
 		if (!m_pDepthStencilState) {
-			// �[�x�X�e���V���X�e�[�g�ݒ�
+			// Depth-stencil state
 			D3D11_DEPTH_STENCIL_DESC depth_stencil_desc{};
 			depth_stencil_desc.DepthFunc = D3D11_COMPARISON_LESS;
 			depth_stencil_desc.StencilEnable = FALSE;
-			depth_stencil_desc.DepthEnable = FALSE; // �����ɂ���
+			depth_stencil_desc.DepthEnable = FALSE; // Off
 			depth_stencil_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
 
 			m_pDevice->CreateDepthStencilState(&depth_stencil_desc, m_pDepthStencilState.GetAddressOf());
 		}
 
 		if (!m_pRasterizerState) {
-			// ���X�^���C�U�[�X�e�[�g�ݒ�
+			// Rasterizer state
 			D3D11_RASTERIZER_DESC rasterizer_desc{};
 			rasterizer_desc.FillMode = D3D11_FILL_SOLID;
 			rasterizer_desc.CullMode = D3D11_CULL_BACK;
-			rasterizer_desc.DepthClipEnable = TRUE; // �[�x�N���b�s���O�L��
+			rasterizer_desc.DepthClipEnable = TRUE; // Depth clipping on
 
 			m_pDevice->CreateRasterizerState(&rasterizer_desc, m_pRasterizerState.GetAddressOf());
 		}
 
 		if (!m_pVertexShader) {
 
-			// ���_�V�F�[�_�[�̍쐬
+			// Create the vertex shader
 			static const char* vs_text = R"(
 				float4x4 mtx;
 
@@ -130,7 +130,7 @@ namespace hal
 			D3DCompile(vs_text, strlen(vs_text), nullptr, nullptr, nullptr, "main", "vs_5_0", 0, 0, pVSBlob.GetAddressOf(), nullptr);
 			m_pDevice->CreateVertexShader(pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), nullptr, m_pVertexShader.GetAddressOf());
 
-			// ���_�V�F�[�_�[�̓��̓��C�A�E�g���`
+			// Vertex shader input layout
 			D3D11_INPUT_ELEMENT_DESC layout[] = {
 				{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT,    0,  0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 				{ "COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
@@ -138,26 +138,26 @@ namespace hal
 			};
 			UINT numElements = ARRAYSIZE(layout);
 
-			// ���̓��C�A�E�g�̍쐬
+			// Create the input layout
 			m_pDevice->CreateInputLayout(layout, numElements, pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), m_pInputLayout.GetAddressOf());
 		}
 
 		if (!m_pVSConstantBuffer) {
-			// �萔�o�b�t�@�̍쐬
+			// Create the constant buffer
 			D3D11_BUFFER_DESC constant_buffer_desc = {};
 			constant_buffer_desc.ByteWidth = sizeof(XMFLOAT4X4);
 			constant_buffer_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 
 			m_pDevice->CreateBuffer(&constant_buffer_desc, nullptr, m_pVSConstantBuffer.GetAddressOf());
 
-			// �萔�o�b�t�@�ɕϊ��s���ݒ�
+			// Write the transform into the constant buffer
 			XMFLOAT4X4 mtx;
 			XMStoreFloat4x4(&mtx, XMMatrixTranspose(XMMatrixOrthographicOffCenterLH(0.0f, (float)screenWidth, (float)screenHeight, 0.0f, 0.0f, 1.0f)));
 			m_pContext->UpdateSubresource(m_pVSConstantBuffer.Get(), 0, nullptr, &mtx, 0, 0);
 		}
 
 		if (!m_pPixelShader) {
-			// �s�N�Z���V�F�[�_�[�̍쐬
+			// Create the pixel shader
 			static const char* ps_text = R"(
 				struct PS_INPUT
 				{
@@ -170,7 +170,7 @@ namespace hal
 				float4 main(PS_INPUT psin) : SV_TARGET
 				{
 					float4 color = fontTexture.Sample(fontSampler, psin.uv);
-					return color * psin.color; // �e�N�X�`���̐F�ƒ��_�J���[��|�����킹��
+					return color * psin.color; // Texture colour times vertex colour
 				}
 			)";
 			ComPtr<ID3DBlob> pPSBlob;
@@ -179,7 +179,7 @@ namespace hal
 		}
 
 		if( !m_pSamplerState) {
-			// �T���v���[�X�e�[�g�̍쐬
+			// Create the sampler state
 			D3D11_SAMPLER_DESC sampler_desc = {};
 			sampler_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
 			sampler_desc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
@@ -194,7 +194,7 @@ namespace hal
 
 	DebugText::~DebugText()
 	{
-		// �e�N�X�`���ƃe�N�X�`���r���[����
+		// Release the texture and its view
 		if (m_pTextureView) {
 			m_pTexture->Release();
 			if(!m_pTextureView->Release()) {
@@ -205,33 +205,33 @@ namespace hal
 
 	void DebugText::SetText(const char* pText, XMFLOAT4 color)
 	{		
-		m_TextLines.back().strings.emplace_back(color); // �V�����������ǉ�
+		m_TextLines.back().strings.emplace_back(color); // Start a new string
 
 		for(; *pText; pText++) {
 	
 			if (*pText == '\n') {
-				m_TextLines.emplace_back(); // �s�𑝂₷
-				 m_TextLines.back().strings.emplace_back(color); // �V�����������ǉ�
+				m_TextLines.emplace_back(); // Add a line
+				 m_TextLines.back().strings.emplace_back(color); // Start a new string
 			}
 			else if (*pText == '\r') {
-				// ���s�R�[�h '\r' �͖���
+				// Ignore '\r'
 			}
 			else if (*pText == '\t') {
 				while (m_TextLines.back().characterCount % 4 != 0) {
 					if (m_MaxCharactersPerLine && m_TextLines.back().characterCount >= m_MaxCharactersPerLine) {
-						m_TextLines.emplace_back(); // �s�𑝂₷
-						 m_TextLines.back().strings.emplace_back(color); // �V�����������ǉ�
+						m_TextLines.emplace_back(); // Add a line
+						 m_TextLines.back().strings.emplace_back(color); // Start a new string
 						break;
 					}
-					m_TextLines.back().strings.back().characters += ' '; // �^�u�̓X�y�[�X�ɒu������
+					m_TextLines.back().strings.back().characters += ' '; // A tab becomes a space
 					m_TextLines.back().characterCount++;
 					m_TextLines.back().spaceCount++;
 				}
 			}
 			else {
 				if (m_MaxCharactersPerLine && m_TextLines.back().characterCount >= m_MaxCharactersPerLine) {
-					m_TextLines.emplace_back(); // �s�𑝂₷
-					m_TextLines.back().strings.emplace_back(color); // �V�����������ǉ�
+					m_TextLines.emplace_back(); // Add a line
+					m_TextLines.back().strings.emplace_back(color); // Start a new string
 				}
 
 				if (*pText >= ' ' && *pText <= '~') {
@@ -240,7 +240,7 @@ namespace hal
 					m_TextLines.back().characterCount++;
 				}
 				else {
-					m_TextLines.back().strings.back().characters += '?'; // �s���ȕ����� '?' �Œu������
+					m_TextLines.back().strings.back().characters += '?'; // Anything unprintable becomes '?'
 					m_CharacterCount++;
 					m_TextLines.back().characterCount++;
 				}
@@ -251,34 +251,34 @@ namespace hal
 
 		while(m_MaxLine && m_TextLines.size() + last_line_count > m_MaxLine) {
 			ULONG remove_character_count = m_TextLines.front().characterCount - m_TextLines.front().spaceCount;
-			m_CharacterCount -= remove_character_count; // �Â��s�̕���������炷
-			m_TextLines.pop_front(); // �Â��s��폜
+			m_CharacterCount -= remove_character_count; // Drop the oldest line's characters from the count
+			m_TextLines.pop_front(); // Drop the oldest line
 		}
 	}
 
 	void DebugText::Draw()
 	{
 		if( !m_CharacterCount){
-			return; // �`�悷�镶�����Ȃ��ꍇ�͉�����Ȃ�
+			return; // Nothing to draw
 		}
 
 		if (!m_pVertexBuffer || m_CharacterCount > m_BufferSourceCharacterCount) {
 			createBuffer(m_CharacterCount);
 		}
 
-		// ���_�o�b�t�@�ƒ��_�C���f�b�N�X����b�N����
+		// Map the vertex and index buffers
 		D3D11_MAPPED_SUBRESOURCE msr;
 		m_pContext->Map(m_pVertexBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &msr);
 
-		// ���_�o�b�t�@�ւ̉��z�|�C���^��擾
+		// Pointer into the vertex buffer
 		Vertex* v = (Vertex*)msr.pData;
 
 		m_pContext->Map(m_pIndexBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &msr);
 
-		// �C���f�b�N�X�o�b�t�@�ւ̉��z�|�C���^��擾
+		// Pointer into the index buffer
 		WORD* indices = (WORD*)msr.pData;
 
-		// ���_�����������
+		// Write the vertices
 		UINT lineCount = 0;
 		WORD characterCount = 0;
 		const float characterWidth = m_TextureWidth / 16.0f;
@@ -338,60 +338,60 @@ namespace hal
 			lineCount++;
 		}
 
-		// ���_�o�b�t�@�ƒ��_�C���f�b�N�X�̃��b�N����
+		// Unmap the vertex and index buffers
 		m_pContext->Unmap(m_pVertexBuffer.Get(), 0);
 		m_pContext->Unmap(m_pIndexBuffer.Get(), 0);
 
-		// ���_�o�b�t�@��`��p�C�v���C���ɐݒ�
+		// Bind the vertex buffer
 		UINT stride = sizeof(Vertex);
 		UINT offset = 0;
 		m_pContext->IASetVertexBuffers(0, 1, m_pVertexBuffer.GetAddressOf(), &stride, &offset);
 
-		// �C���f�b�N�X�o�b�t�@��`��p�C�v���C���ɐݒ�
+		// Bind the index buffer
 		m_pContext->IASetIndexBuffer(m_pIndexBuffer.Get(), DXGI_FORMAT_R16_UINT, 0);
 		
-		// ���_�V�F�[�_�[��`��p�C�v���C���ɐݒ�
+		// Bind the vertex shader
 		m_pContext->VSSetShader(m_pVertexShader.Get(), nullptr, 0);
 
-		// �萔�o�b�t�@��`��p�C�v���C���ɐݒ�
+		// Bind the constant buffer
 		m_pContext->VSSetConstantBuffers(0, 1, m_pVSConstantBuffer.GetAddressOf());
 
-		// ���̓��C�A�E�g��`��p�C�v���C���ɐݒ�
+		// Bind the input layout
 		m_pContext->IASetInputLayout(m_pInputLayout.Get());
 
-		// �s�N�Z���V�F�[�_�[�ƃe�N�X�`���ƃT���v���[�X�e�[�g��`��p�C�v���C���ɐݒ�
+		// Bind the pixel shader, texture and sampler
 		m_pContext->PSSetShader(m_pPixelShader.Get(), nullptr, 0);
 		m_pContext->PSSetShaderResources(0, 1, &m_pTextureView);
 		m_pContext->PSSetSamplers(0, 1, m_pSamplerState.GetAddressOf());
 
-		ComPtr<ID3D11BlendState> pPreviousBlendState; // �ݒ�O�̃u�����h�X�e�[�g
+		ComPtr<ID3D11BlendState> pPreviousBlendState; // Blend state before this call
 		float previous_blend_factor[4];
 		UINT previous_sample_mask;
 		m_pContext->OMGetBlendState(pPreviousBlendState.GetAddressOf(), previous_blend_factor, &previous_sample_mask);
 
-		// �u�����h�X�e�[�g��ݒ�
+		// Set the blend state
 		float blend_factor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 		m_pContext->OMSetBlendState(m_pBlendState.Get(), blend_factor, 0xffffffff);
 
-		ComPtr<ID3D11DepthStencilState> pPreviousDepthStencilState; // �ݒ�O�̐[�x�X�e���V���X�e�[�g
+		ComPtr<ID3D11DepthStencilState> pPreviousDepthStencilState; // Depth-stencil state before this call
 		UINT previous_stencil_ref = 0;
 		m_pContext->OMGetDepthStencilState(pPreviousDepthStencilState.GetAddressOf(), &previous_stencil_ref);
 
-		// �[�x�X�e���V���X�e�[�g��ݒ� (�[�x������)
+		// Set the depth-stencil state (depth test off)
 		m_pContext->OMSetDepthStencilState(m_pDepthStencilState.Get(), 0);
 
-		// ���X�^���C�U�[�X�e�[�g��ݒ�
-		ComPtr<ID3D11RasterizerState> pPreviousRasterizerState; // �ݒ�O�̃��X�^���C�U�[�X�e�[�g
+		// Set the rasterizer state
+		ComPtr<ID3D11RasterizerState> pPreviousRasterizerState; // Rasterizer state before this call
 		m_pContext->RSGetState(pPreviousRasterizerState.GetAddressOf());
 		m_pContext->RSSetState(m_pRasterizerState.Get());
 
-		// �v���~�e�B�u�g�|���W�ݒ�
+		// Primitive topology
 		m_pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-		// �|���S���`�施�ߔ��s
+		// Draw
 		m_pContext->DrawIndexed(m_CharacterCount * 6, 0, 0);
 
-		// �`���A�u�����h�X�e�[�g�Ɛ[�x�X�e���V���X�e�[�g�ƃ��X�^���C�U�[�X�e�[�g����ɖ߂�
+		// Restore the blend, depth-stencil and rasterizer states
 		m_pContext->OMSetBlendState(pPreviousBlendState.Get(), previous_blend_factor, 0xffffffff);
 		m_pContext->OMSetDepthStencilState(pPreviousDepthStencilState.Get(), previous_stencil_ref);
 		m_pContext->RSSetState(pPreviousRasterizerState.Get());
@@ -400,13 +400,13 @@ namespace hal
 	void DebugText::Clear()
 	{
 		m_TextLines.clear();
-		m_TextLines.emplace_back(); // �ŏ��̍s��ēx�ǉ�
+		m_TextLines.emplace_back(); // Re-add the first line
 		m_CharacterCount = 0;
 	}
 
 	void DebugText::createBuffer(ULONG characterCount)
 	{
-		// ���_�o�b�t�@����
+		// Release the vertex buffer
 		D3D11_BUFFER_DESC bd = {};
 		bd.Usage = D3D11_USAGE_DYNAMIC;
 		bd.ByteWidth = sizeof(Vertex) * characterCount * 4;
@@ -415,7 +415,7 @@ namespace hal
 
 		m_pDevice->CreateBuffer(&bd, NULL, m_pVertexBuffer.ReleaseAndGetAddressOf());
 
-		// �C���f�b�N�X�o�b�t�@����
+		// Release the index buffer
 		bd.ByteWidth = sizeof(WORD) * characterCount * 6;
 		bd.BindFlags = D3D11_BIND_INDEX_BUFFER;
 

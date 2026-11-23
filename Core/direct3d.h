@@ -6,15 +6,15 @@
 
 
 
-// �Z�[�t�����[�X�}�N��
+// Safe-release macro
 #define SAFE_RELEASE(o) if (o) { (o)->Release(); o = NULL; }
 
 
-bool Direct3D_Initialize(HWND hWnd); // Direct3D�̏�����
-void Direct3D_Finalize(); // Direct3D�̏I������
+bool Direct3D_Initialize(HWND hWnd); // Initialize Direct3D
+void Direct3D_Finalize(); // Shut down Direct3D
 
-void Direct3D_Clear(); // �o�b�N�o�b�t�@�̃N���A
-void Direct3D_Present(); // �o�b�N�o�b�t�@�̕\��
+void Direct3D_Clear(); // Clear the back buffer
+void Direct3D_Present(); // Present the back buffer
 
 unsigned int Direct3D_GetBackBufferWidth();// バックバッファの幅を取得
 unsigned int Direct3D_GetBackBufferHeight(); // バックバッファの幅と高さを取得
