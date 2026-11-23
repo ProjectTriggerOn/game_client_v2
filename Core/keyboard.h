@@ -1,11 +1,11 @@
 //--------------------------------------------------------------------------------------
 // File: Keyboard.h
 //
-// �L�[�{�[�h���W���[��
+// Keyboard module
 //
 //--------------------------------------------------------------------------------------
 // 2020/06/07
-//     DirectXTK���A�Ȃ񂿂����C����p�ɃV�F�C�v�A�b�v����
+//    Adapted from DirectXTK and reshaped into a C-style API
 //
 // Licensed under the MIT License.
 //
@@ -203,7 +203,7 @@ typedef enum Keyboard_Keys_tag : unsigned char
 } Keyboard_Keys;
 
 
-// �L�[�{�[�h��ԍ\����
+// Keyboard state
 typedef struct Keyboard_State_tag
 {
     bool Reserved0 : 8;
@@ -393,24 +393,24 @@ typedef struct Keyboard_State_tag
 } Keyboard_State;
 
 
-// �L�[�{�[�h���W���[���̏�����
+// Initialize the keyboard module
 void Keyboard_Initialize(void);
 
-// �L�[�{�[�h�̌��݂̃L�[���̏�Ԃ�擾����
+// Is the given key currently held down?
 bool Keyboard_IsKeyDown(Keyboard_Keys key);
 bool Keyboard_IsKeyUp(Keyboard_Keys key);
 
-// �L�[�{�[�h�̌��݂̏�Ԃ�擾����
+// Get the current keyboard state
 const Keyboard_State* Keyboard_GetState(void);
 
-// �L�[�{�[�h�̏�Ԃ���L�[���̏�Ԃ�擾����
+// Is the given key down in the given keyboard state?
 bool Keyboard_IsKeyDown(Keyboard_Keys key, const Keyboard_State* pState);
 bool Keyboard_IsKeyUp(Keyboard_Keys key, const Keyboard_State* pState);
 
-// �L�[�{�[�h�̏�Ԃ���Z�b�g����
+// Reset the keyboard state
 void Keyboard_Reset(void);
 
-// �L�[�{�[�h����̂��߂̃E�H���ǂ����b�Z�[�W�v���V�[�W���t�b�N�֐�
+// Window-procedure hook that feeds keyboard messages to this module
 void Keyboard_ProcessMessage(UINT message, WPARAM wParam, LPARAM lParam);
 
 

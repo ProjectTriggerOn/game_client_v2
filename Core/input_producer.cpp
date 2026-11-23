@@ -31,7 +31,7 @@ static constexpr uint32_t EDGE_BUTTONS = InputButtons::RELOAD | InputButtons::IN
 
 InputProducer::InputProducer()
     : m_pNetwork(nullptr)
-    , m_TargetTick(0)
+    , m_SentCount(0)
     , m_MoveAxisX(0.0f)
     , m_MoveAxisY(0.0f)
     , m_Yaw(0.0f)
@@ -47,7 +47,7 @@ InputProducer::InputProducer()
 void InputProducer::Initialize(INetwork* pNetwork)
 {
     m_pNetwork = pNetwork;
-    m_TargetTick = 0;
+    m_SentCount = 0;
     m_MoveAxisX = 0.0f;
     m_MoveAxisY = 0.0f;
     m_Yaw = 0.0f;
@@ -110,8 +110,8 @@ void InputProducer::Update(double deltaTime)
         (cmd.buttons & InputButtons::JUMP))
     {
         DebugLog_Printf("JUMP",
-            "SENT targetTick=%u cmdTick=%u buttons=0x%02X JumpPending=%d",
-            m_TargetTick, cmd.tickId, cmd.buttons, (int)m_JumpPending);
+            "SENT sent=%u cmdTick=%u buttons=0x%02X JumpPending=%d",
+            m_SentCount, cmd.tickId, cmd.buttons, (int)m_JumpPending);
     }
 
     // 4. Clear sticky jump only when server confirms we're airborne
@@ -126,15 +126,13 @@ void InputProducer::Update(double deltaTime)
             if (DebugLog_IsEnabled() && DebugLog_LogJumpEvents())
             {
                 DebugLog_Printf("JUMP",
-                    "CONSUMED_BY_SERVER targetTick=%u serverFlags=0x%X",
-                    m_TargetTick, m_LastServerState.stateFlags);
+                    "CONSUMED_BY_SERVER sent=%u serverFlags=0x%X",
+                    m_SentCount, m_LastServerState.stateFlags);
             }
         }
     }
 
-    // Increment target tick for next frame
-    // (Server will process commands in order)
-    m_TargetTick++;
+    m_SentCount++;
 }
 
 //-----------------------------------------------------------------------------
@@ -193,7 +191,7 @@ void InputProducer::SampleInput()
         m_JumpPending = true;
         if (DebugLog_IsEnabled() && DebugLog_LogJumpEvents())
         {
-            DebugLog_Printf("JUMP", "SPACE_TRIG targetTick=%u", m_TargetTick);
+            DebugLog_Printf("JUMP", "SPACE_TRIG sent=%u", m_SentCount);
         }
     }
     if (m_JumpPending)

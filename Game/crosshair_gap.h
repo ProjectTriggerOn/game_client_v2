@@ -1,5 +1,5 @@
 //=============================================================================
-// crosshair_gap.h — dynamic crosshair inner-gap math (spec §6.1).
+// crosshair_gap.h — dynamic crosshair inner-gap math.
 // Client-only, pure functions, no state — extracted from Game_Draw so the
 // gap behaviour is unit-testable (Game/tests/test_crosshair_gap.cpp).
 // NOT mirrored to game_server: the server has no crosshair.
@@ -22,7 +22,7 @@ constexpr float GAP_BASE_PX = 4.0f;
 // Visual cap applied AFTER smoothing — the punch pulse alone is ~470px at the
 // 12° PUNCH_MAX (0.21 rad × 2250px/rad), which shoves the arms off-screen.
 // Truncating a punch pulse at the cap is accepted: the visual bound wins, the
-// crosshair never leaves the screen area (user ruling 2026-09-02).
+// crosshair never leaves the screen area.
 constexpr float GAP_MAX_PX = 36.0f;
 
 //-----------------------------------------------------------------------------

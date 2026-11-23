@@ -42,7 +42,7 @@ struct SoundDef {
 
 // Returns false if the file is missing or unparseable.  Individual entries that
 // fail validation are left invalid (empty files) — the rest still load, because
-// a broken sound must never take the game down (spec §10).
+// a broken sound must never take the game down.
 bool AudioCatalog_Load(const char* tomlPath);
 
 const SoundDef& AudioCatalog_Get(SoundId id);

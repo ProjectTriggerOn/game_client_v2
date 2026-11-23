@@ -201,12 +201,12 @@ private:
     DirectX::XMFLOAT3 m_PlayerSpawnPos = { -7.0f, 0.0f, -7.0f };
     float             m_PlayerSpawnYaw = 0.0f;
 
-    // Recoil (COD model, spec §4.3): server-authoritative pool, mirroring
+    // Recoil (COD model): server-authoritative pool, mirroring
     // GameServer::PlayerData.recoil. Advanced on shot in ProcessFiring,
     // decayed once per tick, broadcast into m_PlayerState.* for the snapshot.
     RecoilMath::RecoilState m_PlayerRecoil{};
 
-    // Last shot result for Snapshot.lastShot* (hitmarker, spec §6.2). Mirrors
+    // Last shot result for Snapshot.lastShot* (hitmarker). Mirrors
     // GameServer::PlayerData::lastShot* — cross-tick persistent until the next
     // shot; the client dedups by seqMod.
     uint8_t m_LastShotResult = LastShotResult::MISS;

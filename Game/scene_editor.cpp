@@ -294,7 +294,7 @@ void SceneEditor_Update([[maybe_unused]] double elapsed_time)
     // Decide who owns the mouse this frame before anything reads it.
     EditorInput_BeginFrame();
 
-    // Frame-to-frame mouse delta (cursor stays absolute+visible; see spec §8.1).
+    // Frame-to-frame mouse delta (cursor stays absolute+visible).
     // The editor runs in MOUSE_POSITION_MODE_ABSOLUTE (MousePolicy_Apply forces
     // every non-SCENE_GAME scene into absolute/UI mode), so the cursor lives in
     // MSLogger's MODE_UI slot — the MODE_GAME x/y are zeroed each frame. Read the

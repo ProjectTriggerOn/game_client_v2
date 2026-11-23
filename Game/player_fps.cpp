@@ -13,7 +13,7 @@
 #include "ms_logger.h"
 #include "reticle.h"
 #include "shader_3d_ani.h"
-#include "../UI/ui_manager.h"   // UI::PushDamageFlash (spec §6.3)
+#include "../UI/ui_manager.h"   // UI::PushDamageFlash
 
 #include <cassert>
 #include <cmath>
@@ -201,7 +201,7 @@ void PlayerFps::ConsumeRound()
 		Audio_PlayOneShot(SoundId::WeaponReloadEmpty);
 	}
 
-	// ---- Recoil prediction (COD model, spec §5.1) ------------------------
+	// ---- Recoil prediction (COD model) -----------------------------------
 	// Same pure table as the server: fireCounter was just incremented, so
 	// (fireCounter-1) is this shot's pattern index. dt=0 — the per-frame
 	// decay in Update owns recovery. The push makes this shot's kick visible
@@ -219,7 +219,7 @@ void PlayerFps::ConsumeRound()
 // PushRecoilToCamera — hand the camera the pool's absolute view offset.
 // The single point where the rendered view is derived from the recoil pool,
 // so the rendered angles and the server's ray direction cannot diverge
-// (spec §2 WYSIWYG; both use RecoilTotalOffsets on the same state).
+// (the WYSIWYG contract; both use RecoilTotalOffsets on the same state).
 //-----------------------------------------------------------------------------
 void PlayerFps::PushRecoilToCamera()
 {
@@ -241,13 +241,13 @@ void PlayerFps::PushRecoilToCamera()
 void PlayerFps::Update(double elapsed_time)
 {
 	const float frameDt = static_cast<float>(elapsed_time);
-	// Monotonic clock for the recoil decay-suspend window (spec §5.1): must be
+	// Monotonic clock for the recoil decay-suspend window: must be
 	// advanced before the fire sites below so a shot stamped this frame uses a
 	// nowSec at/after the pool-decay call above it.
 	m_NowSec += elapsed_time;
 
 	// Recoil pool decay at frame rate — SAME exponential formula the server
-	// ticks with (spec §5.1/§5.2: one truth source). The exp(-decayHz*dt)
+	// ticks with (one source of truth). The exp(-decayHz*dt)
 	// recovery is applied ONLY when nowSec is at least FIRE_SUSPEND_DECAY_S past
 	// the last shot (see RecoilAdvance) — punch/bloom accumulate for a whole
 	// burst, then return to zero once the trigger is released.
@@ -262,7 +262,7 @@ void PlayerFps::Update(double elapsed_time)
 	                          frameDt, m_NowSec);
 	PushRecoilToCamera();
 
-	// Hitmarker fade (~140ms linear, spec §6.2 — bolder marker, longer read).
+	// Hitmarker fade (~140ms linear — bolder marker, longer read).
 	constexpr float HITMARKER_LIFE = 0.14f;
 	if (m_HitmarkerAlpha > 0.0f)
 		m_HitmarkerAlpha = std::fmax(0.0f, m_HitmarkerAlpha - frameDt / HITMARKER_LIFE);
@@ -714,7 +714,7 @@ void PlayerFps::ApplyServerCorrection(const NetPlayerState& serverState)
 	if (serverState.tickId <= m_LastServerTick && m_LastServerTick != 0)
 		return;
 
-	// ---- Recoil reconciliation (spec §5.2) -------------------------------
+	// ---- Recoil reconciliation -------------------------------------------
 	// Soft-correct small punch drift toward the server's integrated value;
 	// hard-snap on gross divergence (packet loss / prediction blowup).
 	// fireCounter regression (server behind us) resets the pool — those
@@ -745,7 +745,7 @@ void PlayerFps::ApplyServerCorrection(const NetPlayerState& serverState)
 		m_Recoil.shotKickPitch = serverState.shotKickPitch;  // authoritative acc.
 
 		// Push the reconciled pool to the camera: a hard reset must be visible
-		// immediately, or a stale punch lingers until the next shot (spec §5.2).
+		// immediately, or a stale punch lingers until the next shot.
 		PushRecoilToCamera();
 	}
 
@@ -810,8 +810,11 @@ void PlayerFps::ApplyServerCorrection(const NetPlayerState& serverState)
 	// RESIM: Re-simulate when error exceeds threshold
 	// HARD: Teleport for true divergence (collision bug, respawn, teleport)
 	// Use lower threshold if already correcting to avoid flickering between OK/RESIM
-	const bool wasCorrect = (m_CorrectionMode == nullptr || strcmp(m_CorrectionMode, "OK") == 0);
-	const float RESIM_THRESHOLD = wasCorrect ? 0.25f : 0.1f;  // Higher to enter, lower to stay
+	// Hysteresis: entering a correction takes 0.25 m of error, staying in one
+	// only 0.10 m, so an error hovering near a single threshold cannot flip
+	// between correcting and not correcting every snapshot.
+	const bool wasSettled = (m_CorrectionMode == nullptr || strcmp(m_CorrectionMode, "OK") == 0);
+	const float RESIM_THRESHOLD = wasSettled ? 0.25f : 0.1f;  // Higher to enter, lower to stay
 	constexpr float HARD_SNAP_THRESHOLD = 4.0f;                // Full teleport
 
 	// Calculate error between predicted and server position
@@ -927,7 +930,7 @@ void PlayerFps::ApplyServerCorrection(const NetPlayerState& serverState)
 	else
 	{
 		// ===== NO CORRECTION =====
-		// Prediction is accurate (<0.1m error)
+		// Prediction is within RESIM_THRESHOLD of the server
 		m_CorrectionMode = "OK";
 	}
 
@@ -1048,7 +1051,7 @@ void PlayerFps::ApplyServerCorrection(const NetPlayerState& serverState)
 		m_AmmoReserve = serverState.ammoReserve;
 	}
 
-	// ---- Damage vignette pulse (spec §6.3) --------------------------------
+	// ---- Damage vignette pulse --------------------------------------------
 	// hitByPlayerId rising edge (0xFF -> attacker id) fires the HUD flash.
 	// Push is fire-and-forget; the DOM owns the decay. Falling edge just
 	// clears the latch — no animation.
@@ -1061,7 +1064,7 @@ void PlayerFps::ApplyServerCorrection(const NetPlayerState& serverState)
 }
 
 //=============================================================================
-// ApplyLastShot — hitmarker latch (spec §6.2).
+// ApplyLastShot — hitmarker latch.
 //
 // The snapshot carries the result of this player's LATEST resolved shot tagged
 // with its fireCounter low byte. The server's result is cross-tick persistent

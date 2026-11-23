@@ -1,11 +1,11 @@
 //--------------------------------------------------------------------------------------
 // File: mouse.h
 //
-// �֗��ȃ}�E�X���W���[��
+// Mouse module
 //
 //--------------------------------------------------------------------------------------
 // 2020/02/11
-//     DirectXTK���A�Ȃ񂿂����C����p�ɃV�F�C�v�A�b�v����
+//    Adapted from DirectXTK and reshaped into a C-style API
 //
 // Licensed under the MIT License.
 //
@@ -21,15 +21,15 @@
 #include <memory>
 
 
-// �}�E�X���[�h
+// Mouse position mode
 typedef enum Mouse_PositionMode_tag
 {
-    MOUSE_POSITION_MODE_ABSOLUTE, // ��΍��W���[�h
-    MOUSE_POSITION_MODE_RELATIVE, // ���΍��W���[�h
+    MOUSE_POSITION_MODE_ABSOLUTE, // Absolute coordinates
+    MOUSE_POSITION_MODE_RELATIVE, // Relative coordinates
 } Mouse_PositionMode;
 
 
-// �}�E�X��ԍ\����
+// Mouse state
 typedef struct MouseState_tag
 {
     bool leftButton;
@@ -44,34 +44,34 @@ typedef struct MouseState_tag
 } Mouse_State;
 
 
-// �}�E�X���W���[���̏�����
+// Initialize the mouse module
 void Mouse_Initialize(HWND window);
 
-// �}�E�X���W���[���̏I������
+// Shut down the mouse module
 void Mouse_Finalize(void);
 
-// �}�E�X�̏�Ԃ�擾����
+// Get the mouse state
 void Mouse_GetState(Mouse_State* pState);
 
-// �ݐς����}�E�X�X�N���[���z�C�[���l����Z�b�g����
+// Reset the accumulated scroll-wheel value
 void Mouse_ResetScrollWheelValue(void);
 
-// �}�E�X�̃|�W�V�������[�h��ݒ肷��i�f�t�H���g�͐�΍��W���[�h�j
+// Set the position mode (absolute by default)
 void Mouse_SetMode(Mouse_PositionMode mode);
 
 // Get current position mode (used by UI input tap to flag relative-mode mouse events)
 Mouse_PositionMode Mouse_GetMode(void);
 
-// �}�E�X�̐ڑ�����o����
+// Is a mouse connected?
 bool Mouse_IsConnected(void);
 
-// �}�E�X�J�[�\�����\������Ă��邩�m�F����
+// Is the mouse cursor visible?
 bool Mouse_IsVisible(void);
 
-// �}�E�X�J�[�\���\����ݒ肷��
+// Show or hide the mouse cursor
 void Mouse_SetVisible(bool visible);
 
-// �}�E�X����̂��߂̃E�B���h�E���b�Z�[�W�v���V�[�W���t�b�N�֐�
+// Window-procedure hook that feeds mouse messages to this module
 void Mouse_ProcessMessage(UINT message, WPARAM wParam, LPARAM lParam);
 
 // Recompute the cursor clip rect against the current window client area.
@@ -79,13 +79,13 @@ void Mouse_ProcessMessage(UINT message, WPARAM wParam, LPARAM lParam);
 void Mouse_RefreshClipRect(void);
 
 
-// �������@
+// Usage
 //
-// �Ώۂ̃E�B���h�E���������ꂽ�炻�̃E�B���h�E�n���h��������ɏ������֐���Ă�
+// Once the target window exists, call the initialize function with its handle
 //
 // Mouse_Initialize(hwnd);
 //
-// �E�B���h�E���b�Z�[�W�v���V�[�W������}�E�X����p�t�b�N�֐���Ăяo��
+// Call the mouse hook from the window procedure
 //
 // LResult CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 // {

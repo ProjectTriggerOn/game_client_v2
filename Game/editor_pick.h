@@ -1,6 +1,6 @@
 #pragma once
 //=============================================================================
-// editor_pick.h — screen<->world math for the editor (spec §3.3, §8.2).
+// editor_pick.h — screen<->world math for the editor.
 // Reuses collision.h Ray/AABB. Left-handed, row-vector matrices (DirectXMath).
 //=============================================================================
 #include <DirectXMath.h>

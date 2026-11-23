@@ -6,6 +6,8 @@
 
 Windows game client for TriggerOn — a multiplayer networked FPS built with Direct3D 11 and Win32, with an in-game UI (menus, HUD, settings) authored in HTML/CSS/JS and rendered through [Ultralight](https://ultralig.ht/).
 
+The authoritative server is [game_server](https://github.com/ProjectTriggerOn/game_server). The two share the wire protocol, so they are released together.
+
 ## Features
 
 - **Direct3D 11** rendering with HLSL shaders (lit, unlit, skeletal animation)

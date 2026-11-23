@@ -1,11 +1,11 @@
 //--------------------------------------------------------------------------------------
 // File: mouse.cpp
 //
-// �֗��ȃ}�E�X���W���[��
+// Mouse module
 //
 //--------------------------------------------------------------------------------------
 // 2020/02/11
-//     DirectXTK���A�Ȃ񂿂����C����p�ɃV�F�C�v�A�b�v����
+//    Adapted from DirectXTK and reshaped into a C-style API
 //
 // Licensed under the MIT License.
 //
@@ -187,7 +187,7 @@ void Mouse_ProcessMessage(UINT message, WPARAM wParam, LPARAM lParam)
         point.x = gLastX;
         point.y = gLastY;
 
-        // �����[�g�f�B�X�N�g�b�v�ɑΉ����邽�߂Ɉړ��O�ɃJ�[�\����\������
+        // Show the cursor before moving it, so Remote Desktop keeps working
         ShowCursor(TRUE);
 
         if (MapWindowPoints(gWindow, nullptr, &point, 1)) {
@@ -259,7 +259,7 @@ void Mouse_ProcessMessage(UINT message, WPARAM wParam, LPARAM lParam)
                 }
                 else if (raw.data.mouse.usFlags & MOUSE_VIRTUAL_DESKTOP) {
 
-                    // �����[�g�f�B�X�N�g�b�v�ȂǂɑΉ�
+                    // Covers Remote Desktop and multi-monitor setups
                     const int width = GetSystemMetrics(SM_CXVIRTUALSCREEN);
                     const int height = GetSystemMetrics(SM_CYVIRTUALSCREEN);
 
@@ -351,13 +351,13 @@ void Mouse_ProcessMessage(UINT message, WPARAM wParam, LPARAM lParam)
         break;
 
     default:
-        // �}�E�X�ɑ΂��郁�b�Z�[�W�͖��������c
+        // Not a mouse message: nothing to do
         return;
     }
 
     if (gMode == MOUSE_POSITION_MODE_ABSOLUTE) {
 
-        // ���ׂẴ}�E�X���b�Z�[�W�ɑ΂��ĐV�������W��擾����
+        // Every mouse message carries the new cursor position
         int xPos = GET_X_LPARAM(lParam);
         int yPos = GET_Y_LPARAM(lParam);
 

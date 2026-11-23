@@ -32,7 +32,7 @@ float PlayerCamFps_GetSensitivity();
 // Recoil punch (COD model). The camera does NOT integrate its own copy: it
 // stores the absolute offset it is handed, which PlayerFps pushes every frame
 // from RecoilTotalOffsets(pool) — the same value the server ray-casts through
-// (spec §2 WYSIWYG). Pitch is positive up, radians.
+// (the WYSIWYG contract). Pitch is positive up, radians.
 //
 // It used to accumulate per-shot deltas and run its own exp(-decayHz*dt)
 // recovery. That decayed the WHOLE accumulator while the pool decays only

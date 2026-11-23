@@ -42,8 +42,6 @@ public:
     //-------------------------------------------------------------------------
     // Target tick for synchronization
     //-------------------------------------------------------------------------
-    void SetTargetTick(uint32_t tick) { m_TargetTick = tick; }
-    uint32_t GetTargetTick() const { return m_TargetTick; }
 
 private:
     //-------------------------------------------------------------------------
@@ -59,7 +57,7 @@ private:
 private:
     INetwork* m_pNetwork;
     
-    uint32_t m_TargetTick;      // Next server tick to target
+    uint32_t m_SentCount;       // Commands sent so far (debug log only)
     
     // Cached input state
     float m_MoveAxisX;          // -1 to 1 (A/D)

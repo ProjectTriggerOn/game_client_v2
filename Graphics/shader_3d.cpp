@@ -31,12 +31,12 @@ bool Shader_3D_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 		return false;
 	}
 
-	// �f�o�C�X�ƃf�o�C�X�R���e�L�X�g�̕ۑ�
+	// Keep the device and device context
 	g_pDevice = pDevice;
 	g_pContext = pContext;
 
 
-	// ���O�R���p�C���ςݒ��_�V�F�[�_�[�̓ǂݍ���
+	// Load the precompiled vertex shader
 	std::ifstream ifs_vs("resource/shader/shader_vertex_3d.cso", std::ios::binary);
 
 	if (!ifs_vs) {
@@ -44,18 +44,18 @@ bool Shader_3D_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
 		return false;
 	}
 
-	// �t�@�C���T�C�Y��擾
-	ifs_vs.seekg(0, std::ios::end); // �t�@�C���|�C���^�𖖔��Ɉړ�
-	std::streamsize filesize = ifs_vs.tellg(); // �t�@�C���|�C���^�̈ʒu��擾�i�܂�t�@�C���T�C�Y�j
-	ifs_vs.seekg(0, std::ios::beg); // �t�@�C���|�C���^��擪�ɖ߂�
+	// Get the file size
+	ifs_vs.seekg(0, std::ios::end); // Seek to the end
+	std::streamsize filesize = ifs_vs.tellg(); // The position there is the file size
+	ifs_vs.seekg(0, std::ios::beg); // Seek back to the start
 
-	// �o�C�i���f�[�^��i�[���邽�߂̃o�b�t�@��m��
+	// Allocate a buffer for the shader binary
 	unsigned char* vsbinary_pointer = new unsigned char[filesize];
 	
-	ifs_vs.read((char*)vsbinary_pointer, filesize); // �o�C�i���f�[�^��ǂݍ���
-	ifs_vs.close(); // �t�@�C�������
+	ifs_vs.read((char*)vsbinary_pointer, filesize); // Read the shader binary
+	ifs_vs.close(); // Close the file
 
-	// ���_�V�F�[�_�[�̍쐬
+	// Create the vertex shader
 	hr = g_pDevice->CreateVertexShader(vsbinary_pointer, filesize, nullptr, &g_pVertexShader);
 
 	if (FAILED(hr)) {
@@ -73,12 +73,12 @@ bool Shader_3D_Initialize(ID3D11Device* pDevice, ID3D11DeviceContext* pContext)
         { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,          0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	};
 
-	UINT num_elements = ARRAYSIZE(layout); // �z��̗v�f����擾
+	UINT num_elements = ARRAYSIZE(layout); // Number of elements in the layout
 
 	//頂点レイアウトの作成
 	hr = g_pDevice->CreateInputLayout(layout, num_elements, vsbinary_pointer, filesize, &g_pInputLayout);
 
-	delete[] vsbinary_pointer; // �o�C�i���f�[�^�̃o�b�t�@����
+	delete[] vsbinary_pointer; // Free the binary buffer
 
 	if (FAILED(hr)) {
 		hal::dout << "Shader_3D_Initialize() : failed to create the input layout" << std::endl;

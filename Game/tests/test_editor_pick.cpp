@@ -1,7 +1,7 @@
 //=============================================================================
 // test_editor_pick.cpp — standalone ray-math test. NOT in the vcxproj.
-// Build+run via a .bat wrapper (see the plan Global Constraints):
-//   cl /nologo /std:c++17 /EHsc /W4 /I Game Game\editor_pick.cpp Game\tests\test_editor_pick.cpp /Fe:_test_editor_pick.exe && _test_editor_pick.exe
+// Build+run from the repo root in a VS developer prompt:
+//   cl /nologo /std:c++17 /EHsc /W4 /DEDITOR_ENABLED /I Game /I Core Game\editor_pick.cpp Game\tests\test_editor_pick.cpp /Fe:_test_editor_pick.exe && _test_editor_pick.exe
 //=============================================================================
 #include "editor_pick.h"
 #include <DirectXMath.h>
@@ -12,6 +12,12 @@ using namespace DirectX;
 static int g_fail = 0;
 #define CHECK(c, m) do { if (!(c)) { std::printf("FAIL: %s\n", m); g_fail++; } } while (0)
 static bool Near(float a, float b, float e = 1e-3f) { return std::fabs(a - b) < e; }
+
+// editor_pick.cpp's screen-ray functions read the back-buffer size from the
+// renderer. This test only exercises the pure ray math, so these stand in for
+// it and let the file link without Direct3D.
+unsigned int Direct3D_GetBackBufferWidth() { return 1280; }
+unsigned int Direct3D_GetBackBufferHeight() { return 720; }
 
 int main() {
     // Ray-AABB: straight down the +Z axis into a unit box at z in [4,6].
